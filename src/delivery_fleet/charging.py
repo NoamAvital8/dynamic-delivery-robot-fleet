@@ -12,6 +12,9 @@ that, placement is deterministic given that first station:
 
 Moving the station inward avoids repeatedly placing chargers on peripheral
 endpoints while still pushing coverage toward poorly served parts of the map.
+
+For now, all charging stations are identical: they use one global charging
+power and one fixed number of ports.
 """
 
 from __future__ import annotations
@@ -26,6 +29,11 @@ import numpy as np
 
 NodeId = Hashable
 
+# V1 station capabilities. These are intentionally global constants so all
+# charging stations are identical for now.
+DEFAULT_CHARGING_POWER_W = 500.0
+DEFAULT_NUMBER_OF_PORTS = 2
+
 
 @dataclass(frozen=True, slots=True)
 class ChargingStation:
@@ -33,23 +41,25 @@ class ChargingStation:
 
     id: int
     node_id: NodeId
-    charging_power_w: float
-    number_of_ports: int
+    charging_power_w: float = DEFAULT_CHARGING_POWER_W
+    number_of_ports: int = DEFAULT_NUMBER_OF_PORTS
 
 
 @dataclass(frozen=True, slots=True)
 class ChargingConfig:
-    """Configuration for charging-station placement.
+    """Configuration for charging-station placement only.
 
     By default, roughly 0.1% of graph nodes become charging stations. Set
     ``station_count`` to override the fraction with an exact count.
+
+    Charging power and port count are intentionally not configurable in V1:
+    every station uses ``DEFAULT_CHARGING_POWER_W`` and
+    ``DEFAULT_NUMBER_OF_PORTS``.
     """
 
     station_fraction: float = 0.001
     station_count: int | None = None
     placement_fraction: float = 0.75
-    charging_power_w: float = 500.0
-    number_of_ports: int = 2
     seed: int = 42
     edge_weight: str = "length"
 
@@ -60,10 +70,6 @@ class ChargingConfig:
             raise ValueError("station_count must be positive when provided")
         if not (0.0 < self.placement_fraction <= 1.0):
             raise ValueError("placement_fraction must be in (0, 1]")
-        if self.charging_power_w <= 0:
-            raise ValueError("charging_power_w must be positive")
-        if self.number_of_ports <= 0:
-            raise ValueError("number_of_ports must be positive")
         if not self.edge_weight:
             raise ValueError("edge_weight cannot be empty")
 
@@ -230,7 +236,7 @@ def add_charging_stations(
     *,
     copy_graph: bool = True,
 ) -> tuple[nx.Graph, tuple[ChargingStation, ...]]:
-    """Select stations and annotate their graph nodes.
+    """Select identical stations and annotate their graph nodes.
 
     Returns ``(graph_with_chargers, stations)``. By default the input graph is
     copied so adding chargers does not modify the original OSM graph.
@@ -245,12 +251,7 @@ def add_charging_stations(
 
     stations: list[ChargingStation] = []
     for station_id, node in enumerate(station_nodes):
-        station = ChargingStation(
-            id=station_id,
-            node_id=node,
-            charging_power_w=config.charging_power_w,
-            number_of_ports=config.number_of_ports,
-        )
+        station = ChargingStation(id=station_id, node_id=node)
         stations.append(station)
 
         result.nodes[node]["is_charging_station"] = True
