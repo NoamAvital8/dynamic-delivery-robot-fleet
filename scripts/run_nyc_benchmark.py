@@ -18,7 +18,11 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from delivery_fleet.battery_routing import BatteryFeasibleRoute, BatteryFeasibleRouter
+from delivery_fleet.battery_routing import (
+    BatteryFeasibleRoute,
+    BatteryFeasibleRouter,
+    NoFeasibleBatteryRoute,
+)
 from delivery_fleet.charging import DEFAULT_CHARGING_POWER_W, DEFAULT_NUMBER_OF_PORTS
 from delivery_fleet.deadlines import delivery_deadline_min
 from delivery_fleet.fleet import create_default_fleet, fleet_type_summary
@@ -154,7 +158,12 @@ def build_actions(graph: nx.Graph, route: BatteryFeasibleRoute) -> tuple[Action,
     actions.append(Action("dropoff", node_id=int(route.dropoff_node)))
 
     travel_distance = sum(action.value for action in actions if action.kind == "travel")
-    if not math.isclose(travel_distance, route.total_distance_m, rel_tol=1e-8, abs_tol=1e-5):
+    if not math.isclose(
+        travel_distance,
+        route.total_distance_m,
+        rel_tol=1e-8,
+        abs_tol=1e-5,
+    ):
         raise RuntimeError(
             f"action distance {travel_distance} != route distance {route.total_distance_m}"
         )
@@ -178,7 +187,12 @@ def direct_distance_m(graph: nx.Graph, order: Order) -> float:
         lat2 = math.radians(float(db["y"]))
         dlat = lat2 - lat1
         dlon = math.radians(float(db["x"]) - float(da["x"]))
-        h = math.sin(dlat / 2.0) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2.0) ** 2
+        h = (
+            math.sin(dlat / 2.0) ** 2
+            + math.cos(lat1)
+            * math.cos(lat2)
+            * math.sin(dlon / 2.0) ** 2
+        )
         return 2.0 * 6_371_008.8 * math.asin(math.sqrt(h))
 
     return float(
@@ -192,8 +206,30 @@ def direct_distance_m(graph: nx.Graph, order: Order) -> float:
     )
 
 
-def nearest_available_capable_robot(graph: nx.Graph, order: Order, robots) -> object | None:
-    candidates = [r for r in robots if r.available and r.can_hold(order.item)]
+def nearest_available_capable_robot(
+    graph: nx.Graph,
+    order: Order,
+    robots,
+    *,
+    excluded_robot_ids: set[int] | None = None,
+) -> object | None:
+    """Return the nearest available capable robot not explicitly excluded.
+
+    Battery feasibility is intentionally checked separately. This lets the
+    benchmark preserve its NAR ordering while trying the next-nearest robot when
+    the closest candidate cannot serve the order with its current battery.
+    """
+
+    excluded = excluded_robot_ids or set()
+    candidates = [
+        r
+        for r in robots
+        if (
+            r.available
+            and r.can_hold(order.item)
+            and r.spec.id not in excluded
+        )
+    ]
     if not candidates:
         return None
 
@@ -220,26 +256,53 @@ def percentile(values: list[float], p: float) -> float:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--graph", type=Path, default=ROOT / "data" / "graphs" / "new_york_city.graphml")
-    parser.add_argument("--scenario", type=Path, default=ROOT / "data" / "scenarios" / "nyc_reference_12h_seed42.json")
-    parser.add_argument("--output", type=Path, default=ROOT / "benchmark_results.json")
+    parser.add_argument(
+        "--graph",
+        type=Path,
+        default=ROOT / "data" / "graphs" / "new_york_city.graphml",
+    )
+    parser.add_argument(
+        "--scenario",
+        type=Path,
+        default=ROOT / "data" / "scenarios" / "nyc_reference_12h_seed42.json",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=ROOT / "benchmark_results.json",
+    )
     args = parser.parse_args()
 
     wall_start = time.perf_counter()
     print(f"loading graph: {args.graph}", flush=True)
     graph = nx.read_graphml(args.graph, node_type=int)
-    print(f"graph nodes={graph.number_of_nodes():,} edges={graph.number_of_edges():,}", flush=True)
+    print(
+        f"graph nodes={graph.number_of_nodes():,} edges={graph.number_of_edges():,}",
+        flush=True,
+    )
     scenario = Scenario.load_json(args.scenario)
-    print(f"orders={len(scenario.orders):,} duration={scenario.duration_minutes:.1f} min", flush=True)
+    print(
+        f"orders={len(scenario.orders):,} duration={scenario.duration_minutes:.1f} min",
+        flush=True,
+    )
 
     station_nodes = tuple(
-        int(node) for node, data in graph.nodes(data=True) if truthy(data.get("is_charging_station", False))
+        int(node)
+        for node, data in graph.nodes(data=True)
+        if truthy(data.get("is_charging_station", False))
     )
     print(f"charging stations={len(station_nodes):,}", flush=True)
-    router = BatteryFeasibleRouter(graph, station_nodes=station_nodes, edge_weight=EDGE_WEIGHT)
+    router = BatteryFeasibleRouter(
+        graph,
+        station_nodes=station_nodes,
+        edge_weight=EDGE_WEIGHT,
+    )
     robots = create_default_fleet(graph, seed=scenario.seed)
     robot_by_id = {r.spec.id: r for r in robots}
-    print(f"robots={len(robots):,} types={fleet_type_summary(robots)}", flush=True)
+    print(
+        f"robots={len(robots):,} types={fleet_type_summary(robots)}",
+        flush=True,
+    )
 
     station_state = {node: StationState() for node in station_nodes}
     plans: dict[int, PlanState] = {}
@@ -250,13 +313,27 @@ def main() -> None:
     events: list[tuple[float, int, int, str, object]] = []
     counter = itertools.count()
 
-    def push_event(time_min: float, priority: int, kind: str, payload: object) -> None:
-        heapq.heappush(events, (float(time_min), priority, next(counter), kind, payload))
+    def push_event(
+        time_min: float,
+        priority: int,
+        kind: str,
+        payload: object,
+    ) -> None:
+        heapq.heappush(
+            events,
+            (float(time_min), priority, next(counter), kind, payload),
+        )
 
     for order in scenario.orders:
         push_event(order.request_time_min, 2, "order_arrival", order)
 
-    def start_charge(robot_id: int, station_node: int, energy_wh: float, now: float, queued_arrival: float | None = None) -> None:
+    def start_charge(
+        robot_id: int,
+        station_node: int,
+        energy_wh: float,
+        now: float,
+        queued_arrival: float | None = None,
+    ) -> None:
         state = station_state[station_node]
         if state.active >= DEFAULT_NUMBER_OF_PORTS:
             raise RuntimeError("start_charge called without a free port")
@@ -265,9 +342,19 @@ def main() -> None:
         if queued_arrival is not None:
             metrics.queue_waits_min.append(now - queued_arrival)
         duration = energy_wh / DEFAULT_CHARGING_POWER_W * 60.0
-        push_event(now + duration, 0, "charge_complete", (robot_id, station_node))
+        push_event(
+            now + duration,
+            0,
+            "charge_complete",
+            (robot_id, station_node),
+        )
 
-    def request_charge(robot_id: int, station_node: int, energy_wh: float, now: float) -> None:
+    def request_charge(
+        robot_id: int,
+        station_node: int,
+        energy_wh: float,
+        now: float,
+    ) -> None:
         state = station_state[station_node]
         if state.active < DEFAULT_NUMBER_OF_PORTS:
             start_charge(robot_id, station_node, energy_wh, now)
@@ -283,28 +370,86 @@ def main() -> None:
             action = plan.actions[plan.action_index]
             plan.action_index += 1
             if action.kind == "travel":
-                push_event(now + action.value / robot.spec.speed_mps / 60.0, 1, "robot_ready", robot_id)
+                push_event(
+                    now + action.value / robot.spec.speed_mps / 60.0,
+                    1,
+                    "robot_ready",
+                    robot_id,
+                )
                 return
             if action.kind == "pickup":
                 plan.pickup_completed_at_min = now + PICKUP_HANDLING_MIN
-                push_event(now + PICKUP_HANDLING_MIN, 1, "robot_ready", robot_id)
+                push_event(
+                    now + PICKUP_HANDLING_MIN,
+                    1,
+                    "robot_ready",
+                    robot_id,
+                )
                 return
             if action.kind == "charge":
                 assert action.node_id is not None
-                request_charge(robot_id, action.node_id, action.value, now)
+                request_charge(
+                    robot_id,
+                    action.node_id,
+                    action.value,
+                    now,
+                )
                 return
             if action.kind == "dropoff":
-                push_event(now + DROPOFF_HANDLING_MIN, 0, "delivery_complete", robot_id)
+                push_event(
+                    now + DROPOFF_HANDLING_MIN,
+                    0,
+                    "delivery_complete",
+                    robot_id,
+                )
                 return
         raise RuntimeError("robot plan exhausted without dropoff")
 
-    def assign_order(order: Order, robot, now: float) -> None:
-        route = router.plan(robot, order.pickup_node, order.dropoff_node)
+    def nearest_feasible_robot_and_route(
+        order: Order,
+    ) -> tuple[object, BatteryFeasibleRoute] | None:
+        """Try capable robots in nearest-first order until one is feasible."""
+
+        excluded_robot_ids: set[int] = set()
+        while True:
+            robot = nearest_available_capable_robot(
+                graph,
+                order,
+                robots,
+                excluded_robot_ids=excluded_robot_ids,
+            )
+            if robot is None:
+                return None
+
+            try:
+                route = router.plan(
+                    robot,
+                    order.pickup_node,
+                    order.dropoff_node,
+                )
+            except NoFeasibleBatteryRoute:
+                # This robot remains idle/available. Skip it only for this
+                # order at this decision time and try the next-nearest candidate.
+                excluded_robot_ids.add(robot.spec.id)
+                continue
+
+            return robot, route
+
+    def assign_order(
+        order: Order,
+        robot,
+        route: BatteryFeasibleRoute,
+        now: float,
+    ) -> None:
         direct = direct_cache.get(order.id)
         if direct is None:
             direct = direct_distance_m(graph, order)
             direct_cache[order.id] = direct
-        deadline = delivery_deadline_min(order.request_time_min, direct, order.importance)
+        deadline = delivery_deadline_min(
+            order.request_time_min,
+            direct,
+            order.importance,
+        )
         actions = build_actions(graph, route)
 
         robot.available = False
@@ -321,9 +466,14 @@ def main() -> None:
         metrics.route_distances_m.append(route.total_distance_m)
         metrics.direct_distances_m.append(direct)
         metrics.planned_service_times.append(
-            route.travel_time_min + route.charging_time_min + PICKUP_HANDLING_MIN + DROPOFF_HANDLING_MIN
+            route.travel_time_min
+            + route.charging_time_min
+            + PICKUP_HANDLING_MIN
+            + DROPOFF_HANDLING_MIN
         )
-        metrics.assignments_by_type[getattr(robot.spec, "display_name", type(robot.spec).__name__)] += 1
+        metrics.assignments_by_type[
+            getattr(robot.spec, "display_name", type(robot.spec).__name__)
+        ] += 1
         if now <= scenario.duration_minutes + 1e-9:
             metrics.assigned_by_scenario_end += 1
         advance_robot(robot.spec.id, now)
@@ -332,11 +482,12 @@ def main() -> None:
         while pending:
             assigned = False
             for idx, order in enumerate(pending):
-                robot = nearest_available_capable_robot(graph, order, robots)
-                if robot is None:
+                feasible = nearest_feasible_robot_and_route(order)
+                if feasible is None:
                     continue
+                robot, route = feasible
                 pending.pop(idx)
-                assign_order(order, robot, now)
+                assign_order(order, robot, route, now)
                 assigned = True
                 break
             if not assigned:
@@ -382,7 +533,9 @@ def main() -> None:
             service_time = now - plan.assigned_at_min
             metrics.delivery_times.append(delivery_time)
             metrics.actual_service_times.append(service_time)
-            metrics.weighted_wait_objective += plan.order.importance * delivery_time
+            metrics.weighted_wait_objective += (
+                plan.order.importance * delivery_time
+            )
             if now <= plan.deadline_min + 1e-9:
                 metrics.on_time += 1
             if now <= scenario.duration_minutes + 1e-9:
@@ -400,29 +553,36 @@ def main() -> None:
 
         if time.perf_counter() - last_progress >= 30.0:
             print(
-                f"progress delivered={delivered}/{len(scenario.orders)} pending={len(pending)} "
-                f"active={len(plans)} sim_t={now:.1f} wall={time.perf_counter()-wall_start:.1f}s",
+                f"progress delivered={delivered}/{len(scenario.orders)} "
+                f"pending={len(pending)} active={len(plans)} "
+                f"sim_t={now:.1f} wall={time.perf_counter()-wall_start:.1f}s",
                 flush=True,
             )
             last_progress = time.perf_counter()
 
     if pending or plans or delivered != len(scenario.orders):
         raise RuntimeError(
-            f"simulation ended incomplete: delivered={delivered}, pending={len(pending)}, active={len(plans)}"
+            f"simulation ended incomplete: delivered={delivered}, "
+            f"pending={len(pending)}, active={len(plans)}"
         )
 
-    end_time = max((order.request_time_min + dt for order, dt in []), default=0.0)
     # The final popped event time is the simulation completion time.
     simulation_finish_min = now if scenario.orders else 0.0
     queue_total = float(sum(metrics.queue_waits_min))
-    peak_queues = sorted((state.peak_queue for state in station_state.values()), reverse=True)
+    peak_queues = sorted(
+        (state.peak_queue for state in station_state.values()),
+        reverse=True,
+    )
 
     results = {
         "scenario": scenario.graph_name,
         "scenario_seed": scenario.seed,
         "orders": len(scenario.orders),
         "robots": len(robots),
-        "fleet_types": {str(k.value): int(v) for k, v in fleet_type_summary(robots).items()},
+        "fleet_types": {
+            str(k.value): int(v)
+            for k, v in fleet_type_summary(robots).items()
+        },
         "charging_stations": len(station_nodes),
         "charger_power_w": DEFAULT_CHARGING_POWER_W,
         "ports_per_station": DEFAULT_NUMBER_OF_PORTS,
@@ -431,26 +591,64 @@ def main() -> None:
         "on_time_pct": 100.0 * metrics.on_time / delivered,
         "weighted_wait_objective": metrics.weighted_wait_objective,
         "mean_request_to_delivery_min": float(np.mean(metrics.delivery_times)),
-        "median_request_to_delivery_min": float(np.median(metrics.delivery_times)),
-        "p95_request_to_delivery_min": percentile(metrics.delivery_times, 95),
+        "median_request_to_delivery_min": float(
+            np.median(metrics.delivery_times)
+        ),
+        "p95_request_to_delivery_min": percentile(
+            metrics.delivery_times,
+            95,
+        ),
         "mean_assignment_wait_min": float(np.mean(metrics.assignment_waits)),
-        "median_assignment_wait_min": float(np.median(metrics.assignment_waits)),
-        "p95_assignment_wait_min": percentile(metrics.assignment_waits, 95),
-        "mean_actual_service_min": float(np.mean(metrics.actual_service_times)),
-        "mean_planned_service_no_queue_min": float(np.mean(metrics.planned_service_times)),
-        "mean_direct_distance_km": float(np.mean(metrics.direct_distances_m)) / 1000.0,
-        "median_direct_distance_km": float(np.median(metrics.direct_distances_m)) / 1000.0,
-        "mean_route_distance_km": float(np.mean(metrics.route_distances_m)) / 1000.0,
-        "total_robot_distance_km": float(sum(metrics.route_distances_m)) / 1000.0,
+        "median_assignment_wait_min": float(
+            np.median(metrics.assignment_waits)
+        ),
+        "p95_assignment_wait_min": percentile(
+            metrics.assignment_waits,
+            95,
+        ),
+        "mean_actual_service_min": float(
+            np.mean(metrics.actual_service_times)
+        ),
+        "mean_planned_service_no_queue_min": float(
+            np.mean(metrics.planned_service_times)
+        ),
+        "mean_direct_distance_km": (
+            float(np.mean(metrics.direct_distances_m)) / 1000.0
+        ),
+        "median_direct_distance_km": (
+            float(np.median(metrics.direct_distances_m)) / 1000.0
+        ),
+        "mean_route_distance_km": (
+            float(np.mean(metrics.route_distances_m)) / 1000.0
+        ),
+        "total_robot_distance_km": (
+            float(sum(metrics.route_distances_m)) / 1000.0
+        ),
         "charge_sessions": metrics.charge_sessions,
         "queued_charge_sessions": metrics.queued_charge_sessions,
-        "queued_charge_pct": 100.0 * metrics.queued_charge_sessions / max(1, metrics.charge_sessions),
+        "queued_charge_pct": (
+            100.0
+            * metrics.queued_charge_sessions
+            / max(1, metrics.charge_sessions)
+        ),
         "total_charger_queue_wait_min": queue_total,
-        "mean_queue_wait_if_queued_min": float(np.mean(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0,
-        "median_queue_wait_if_queued_min": float(np.median(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0,
+        "mean_queue_wait_if_queued_min": (
+            float(np.mean(metrics.queue_waits_min))
+            if metrics.queue_waits_min
+            else 0.0
+        ),
+        "median_queue_wait_if_queued_min": (
+            float(np.median(metrics.queue_waits_min))
+            if metrics.queue_waits_min
+            else 0.0
+        ),
         "max_queue_wait_min": max(metrics.queue_waits_min, default=0.0),
-        "max_station_queue_length": peak_queues[0] if peak_queues else 0,
-        "second_max_station_queue_length": peak_queues[1] if len(peak_queues) > 1 else 0,
+        "max_station_queue_length": (
+            peak_queues[0] if peak_queues else 0
+        ),
+        "second_max_station_queue_length": (
+            peak_queues[1] if len(peak_queues) > 1 else 0
+        ),
         "assigned_by_scenario_end": metrics.assigned_by_scenario_end,
         "delivered_by_scenario_end": metrics.delivered_by_scenario_end,
         "simulation_finish_min": simulation_finish_min,
@@ -459,7 +657,10 @@ def main() -> None:
         "wall_clock_seconds": time.perf_counter() - wall_start,
     }
 
-    args.output.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    args.output.write_text(
+        json.dumps(results, indent=2),
+        encoding="utf-8",
+    )
     print("BENCHMARK_RESULTS_JSON")
     print(json.dumps(results, indent=2), flush=True)
 
