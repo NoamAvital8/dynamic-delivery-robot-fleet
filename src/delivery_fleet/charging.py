@@ -5,13 +5,15 @@ that, placement is deterministic given that first station:
 
 1. Find the node whose graph distance to its nearest existing charger is
    maximal.
-2. Find the nearest existing charger to that node.
-3. Compute the shortest path from that charger to the farthest node.
-4. Place the new charger at ``placement_fraction`` of the path distance
+2. If that distance is at most the configured coverage radius (2 km by
+   default), stop.
+3. Otherwise find the nearest existing charger to that farthest node.
+4. Compute the shortest path from that charger to the farthest node.
+5. Place the new charger at ``placement_fraction`` of the path distance
    (75% by default), rather than at the farthest endpoint itself.
 
-Moving the station inward avoids repeatedly placing chargers on peripheral
-endpoints while still pushing coverage toward poorly served parts of the map.
+Thus the number of stations is not hard-coded. Enough stations are added to
+ensure every graph node is within the required graph distance of a charger.
 
 For now, all charging stations are identical: they use one global charging
 power and one fixed number of ports.
@@ -25,6 +27,8 @@ from typing import Hashable
 
 import networkx as nx
 import numpy as np
+
+from .defaults import MAX_DISTANCE_TO_CHARGING_STATION_M
 
 
 NodeId = Hashable
@@ -49,42 +53,24 @@ class ChargingStation:
 class ChargingConfig:
     """Configuration for charging-station placement only.
 
-    By default, roughly 0.1% of graph nodes become charging stations. Set
-    ``station_count`` to override the fraction with an exact count.
-
-    Charging power and port count are intentionally not configurable in V1:
-    every station uses ``DEFAULT_CHARGING_POWER_W`` and
-    ``DEFAULT_NUMBER_OF_PORTS``.
+    Stations are added until every graph node is within
+    ``max_distance_to_station_m`` of at least one station. Charging power and
+    port count are intentionally not configurable in V1: every station uses
+    ``DEFAULT_CHARGING_POWER_W`` and ``DEFAULT_NUMBER_OF_PORTS``.
     """
 
-    station_fraction: float = 0.001
-    station_count: int | None = None
+    max_distance_to_station_m: float = MAX_DISTANCE_TO_CHARGING_STATION_M
     placement_fraction: float = 0.75
     seed: int = 42
     edge_weight: str = "length"
 
     def __post_init__(self) -> None:
-        if self.station_fraction <= 0:
-            raise ValueError("station_fraction must be positive")
-        if self.station_count is not None and self.station_count <= 0:
-            raise ValueError("station_count must be positive when provided")
+        if self.max_distance_to_station_m <= 0:
+            raise ValueError("max_distance_to_station_m must be positive")
         if not (0.0 < self.placement_fraction <= 1.0):
             raise ValueError("placement_fraction must be in (0, 1]")
         if not self.edge_weight:
             raise ValueError("edge_weight cannot be empty")
-
-    def resolved_station_count(self, number_of_nodes: int) -> int:
-        if number_of_nodes <= 0:
-            raise ValueError("graph must contain at least one node")
-
-        count = (
-            self.station_count
-            if self.station_count is not None
-            else max(1, round(number_of_nodes * self.station_fraction))
-        )
-        if count > number_of_nodes:
-            raise ValueError("station count cannot exceed number of graph nodes")
-        return count
 
 
 def _edge_weight_value(
@@ -145,7 +131,7 @@ def select_charging_station_nodes(
     graph: nx.Graph,
     config: ChargingConfig | None = None,
 ) -> tuple[NodeId, ...]:
-    """Select charging-station nodes.
+    """Select charger nodes until the requested coverage radius is satisfied.
 
     The graph must be undirected and connected. The only random choice is the
     first station. Every subsequent station is completely determined by the
@@ -163,7 +149,6 @@ def select_charging_station_nodes(
 
     nodes = sorted(graph.nodes())
     node_rank = {node: rank for rank, node in enumerate(nodes)}
-    target_count = config.resolved_station_count(len(nodes))
 
     rng = np.random.default_rng(config.seed)
     first_station = nodes[int(rng.integers(0, len(nodes)))]
@@ -182,14 +167,18 @@ def select_charging_station_nodes(
         node: first_station for node in nearest_distance
     }
 
-    while len(stations) < target_count:
+    while True:
         # Deterministic tie-breaking by node order after the random first choice.
         farthest = max(
             nodes,
             key=lambda node: (nearest_distance[node], -node_rank[node]),
         )
-        source_station = nearest_station[farthest]
+        farthest_distance = nearest_distance[farthest]
 
+        if farthest_distance <= config.max_distance_to_station_m:
+            break
+
+        source_station = nearest_station[farthest]
         path = nx.shortest_path(
             graph,
             source=source_station,
@@ -228,6 +217,27 @@ def select_charging_station_nodes(
                     nearest_station[node] = new_station
 
     return tuple(stations)
+
+
+def max_distance_to_nearest_station(
+    graph: nx.Graph,
+    station_nodes: tuple[NodeId, ...] | list[NodeId],
+    *,
+    edge_weight: str = "length",
+) -> float:
+    """Return max_v min_s d(v, s) for a station set."""
+
+    if not station_nodes:
+        raise ValueError("at least one charging station is required")
+
+    distances = nx.multi_source_dijkstra_path_length(
+        graph,
+        station_nodes,
+        weight=edge_weight,
+    )
+    if len(distances) != graph.number_of_nodes():
+        raise ValueError("every graph node must be reachable from a charging station")
+    return float(max(distances.values(), default=0.0))
 
 
 def add_charging_stations(
