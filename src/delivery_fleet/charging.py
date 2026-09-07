@@ -156,6 +156,7 @@ def select_charging_station_nodes(
         raise ValueError("charging placement expects a connected graph")
 
     nodes = sorted(graph.nodes())
+    node_rank = {node: rank for rank, node in enumerate(nodes)}
     target_count = config.resolved_station_count(len(nodes))
 
     rng = np.random.default_rng(config.seed)
@@ -176,8 +177,11 @@ def select_charging_station_nodes(
     }
 
     while len(stations) < target_count:
-        # Deterministic tie breaking by node order after the random first choice.
-        farthest = max(nodes, key=lambda node: (nearest_distance[node], -nodes.index(node)))
+        # Deterministic tie-breaking by node order after the random first choice.
+        farthest = max(
+            nodes,
+            key=lambda node: (nearest_distance[node], -node_rank[node]),
+        )
         source_station = nearest_station[farthest]
 
         path = nx.shortest_path(
@@ -199,6 +203,8 @@ def select_charging_station_nodes(
         stations.append(new_station)
         station_set.add(new_station)
 
+        # Only one new full Dijkstra is required. Distances to the nearest
+        # charger are updated by comparing against distances from this station.
         distances_from_new = nx.single_source_dijkstra_path_length(
             graph,
             new_station,
@@ -212,7 +218,7 @@ def select_charging_station_nodes(
                 nearest_station[node] = new_station
             elif math.isclose(new_distance, old_distance):
                 # Stable deterministic tie-break between equidistant stations.
-                if str(new_station) < str(nearest_station[node]):
+                if node_rank[new_station] < node_rank[nearest_station[node]]:
                     nearest_station[node] = new_station
 
     return tuple(stations)
