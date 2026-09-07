@@ -39,21 +39,21 @@ def test_fixed_robot_models_have_expected_specs() -> None:
 
 def test_robot_count_scales_with_graph_nodes() -> None:
     assert robot_count_for_graph(nx.path_graph(1)) == 1
-    assert robot_count_for_graph(nx.path_graph(2_000)) == 1
-    assert robot_count_for_graph(nx.path_graph(2_001)) == 2
-    assert robot_count_for_graph(nx.path_graph(4_001)) == 3
+    assert robot_count_for_graph(nx.path_graph(500)) == 1
+    assert robot_count_for_graph(nx.path_graph(501)) == 2
+    assert robot_count_for_graph(nx.path_graph(1_001)) == 3
 
 
 def test_nyc_sized_fleet_composition() -> None:
-    counts = fleet_type_counts(137)
+    counts = fleet_type_counts(546)
 
     assert counts == {
-        RobotType.SPEEDY_MCQUEEN: 34,
-        RobotType.MIDDLE_MAN: 55,
-        RobotType.ENDURO: 27,
-        RobotType.OOMPH: 21,
+        RobotType.SPEEDY_MCQUEEN: 137,
+        RobotType.MIDDLE_MAN: 218,
+        RobotType.ENDURO: 109,
+        RobotType.OOMPH: 82,
     }
-    assert sum(counts.values()) == 137
+    assert sum(counts.values()) == 546
 
 
 def test_default_fleet_is_reproducible_and_starts_full() -> None:
@@ -62,7 +62,7 @@ def test_default_fleet_is_reproducible_and_starts_full() -> None:
     first = create_default_fleet(graph, seed=123)
     second = create_default_fleet(graph, seed=123)
 
-    assert len(first) == len(second) == 5
+    assert len(first) == len(second) == 20
     assert [r.node_id for r in first] == [r.node_id for r in second]
     assert [type(r.spec) for r in first] == [type(r.spec) for r in second]
     assert len({r.node_id for r in first}) == len(first)
