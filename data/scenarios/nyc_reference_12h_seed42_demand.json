@@ -1,0 +1,36 @@
+{
+  "name": "nyc_reference_12h_demand_v1",
+  "graph_name": "new_york_city",
+  "graph_nodes": 272526,
+  "duration_hours": 12,
+  "start_hour_local": 8,
+  "bucket_minutes": 60.0,
+  "scenario_seed": 42,
+  "model": "continuous_node_level_gaussian_hotspots",
+  "formula": "lambda[v,t] = target_orders_per_hour[t] * raw[v,t] / sum_x raw[x,t]; raw[v,t] = baseline_weight + sum_k weight_k * profile_k[t] * exp(-0.5*(haversine_km(v, center_k)/sigma_km_k)^2)",
+  "baseline_weight": 0.18,
+  "target_orders_per_hour": [60.0, 75.0, 95.0, 120.0, 145.0, 165.0, 160.0, 150.0, 170.0, 190.0, 180.0, 140.0],
+  "time_profiles": {
+    "business": [1.55, 1.7, 1.55, 1.35, 1.55, 1.5, 1.3, 1.2, 1.05, 0.9, 0.7, 0.55],
+    "mixed": [1.0, 1.05, 1.05, 1.15, 1.25, 1.25, 1.2, 1.25, 1.35, 1.4, 1.3, 1.15],
+    "residential": [0.85, 0.75, 0.7, 0.75, 0.9, 1.0, 1.1, 1.25, 1.45, 1.65, 1.8, 1.75]
+  },
+  "hotspots": [
+    {"name": "midtown_manhattan", "lat": 40.7549, "lon": -73.984, "sigma_km": 2.5, "weight": 1.6, "profile": "business"},
+    {"name": "lower_manhattan", "lat": 40.7075, "lon": -74.0113, "sigma_km": 2.5, "weight": 1.2, "profile": "business"},
+    {"name": "downtown_brooklyn", "lat": 40.692, "lon": -73.986, "sigma_km": 2.8, "weight": 1.1, "profile": "mixed"},
+    {"name": "williamsburg", "lat": 40.718, "lon": -73.958, "sigma_km": 2.5, "weight": 1.0, "profile": "mixed"},
+    {"name": "long_island_city", "lat": 40.7447, "lon": -73.9485, "sigma_km": 2.8, "weight": 0.9, "profile": "mixed"},
+    {"name": "flushing", "lat": 40.759, "lon": -73.83, "sigma_km": 3.5, "weight": 0.8, "profile": "residential"},
+    {"name": "bronx_hub", "lat": 40.817, "lon": -73.919, "sigma_km": 3.5, "weight": 0.8, "profile": "residential"},
+    {"name": "jamaica", "lat": 40.703, "lon": -73.802, "sigma_km": 3.5, "weight": 0.7, "profile": "residential"},
+    {"name": "st_george", "lat": 40.6437, "lon": -74.0736, "sigma_km": 4.0, "weight": 0.45, "profile": "residential"}
+  ],
+  "realized_orders_per_hour": [67, 69, 87, 126, 150, 173, 176, 176, 188, 218, 168, 133],
+  "realized_total_orders": 1731,
+  "notes": [
+    "Ground-truth pickup demand is defined per OSM node, independently of any clustering used by the planning algorithm.",
+    "For any later cluster C, its true lambda at hour t is sum(lambda[v,t] for v in C).",
+    "Drop-off nodes are uniform over all graph nodes except the pickup node in this V1 reference scenario."
+  ]
+}
