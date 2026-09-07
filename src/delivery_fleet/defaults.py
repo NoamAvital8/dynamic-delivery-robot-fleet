@@ -10,6 +10,14 @@ coverage region and still have enough nominal range to return to a charger.
 MAX_DISTANCE_TO_CHARGING_STATION_M = 2_000.0
 MIN_ROBOT_FULL_BATTERY_RANGE_M = 4_000.0
 
+# V1 benchmark execution defaults.
+PICKUP_SERVICE_TIME_MIN = 1.0
+DROPOFF_SERVICE_TIME_MIN = 1.0
+DETERMINISTIC_TRAVEL_TIMES = True
+PENDING_ORDER_DISCIPLINE = "fifo"
+CONTINUE_UNTIL_ALL_RELEASED_ORDERS_FINISH = True
+LATE_ORDERS_ARE_STILL_DELIVERED = True
+
 if 2 * MAX_DISTANCE_TO_CHARGING_STATION_M > MIN_ROBOT_FULL_BATTERY_RANGE_M:
     raise RuntimeError(
         "charging coverage requires at least twice the station coverage radius "
