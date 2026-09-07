@@ -46,7 +46,7 @@ class SpeedyMcQueen(RobotSpec):
             speed_mps=5.5,
             max_payload_kg=5.0,
             max_volume_l=12.0,
-            battery_capacity_wh=350.0,
+            battery_capacity_wh=700.0,
             energy_per_meter_wh=0.07,
         )
 
@@ -64,7 +64,7 @@ class MiddleMan(RobotSpec):
             speed_mps=4.0,
             max_payload_kg=12.0,
             max_volume_l=30.0,
-            battery_capacity_wh=600.0,
+            battery_capacity_wh=1_200.0,
             energy_per_meter_wh=0.075,
         )
 
@@ -82,7 +82,7 @@ class Enduro(RobotSpec):
             speed_mps=3.5,
             max_payload_kg=10.0,
             max_volume_l=25.0,
-            battery_capacity_wh=900.0,
+            battery_capacity_wh=1_800.0,
             energy_per_meter_wh=0.065,
         )
 
@@ -100,7 +100,7 @@ class Oomph(RobotSpec):
             speed_mps=2.8,
             max_payload_kg=30.0,
             max_volume_l=80.0,
-            battery_capacity_wh=1_200.0,
+            battery_capacity_wh=2_400.0,
             energy_per_meter_wh=0.10,
         )
 
