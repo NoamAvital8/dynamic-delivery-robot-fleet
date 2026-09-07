@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/run-nyc-benchmark.yml'
+      - 'scripts/run_nyc_benchmark.py'
+      - 'scripts/initialize_chargers.py'
 
 permissions:
   contents: read
@@ -32,10 +34,17 @@ jobs:
           gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
           ls -lh data/graphs/new_york_city.graphml
 
+      - name: Initialize charging stations
+        env:
+          PYTHONPATH: src
+        run: python scripts/initialize_chargers.py data/graphs/new_york_city.graphml
+
       - name: Run benchmark
         env:
           PYTHONPATH: src
-        run: python scripts/run_nyc_benchmark.py | tee benchmark.log
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark.py | tee benchmark.log
 
       - name: Upload benchmark results
         if: always()
