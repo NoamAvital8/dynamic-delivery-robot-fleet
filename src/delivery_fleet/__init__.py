@@ -16,6 +16,13 @@ from .charging import (
     nearest_station_data,
     select_charging_station_nodes,
 )
+from .deadlines import (
+    DEADLINE_FIXED_BUFFER_MIN,
+    DEADLINE_IMPORTANCE_SLACK_MIN,
+    DEADLINE_REFERENCE_SPEED_MPS,
+    delivery_deadline_min,
+    delivery_time_allowance_min,
+)
 from .defaults import (
     MAX_DISTANCE_TO_CHARGING_STATION_M,
     MIN_ROBOT_FULL_BATTERY_RANGE_M,
@@ -59,6 +66,9 @@ __all__ = [
     "ChargeEvent",
     "ChargingConfig",
     "ChargingStation",
+    "DEADLINE_FIXED_BUFFER_MIN",
+    "DEADLINE_IMPORTANCE_SLACK_MIN",
+    "DEADLINE_REFERENCE_SPEED_MPS",
     "DEFAULT_FLEET_PROPORTIONS",
     "DEFAULT_FLEET_SEED",
     "DISTANCE_TO_NEAREST_CHARGING_STATION_M_ATTR",
@@ -89,6 +99,8 @@ __all__ = [
     "annotate_nearest_charging_stations",
     "constant_demand_profile",
     "create_default_fleet",
+    "delivery_deadline_min",
+    "delivery_time_allowance_min",
     "fleet_type_counts",
     "fleet_type_summary",
     "max_distance_to_nearest_station",
