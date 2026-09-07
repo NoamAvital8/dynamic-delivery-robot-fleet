@@ -8,7 +8,7 @@ from typing import Iterable
 import networkx as nx
 
 from .battery_routing import BatteryFeasibleRoute, BatteryFeasibleRouter
-from .robot import RobotState
+from .robot import RobotNodeArrivalEvent, RobotState
 from .scenario_creator import Order
 
 
@@ -19,6 +19,10 @@ class Assignment:
     assigned_at_min: float
     completion_time_min: float
     route: BatteryFeasibleRoute
+    # If the route can depart immediately, this is the first committed
+    # node-arrival event. It is None when a charge at the current node must
+    # happen before departure.
+    first_node_arrival_event: RobotNodeArrivalEvent | None = None
 
 
 class NearestAvailableRobotPolicy:
@@ -30,6 +34,11 @@ class NearestAvailableRobotPolicy:
          battery for the robot-selection step.
       3. For that robot, compute the minimum-time battery-feasible route through
          any required charging stations, with partial charging allowed.
+
+    Movement is node-event based. Once assigned, the route is stored on the
+    robot and, when no initial charge is needed, its first edge is committed
+    immediately. A future policy may alter only the path after the committed
+    next node.
 
     A None result means no capable robot is currently available; the simulator
     should keep that order pending and retry when robots become available.
@@ -104,6 +113,24 @@ class NearestAvailableRobotPolicy:
 
         robot.available = False
         robot.current_order_id = order.id
+        robot.set_planned_path(route.node_path)
+
+        # If the route starts with a partial charge at the robot's current node,
+        # movement starts only after that charging event. Otherwise commit the
+        # first graph edge now so the simulator immediately knows next_node+ETA.
+        initial_charge = (
+            route.charging_events[0]
+            if route.charging_events
+            and route.charging_events[0].node_id == robot.node_id
+            else None
+        )
+        first_arrival = None
+        if initial_charge is None:
+            first_arrival = robot.depart_next_edge(
+                self.graph,
+                float(now_min),
+                edge_weight=self.edge_weight,
+            )
 
         return Assignment(
             order_id=order.id,
@@ -111,6 +138,7 @@ class NearestAvailableRobotPolicy:
             assigned_at_min=float(now_min),
             completion_time_min=float(now_min + route.total_time_min),
             route=route,
+            first_node_arrival_event=first_arrival,
         )
 
     def complete_delivery(
@@ -118,7 +146,13 @@ class NearestAvailableRobotPolicy:
         assignment: Assignment,
         robot: RobotState,
     ) -> None:
-        """Apply the assignment's terminal state when its completion event fires."""
+        """Apply the assignment's terminal state when its completion event fires.
+
+        The eventual simulator should normally reach the dropoff node through
+        node-arrival events. Clearing the movement plan here also keeps this
+        terminal operation safe for simple benchmark harnesses that jump
+        directly to the completion event.
+        """
 
         if robot.spec.id != assignment.robot_id:
             raise ValueError("assignment belongs to a different robot")
@@ -127,6 +161,7 @@ class NearestAvailableRobotPolicy:
         if robot.current_order_id != assignment.order_id:
             raise ValueError("robot is serving a different order")
 
+        robot.clear_movement_plan()
         robot.node_id = assignment.route.dropoff_node
         robot.battery_wh = assignment.route.arrival_battery_wh
         robot.current_order_id = None
