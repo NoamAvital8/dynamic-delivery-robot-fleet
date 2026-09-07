@@ -31,10 +31,10 @@ def test_fixed_robot_models_have_expected_specs() -> None:
     assert enduro.max_payload_kg == 10.0
     assert oomph.max_payload_kg == 30.0
 
-    assert math.isclose(speedy.full_battery_range_m, 5_000.0)
-    assert math.isclose(middle.full_battery_range_m, 8_000.0)
-    assert math.isclose(enduro.full_battery_range_m, 900.0 / 0.065)
-    assert math.isclose(oomph.full_battery_range_m, 12_000.0)
+    assert math.isclose(speedy.full_battery_range_m, 10_000.0)
+    assert math.isclose(middle.full_battery_range_m, 16_000.0)
+    assert math.isclose(enduro.full_battery_range_m, 1_800.0 / 0.065)
+    assert math.isclose(oomph.full_battery_range_m, 24_000.0)
 
 
 def test_robot_count_scales_with_graph_nodes() -> None:
