@@ -64,13 +64,14 @@ def test_router_uses_partial_charge_and_keeps_dropoff_reserve() -> None:
     assert charge.node_id == 4
     assert math.isclose(charge.energy_added_wh, 200.0)
     assert charge.energy_added_wh < robot.spec.battery_capacity_wh
-    assert math.isclose(charge.duration_min, 24.0)
+    # 2 kW = 33.333... Wh/min, so 200 Wh takes 6 minutes.
+    assert math.isclose(charge.duration_min, 6.0)
 
     # Arrival at node 5 keeps exactly enough energy for the nearest charger at 4.
     assert math.isclose(route.required_dropoff_reserve_wh, 100.0)
     assert math.isclose(route.arrival_battery_wh, 100.0)
     assert math.isclose(route.travel_time_min, 50.0)
-    assert math.isclose(route.total_time_min, 74.0)
+    assert math.isclose(route.total_time_min, 56.0)
 
 
 def test_router_avoids_charging_when_current_battery_is_enough() -> None:
