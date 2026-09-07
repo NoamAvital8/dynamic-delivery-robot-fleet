@@ -1,6 +1,8 @@
 import networkx as nx
 
 from delivery_fleet.charging import (
+    DEFAULT_CHARGING_POWER_W,
+    DEFAULT_NUMBER_OF_PORTS,
     ChargingConfig,
     add_charging_stations,
     select_charging_station_nodes,
@@ -52,6 +54,24 @@ def test_add_charging_stations_annotates_selected_nodes() -> None:
         bool(data.get("is_charging_station"))
         for _, data in result.nodes(data=True)
     ) == 4
+
+    # All charging stations have the same fixed V1 capabilities.
+    assert all(
+        station.charging_power_w == DEFAULT_CHARGING_POWER_W
+        for station in stations
+    )
+    assert all(
+        station.number_of_ports == DEFAULT_NUMBER_OF_PORTS
+        for station in stations
+    )
+    assert all(
+        result.nodes[node]["charging_power_w"] == DEFAULT_CHARGING_POWER_W
+        for node in selected
+    )
+    assert all(
+        result.nodes[node]["charging_ports"] == DEFAULT_NUMBER_OF_PORTS
+        for node in selected
+    )
 
     # Input graph is unchanged by default.
     assert all("is_charging_station" not in data for _, data in graph.nodes(data=True))
