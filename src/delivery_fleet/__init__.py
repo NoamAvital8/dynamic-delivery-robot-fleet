@@ -21,7 +21,12 @@ from .defaults import (
     MIN_ROBOT_FULL_BATTERY_RANGE_M,
 )
 from .policies import Assignment, NearestAvailableRobotPolicy
-from .robot import RobotSpec, RobotState
+from .robot import (
+    RobotActivity,
+    RobotNodeArrivalEvent,
+    RobotSpec,
+    RobotState,
+)
 from .scenario_creator import (
     ImportanceDistribution,
     Item,
@@ -51,6 +56,8 @@ __all__ = [
     "NoFeasibleBatteryRoute",
     "NodeDemandProfile",
     "Order",
+    "RobotActivity",
+    "RobotNodeArrivalEvent",
     "RobotSpec",
     "RobotState",
     "RouteSegment",
