@@ -1,0 +1,48 @@
+name: Run NYC benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/run-nyc-benchmark.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install numpy networkx
+
+      - name: Download NYC graph artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+          ls -lh data/graphs/new_york_city.graphml
+
+      - name: Run benchmark
+        env:
+          PYTHONPATH: src
+        run: python scripts/run_nyc_benchmark.py | tee benchmark.log
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyc-benchmark-results
+          path: |
+            benchmark_results.json
+            benchmark.log
+          if-no-files-found: warn
