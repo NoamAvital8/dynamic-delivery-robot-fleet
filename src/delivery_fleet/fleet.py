@@ -2,7 +2,7 @@
 
 The fleet size scales with graph size:
 
-    number_of_robots = ceil(number_of_nodes / 2000)
+    number_of_robots = ceil(number_of_nodes / 500)
 
 Four fixed robot subclasses provide controlled heterogeneity.  Robots of the
 same subclass are intentionally identical; stochasticity comes from the
@@ -22,7 +22,7 @@ import numpy as np
 from .robot import NodeId, RobotSpec, RobotState
 
 
-NODES_PER_ROBOT = 2_000
+NODES_PER_ROBOT = 500
 DEFAULT_FLEET_SEED = 42
 
 
@@ -125,7 +125,7 @@ _MODEL_BY_TYPE: dict[RobotType, type[RobotSpec]] = {
 
 
 def robot_count_for_graph(graph: nx.Graph) -> int:
-    """Return max(1, ceil(|V| / 2000))."""
+    """Return max(1, ceil(|V| / 500))."""
 
     number_of_nodes = graph.number_of_nodes()
     if number_of_nodes <= 0:
@@ -174,7 +174,7 @@ def create_default_fleet(
 ) -> list[RobotState]:
     """Create the default heterogeneous fleet at random graph nodes.
 
-    - Fleet size defaults to ``ceil(number_of_nodes / 2000)``.
+    - Fleet size defaults to ``ceil(number_of_nodes / 500)``.
     - Type counts use the fixed 25/40/20/15 percent composition.
     - Initial nodes are sampled uniformly without replacement when possible.
     - Every robot starts idle, available, and at 100% battery.
