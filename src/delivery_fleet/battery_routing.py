@@ -46,8 +46,6 @@ class ChargeEvent:
 
 @dataclass(frozen=True, slots=True)
 class RouteSegment:
-    """Travel between two consecutive charging opportunities (or the finish)."""
-
     waypoints: tuple[NodeId, ...]
     node_path: tuple[NodeId, ...]
     distance_m: float
@@ -122,8 +120,6 @@ class BatteryFeasibleRouter:
                 "for every node"
             )
 
-        # Station-to-station reachability is reused across many orders. The key
-        # includes the robot range because robots may be heterogeneous.
         self._station_neighbor_cache: dict[
             tuple[NodeId, float], dict[NodeId, float]
         ] = {}
@@ -157,7 +153,7 @@ class BatteryFeasibleRouter:
 
     def _path_length(self, path: list[NodeId]) -> float:
         total = 0.0
-        for a, b in zip(path, path[1:], strict=True):
+        for a, b in zip(path, path[1:]):
             data = self.graph.get_edge_data(a, b)
             if self.graph.is_multigraph():
                 total += min(
@@ -179,7 +175,7 @@ class BatteryFeasibleRouter:
             raise RuntimeError("internal route edge has no waypoints")
 
         full_path: list[NodeId] = [waypoints[0]]
-        for a, b in zip(waypoints, waypoints[1:], strict=True):
+        for a, b in zip(waypoints, waypoints[1:]):
             if a == b:
                 continue
             leg = nx.shortest_path(
@@ -235,8 +231,6 @@ class BatteryFeasibleRouter:
                 "robot is already below the safety reserve needed to reach a charger"
             )
 
-        # Distances from u/v need only be known within one full-battery range;
-        # anything farther cannot belong to a no-charge segment anyway.
         u_dist = self._distances_within(pickup_node, full_range)
         v_dist = self._distances_within(dropoff_node, full_range)
 
@@ -244,9 +238,7 @@ class BatteryFeasibleRouter:
         DONE = ("done",)
 
         def physical_node(state: tuple) -> NodeId:
-            if state == START:
-                return start
-            return state[1]
+            return start if state == START else state[1]
 
         def departure_range(state: tuple) -> float:
             if state == START:
@@ -262,7 +254,6 @@ class BatteryFeasibleRouter:
             available_range = departure_range(state)
 
             if phase == "pre":
-                # Move between chargers before pickup.
                 for station, distance in self._station_neighbors(
                     source, available_range
                 ).items():
@@ -277,16 +268,12 @@ class BatteryFeasibleRouter:
                 d_to_pickup = float(d_to_pickup)
 
                 if pickup_node in self.station_set:
-                    # Reaching u also reaches a charger, so charging is allowed
-                    # after pickup before continuing toward v.
                     yield (
                         ("post", pickup_node),
                         _MetaEdge(d_to_pickup, (source, pickup_node)),
                     )
                     return
 
-                # Cross pickup and reach the first charger after pickup without
-                # recharging at u.
                 for station in self.station_nodes:
                     d_from_pickup = u_dist.get(station)
                     if d_from_pickup is None:
@@ -301,8 +288,6 @@ class BatteryFeasibleRouter:
                             ),
                         )
 
-                # Finish without another charger only if arrival at v still
-                # leaves enough battery to reach v's nearest charger.
                 d_pickup_to_dropoff = u_dist.get(dropoff_node)
                 if d_pickup_to_dropoff is not None:
                     segment_distance = d_to_pickup + float(d_pickup_to_dropoff)
@@ -319,8 +304,6 @@ class BatteryFeasibleRouter:
                         )
                 return
 
-            # After pickup, only charger-to-charger movement or final delivery
-            # remains.
             for station, distance in self._station_neighbors(
                 source, full_range
             ).items():
@@ -338,9 +321,6 @@ class BatteryFeasibleRouter:
                         _MetaEdge(d_to_dropoff, (source, dropoff_node)),
                     )
 
-        # Dijkstra on the charging-stop meta graph. Distance is the correct V1
-        # objective because equal station charging power + linear partial
-        # charging makes total route time strictly monotone in total distance.
         best: dict[tuple, float] = {START: 0.0}
         previous: dict[tuple, tuple[tuple, _MetaEdge]] = {}
         counter = itertools.count()
@@ -403,9 +383,7 @@ class BatteryFeasibleRouter:
                 energy_added = required_departure - battery
                 before = battery
                 battery += energy_added
-                duration_min = (
-                    energy_added / DEFAULT_CHARGING_POWER_W * 60.0
-                )
+                duration_min = energy_added / DEFAULT_CHARGING_POWER_W * 60.0
                 total_charging_time += duration_min
                 charge_events.append(
                     ChargeEvent(
