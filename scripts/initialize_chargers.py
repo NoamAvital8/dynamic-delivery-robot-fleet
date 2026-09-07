@@ -19,6 +19,15 @@ def truthy(value) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes"}
 
 
+def normalize_edge_lengths(graph: nx.Graph) -> None:
+    if graph.is_multigraph():
+        for _, _, _, data in graph.edges(keys=True, data=True):
+            data["length"] = float(data.get("length", 1.0))
+    else:
+        for _, _, data in graph.edges(data=True):
+            data["length"] = float(data.get("length", 1.0))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("graph", type=Path)
@@ -26,6 +35,8 @@ def main() -> None:
 
     start = time.perf_counter()
     graph = nx.read_graphml(args.graph, node_type=int)
+    normalize_edge_lengths(graph)
+
     existing = [
         node
         for node, data in graph.nodes(data=True)
@@ -33,6 +44,7 @@ def main() -> None:
     ]
     if existing:
         print(f"graph already has {len(existing):,} charging stations")
+        nx.write_graphml(graph, args.graph)
         return
 
     print(
