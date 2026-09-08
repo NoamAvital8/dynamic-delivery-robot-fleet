@@ -27,6 +27,7 @@ from .scenario_creator import Item
 
 NodeId = Hashable
 _EPS = 1e-9
+BATTERY_EPS_WH = 1e-3
 
 
 class RobotActivity(str, Enum):
@@ -143,10 +144,14 @@ class RobotState:
     remaining_route: list[NodeId] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if self.battery_wh < -_EPS:
+        if self.battery_wh < -BATTERY_EPS_WH:
             raise ValueError("battery_wh cannot be negative")
-        if self.battery_wh > self.spec.battery_capacity_wh + _EPS:
+        if self.battery_wh > self.spec.battery_capacity_wh + BATTERY_EPS_WH:
             raise ValueError("battery_wh cannot exceed battery capacity")
+        self.battery_wh = min(
+            self.spec.battery_capacity_wh,
+            max(0.0, self.battery_wh),
+        )
         if self.available and self.current_order_id is not None:
             raise ValueError("available robot cannot have a current order")
 
@@ -199,9 +204,12 @@ class RobotState:
         if not self.is_moving:
             return self.battery_wh
         assert self.current_edge_distance_m is not None
-        return self.battery_wh - (
+        battery_wh = self.battery_wh - (
             self.current_edge_distance_m * self.spec.energy_per_meter_wh
         )
+        if battery_wh < -BATTERY_EPS_WH:
+            return battery_wh
+        return max(0.0, battery_wh)
 
     def decision_time_min(self, now_min: float) -> float:
         """Earliest time at which a newly planned route may take effect."""
@@ -270,7 +278,7 @@ class RobotState:
         target = self.remaining_route[0]
         distance_m = _edge_distance_m(graph, self.node_id, target, edge_weight)
         energy_wh = distance_m * self.spec.energy_per_meter_wh
-        if energy_wh > self.battery_wh + _EPS:
+        if energy_wh > self.battery_wh + BATTERY_EPS_WH:
             raise ValueError("robot does not have enough battery for the next edge")
 
         travel_time_min = distance_m / self.spec.speed_mps / 60.0
@@ -312,7 +320,7 @@ class RobotState:
         assert self.current_edge_distance_m is not None
         energy_wh = self.current_edge_distance_m * self.spec.energy_per_meter_wh
         self.battery_wh -= energy_wh
-        if self.battery_wh < -1e-7:
+        if self.battery_wh < -BATTERY_EPS_WH:
             raise RuntimeError("robot battery became negative while traversing an edge")
         self.battery_wh = max(0.0, self.battery_wh)
 
