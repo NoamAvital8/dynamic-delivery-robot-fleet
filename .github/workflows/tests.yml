@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install test dependencies
-        run: pip install numpy networkx pytest
+        run: pip install numpy scipy networkx pytest
       - name: Run tests
         env:
           PYTHONPATH: src
