@@ -24,7 +24,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install numpy networkx
+        run: pip install numpy scipy networkx
 
       - name: Download NYC graph artifact
         env:
