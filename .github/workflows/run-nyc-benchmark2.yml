@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/run-nyc-benchmark2.yml'
       - 'scripts/run_nyc_benchmark2.py'
+      - 'scripts/run_nyc_benchmark2_diagnostic.py'
       - 'scripts/initialize_chargers.py'
       - 'src/delivery_fleet/robot.py'
       - 'src/delivery_fleet/routing.py'
@@ -30,7 +31,9 @@ jobs:
         run: pip install numpy scipy networkx
 
       - name: Compile benchmark 2
-        run: python -m py_compile scripts/run_nyc_benchmark2.py
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark2.py
+          python -m py_compile scripts/run_nyc_benchmark2_diagnostic.py
 
       - name: Download NYC graph artifact
         env:
@@ -50,7 +53,7 @@ jobs:
           PYTHONPATH: src
         run: |
           set -o pipefail
-          python scripts/run_nyc_benchmark2.py | tee benchmark2.log
+          python scripts/run_nyc_benchmark2_diagnostic.py | tee benchmark2.log
 
       - name: Upload benchmark 2 results
         if: always()
