@@ -1,0 +1,63 @@
+name: Run NYC benchmark 2
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/run-nyc-benchmark2.yml'
+      - 'scripts/run_nyc_benchmark2.py'
+      - 'scripts/initialize_chargers.py'
+      - 'src/delivery_fleet/robot.py'
+      - 'src/delivery_fleet/routing.py'
+      - 'src/delivery_fleet/battery_routing.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install numpy scipy networkx
+
+      - name: Compile benchmark 2
+        run: python -m py_compile scripts/run_nyc_benchmark2.py
+
+      - name: Download NYC graph artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+          ls -lh data/graphs/new_york_city.graphml
+
+      - name: Initialize charging stations
+        env:
+          PYTHONPATH: src
+        run: python scripts/initialize_chargers.py data/graphs/new_york_city.graphml
+
+      - name: Run benchmark 2
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark2.py | tee benchmark2.log
+
+      - name: Upload benchmark 2 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyc-benchmark2-results
+          path: |
+            benchmark2_results.json
+            benchmark2.log
+          if-no-files-found: warn
