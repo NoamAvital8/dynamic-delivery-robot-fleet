@@ -1,8 +1,10 @@
 from .battery_routing import (
     BatteryFeasibleRoute,
     BatteryFeasibleRouter,
+    BatteryRouteQuote,
     ChargeEvent,
     NoFeasibleBatteryRoute,
+    RouteQuoteSegment,
     RouteSegment,
 )
 from .charging import (
@@ -63,6 +65,7 @@ from .robot import (
     RobotSpec,
     RobotState,
 )
+from .routing import ChargerDistanceIndex, DistanceOracle, NearestTarget
 from .scenario_creator import (
     ImportanceDistribution,
     Item,
@@ -78,8 +81,10 @@ __all__ = [
     "Assignment",
     "BatteryFeasibleRoute",
     "BatteryFeasibleRouter",
+    "BatteryRouteQuote",
     "ChargeCompletionResult",
     "ChargeEvent",
+    "ChargerDistanceIndex",
     "ChargingCompleteEvent",
     "ChargingConfig",
     "ChargingNetworkRuntime",
@@ -97,6 +102,7 @@ __all__ = [
     "DETERMINISTIC_TRAVEL_TIMES",
     "DISTANCE_TO_NEAREST_CHARGING_STATION_M_ATTR",
     "DROPOFF_SERVICE_TIME_MIN",
+    "DistanceOracle",
     "Enduro",
     "ImportanceDistribution",
     "Item",
@@ -108,6 +114,7 @@ __all__ = [
     "NEAREST_CHARGING_STATION_NODE_ATTR",
     "NODES_PER_ROBOT",
     "NearestAvailableRobotPolicy",
+    "NearestTarget",
     "NoFeasibleBatteryRoute",
     "NodeDemandProfile",
     "Oomph",
@@ -119,6 +126,7 @@ __all__ = [
     "RobotSpec",
     "RobotState",
     "RobotType",
+    "RouteQuoteSegment",
     "RouteSegment",
     "Scenario",
     "ScenarioCreator",
