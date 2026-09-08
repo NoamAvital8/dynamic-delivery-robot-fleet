@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Iterator
 
 import networkx as nx
 
-from .battery_routing import BatteryFeasibleRoute, BatteryFeasibleRouter
+from .battery_routing import (
+    BatteryFeasibleRoute,
+    BatteryFeasibleRouter,
+    BatteryRouteQuote,
+    NoFeasibleBatteryRoute,
+)
 from .robot import RobotNodeArrivalEvent, RobotState
+from .routing import DistanceOracle
 from .scenario_creator import Order
 
 
@@ -28,20 +34,14 @@ class Assignment:
 class NearestAvailableRobotPolicy:
     """Nearest-Available Robot (NAR) baseline.
 
-    On each revealed order:
-      1. Keep only currently available robots that can carry the item.
-      2. Choose the one with minimum graph distance to the pickup, ignoring
-         battery for the robot-selection step.
-      3. For that robot, compute the minimum-time battery-feasible route through
-         any required charging stations, with partial charging allowed.
+    Available payload-capable robots are considered in exact graph-distance
+    order from the pickup.  The outward shortest-path search is run once and is
+    continued if a nearer robot is battery-infeasible.  Route feasibility/cost
+    is evaluated without constructing the street-node path; only the chosen
+    candidate's route is materialized.
 
-    Movement is node-event based. Once assigned, the route is stored on the
-    robot and, when no initial charge is needed, its first edge is committed
-    immediately. A future policy may alter only the path after the committed
-    next node.
-
-    A None result means no capable robot is currently available; the simulator
-    should keep that order pending and retry when robots become available.
+    A None result means no currently available capable robot has a safe route;
+    the simulator should keep the order pending and retry later.
     """
 
     def __init__(
@@ -50,42 +50,75 @@ class NearestAvailableRobotPolicy:
         router: BatteryFeasibleRouter | None = None,
         *,
         edge_weight: str = "length",
+        distance_oracle: DistanceOracle | None = None,
     ) -> None:
         self.graph = graph
         self.edge_weight = edge_weight
-        self.router = router or BatteryFeasibleRouter(
-            graph, edge_weight=edge_weight
-        )
+        if router is not None:
+            self.router = router
+            self.distance_oracle = router.distance_oracle
+        else:
+            self.distance_oracle = distance_oracle or DistanceOracle(
+                graph,
+                edge_weight=edge_weight,
+            )
+            self.router = BatteryFeasibleRouter(
+                graph,
+                edge_weight=edge_weight,
+                distance_oracle=self.distance_oracle,
+            )
 
-    def _choose_robot(
+    def _candidate_robots_in_distance_order(
         self,
         order: Order,
         robots: Iterable[RobotState],
-    ) -> RobotState | None:
+    ) -> Iterator[tuple[RobotState, float]]:
         candidates = [
             robot
             for robot in robots
             if robot.available and robot.can_hold(order.item)
         ]
         if not candidates:
-            return None
+            return
 
-        # One Dijkstra from u gives d(u, robot_location) for the whole candidate
-        # set on our undirected graph, rather than one search per robot.
-        distances = nx.single_source_dijkstra_path_length(
-            self.graph,
+        by_node: dict[object, list[RobotState]] = {}
+        for robot in candidates:
+            by_node.setdefault(robot.node_id, []).append(robot)
+        for robots_at_node in by_node.values():
+            robots_at_node.sort(key=lambda robot: robot.spec.id)
+
+        for nearest in self.distance_oracle.iter_nearest_targets(
             order.pickup_node,
-            weight=self.edge_weight,
-        )
+            by_node,
+        ):
+            for robot in by_node[nearest.node_id]:
+                yield robot, nearest.distance_m
 
-        unreachable = [robot for robot in candidates if robot.node_id not in distances]
-        if unreachable:
-            raise ValueError("an available robot is disconnected from the pickup")
-
-        return min(
-            candidates,
-            key=lambda robot: (distances[robot.node_id], robot.spec.id),
+    def _choose_feasible_quote(
+        self,
+        order: Order,
+        robots: Iterable[RobotState],
+    ) -> tuple[RobotState, BatteryRouteQuote] | None:
+        pickup_to_dropoff = self.distance_oracle.distance(
+            order.pickup_node,
+            order.dropoff_node,
         )
+        for robot, start_to_pickup in self._candidate_robots_in_distance_order(
+            order,
+            robots,
+        ):
+            try:
+                quote = self.router.evaluate(
+                    robot,
+                    order.pickup_node,
+                    order.dropoff_node,
+                    start_to_pickup_m=start_to_pickup,
+                    pickup_to_dropoff_m=pickup_to_dropoff,
+                )
+            except NoFeasibleBatteryRoute:
+                continue
+            return robot, quote
+        return None
 
     def on_order(
         self,
@@ -101,14 +134,13 @@ class NearestAvailableRobotPolicy:
         if now_min + 1e-9 < order.request_time_min:
             raise ValueError("cannot dispatch an order before its request time")
 
-        robot = self._choose_robot(order, robots)
-        if robot is None:
+        selected = self._choose_feasible_quote(order, robots)
+        if selected is None:
             return None
-
-        route = self.router.plan(
-            robot,
-            pickup_node=order.pickup_node,
-            dropoff_node=order.dropoff_node,
+        robot, quote = selected
+        route = self.router.materialize(
+            quote,
+            speed_mps=robot.spec.speed_mps,
         )
 
         robot.available = False
@@ -146,13 +178,7 @@ class NearestAvailableRobotPolicy:
         assignment: Assignment,
         robot: RobotState,
     ) -> None:
-        """Apply the assignment's terminal state when its completion event fires.
-
-        The eventual simulator should normally reach the dropoff node through
-        node-arrival events. Clearing the movement plan here also keeps this
-        terminal operation safe for simple benchmark harnesses that jump
-        directly to the completion event.
-        """
+        """Apply the assignment's terminal state when its completion event fires."""
 
         if robot.spec.id != assignment.robot_id:
             raise ValueError("assignment belongs to a different robot")
