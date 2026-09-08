@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 import sys
 import time
-from typing import Literal
+from typing import Iterator, Literal
 
 import networkx as nx
 import numpy as np
@@ -19,13 +19,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from delivery_fleet.battery_routing import (
-    BatteryFeasibleRoute,
     BatteryFeasibleRouter,
+    BatteryRouteQuote,
     NoFeasibleBatteryRoute,
 )
 from delivery_fleet.charging import DEFAULT_CHARGING_POWER_W, DEFAULT_NUMBER_OF_PORTS
 from delivery_fleet.deadlines import delivery_deadline_min
 from delivery_fleet.fleet import create_default_fleet, fleet_type_summary
+from delivery_fleet.routing import ChargerDistanceIndex, DistanceOracle
 from delivery_fleet.scenario_creator import Order, Scenario
 
 PICKUP_HANDLING_MIN = 1.0
@@ -43,7 +44,7 @@ class Action:
 @dataclass(slots=True)
 class PlanState:
     order: Order
-    route: BatteryFeasibleRoute
+    route: BatteryRouteQuote
     assigned_at_min: float
     direct_distance_m: float
     deadline_min: float
@@ -84,102 +85,6 @@ class Metrics:
     delivered_by_scenario_end: int = 0
 
 
-def edge_distance_m(graph: nx.Graph, u: int, v: int) -> float:
-    data = graph.get_edge_data(u, v)
-    if data is None:
-        raise RuntimeError(f"missing route edge {u!r}->{v!r}")
-    if graph.is_multigraph():
-        return min(float(attrs.get(EDGE_WEIGHT, 1.0)) for attrs in data.values())
-    return float(data.get(EDGE_WEIGHT, 1.0))
-
-
-def segment_leg_distances(graph: nx.Graph, route_segment) -> list[tuple[int, int, float]]:
-    path = list(route_segment.node_path)
-    waypoints = list(route_segment.waypoints)
-    if not path or not waypoints:
-        raise RuntimeError("empty route segment")
-    if path[0] != waypoints[0] or path[-1] != waypoints[-1]:
-        raise RuntimeError("segment path endpoints do not match waypoints")
-
-    result: list[tuple[int, int, float]] = []
-    position = 0
-    for start, target in zip(waypoints, waypoints[1:]):
-        if path[position] != start:
-            raise RuntimeError("waypoint order disagrees with materialized path")
-        if target == start:
-            result.append((int(start), int(target), 0.0))
-            continue
-        distance = 0.0
-        next_position = position
-        while next_position + 1 < len(path):
-            a, b = path[next_position], path[next_position + 1]
-            distance += edge_distance_m(graph, a, b)
-            next_position += 1
-            if path[next_position] == target:
-                break
-        else:
-            raise RuntimeError("target waypoint not found in segment path")
-        result.append((int(start), int(target), distance))
-        position = next_position
-    return result
-
-
-def build_actions(graph: nx.Graph, route: BatteryFeasibleRoute) -> tuple[Action, ...]:
-    """Materialize route actions while preserving every ordered charge event.
-
-    Charging events are generated once per route segment that needs energy.
-    The same physical station may therefore appear multiple times in one route,
-    so events must be consumed in route order rather than keyed by station node.
-    """
-
-    actions: list[Action] = []
-    pickup_added = False
-    charge_index = 0
-
-    for segment in route.segments:
-        start = segment.node_path[0]
-
-        if start == route.pickup_node and not pickup_added:
-            actions.append(Action("pickup", node_id=int(start)))
-            pickup_added = True
-
-        if charge_index < len(route.charging_events):
-            event = route.charging_events[charge_index]
-            if event.node_id == start:
-                actions.append(
-                    Action(
-                        "charge",
-                        value=float(event.energy_added_wh),
-                        node_id=int(start),
-                    )
-                )
-                charge_index += 1
-
-        for _, target, distance_m in segment_leg_distances(graph, segment):
-            if distance_m > 0:
-                actions.append(Action("travel", value=float(distance_m), node_id=int(target)))
-            if target == route.pickup_node and not pickup_added:
-                actions.append(Action("pickup", node_id=int(target)))
-                pickup_added = True
-
-    if not pickup_added:
-        raise RuntimeError("route actions never reached pickup")
-    if charge_index != len(route.charging_events):
-        remaining = route.charging_events[charge_index:]
-        raise RuntimeError(
-            "not every planned charging event was materialized in route order: "
-            f"next_unmatched={remaining[0].node_id!r}"
-        )
-
-    actions.append(Action("dropoff", node_id=int(route.dropoff_node)))
-    travel_distance = sum(action.value for action in actions if action.kind == "travel")
-    if not math.isclose(travel_distance, route.total_distance_m, rel_tol=1e-8, abs_tol=1e-5):
-        raise RuntimeError(
-            f"action distance {travel_distance} != route distance {route.total_distance_m}"
-        )
-    return tuple(actions)
-
-
 def truthy(value) -> bool:
     if isinstance(value, bool):
         return value
@@ -187,6 +92,8 @@ def truthy(value) -> bool:
 
 
 def direct_distance_m(graph: nx.Graph, order: Order) -> float:
+    """Exact A* pickup->dropoff distance using Haversine as lower bound."""
+
     def heuristic(a: int, b: int) -> float:
         da, db = graph.nodes[a], graph.nodes[b]
         lat1 = math.radians(float(da["y"]))
@@ -210,36 +117,112 @@ def direct_distance_m(graph: nx.Graph, order: Order) -> float:
     )
 
 
-def nearest_available_capable_robot(
-    graph: nx.Graph,
+def candidate_robots_in_distance_order(
     order: Order,
     robots,
-    *,
-    excluded_robot_ids: set[int] | None = None,
-):
-    excluded = excluded_robot_ids or set()
+    oracle: DistanceOracle,
+) -> Iterator[tuple[object, float]]:
+    """Yield available capable robots from nearest to farthest with one search."""
+
     candidates = [
-        r
-        for r in robots
-        if r.available and r.can_hold(order.item) and r.spec.id not in excluded
+        robot
+        for robot in robots
+        if robot.available and robot.can_hold(order.item)
     ]
     if not candidates:
-        return None
+        return
 
     by_node: dict[int, list] = {}
     for robot in candidates:
         by_node.setdefault(int(robot.node_id), []).append(robot)
     for node_robots in by_node.values():
-        node_robots.sort(key=lambda r: r.spec.id)
+        node_robots.sort(key=lambda robot: robot.spec.id)
 
-    sources = sorted(by_node, key=lambda n: by_node[n][0].spec.id)
-    _, path = nx.multi_source_dijkstra(
-        graph,
-        sources=sources,
-        target=order.pickup_node,
-        weight=EDGE_WEIGHT,
-    )
-    return by_node[int(path[0])][0]
+    # One outward Dijkstra from the pickup.  If the nearest robot is
+    # battery-infeasible, iteration simply continues to the next target; the
+    # shortest-path search is not restarted.
+    for nearest in oracle.iter_nearest_targets(order.pickup_node, by_node):
+        for robot in by_node[int(nearest.node_id)]:
+            yield robot, nearest.distance_m
+
+
+def leg_distance_m(router: BatteryFeasibleRouter, source: int, target: int) -> float:
+    """Exact waypoint-leg distance without constructing its street-node path."""
+
+    if source == target:
+        return 0.0
+    if source in router.station_set:
+        return router.charger_index.distance(source, target)
+    if target in router.station_set:
+        return router.charger_index.distance(target, source)
+    return router.distance_oracle.distance(source, target)
+
+
+def build_actions(
+    router: BatteryFeasibleRouter,
+    route: BatteryRouteQuote,
+) -> tuple[Action, ...]:
+    """Build semantic actions directly from a route quote.
+
+    This benchmark never reroutes a busy robot, so it only needs exact travel
+    distances/times between semantic waypoints.  It deliberately avoids
+    materializing full node-by-node street paths.  The general router can still
+    materialize a quote when a policy/simulator needs edge-level movement.
+    """
+
+    actions: list[Action] = []
+    pickup_added = False
+    charge_index = 0
+
+    for segment in route.segments:
+        start = int(segment.waypoints[0])
+        if start == route.pickup_node and not pickup_added:
+            actions.append(Action("pickup", node_id=start))
+            pickup_added = True
+
+        if charge_index < len(route.charging_events):
+            event = route.charging_events[charge_index]
+            if event.node_id == segment.waypoints[0]:
+                actions.append(
+                    Action(
+                        "charge",
+                        value=float(event.energy_added_wh),
+                        node_id=start,
+                    )
+                )
+                charge_index += 1
+
+        for source, target in zip(segment.waypoints, segment.waypoints[1:]):
+            distance = leg_distance_m(router, int(source), int(target))
+            if distance > 0:
+                actions.append(
+                    Action("travel", value=float(distance), node_id=int(target))
+                )
+            if target == route.pickup_node and not pickup_added:
+                actions.append(Action("pickup", node_id=int(target)))
+                pickup_added = True
+
+    if not pickup_added:
+        raise RuntimeError("route actions never reached pickup")
+    if charge_index != len(route.charging_events):
+        remaining = route.charging_events[charge_index:]
+        raise RuntimeError(
+            "not every planned charging event was materialized in route order: "
+            f"next_unmatched={remaining[0].node_id!r}"
+        )
+
+    actions.append(Action("dropoff", node_id=int(route.dropoff_node)))
+    travel_distance = sum(action.value for action in actions if action.kind == "travel")
+    if not math.isclose(
+        travel_distance,
+        route.total_distance_m,
+        rel_tol=2e-6,
+        abs_tol=0.1,
+    ):
+        raise RuntimeError(
+            f"action distance {travel_distance} != route distance {route.total_distance_m}"
+        )
+    return tuple(actions)
 
 
 def percentile(values: list[float], p: float) -> float:
@@ -264,9 +247,15 @@ def main() -> None:
     wall_start = time.perf_counter()
     print(f"loading graph: {args.graph}", flush=True)
     graph = nx.read_graphml(args.graph, node_type=int)
-    print(f"graph nodes={graph.number_of_nodes():,} edges={graph.number_of_edges():,}", flush=True)
+    print(
+        f"graph nodes={graph.number_of_nodes():,} edges={graph.number_of_edges():,}",
+        flush=True,
+    )
     scenario = Scenario.load_json(args.scenario)
-    print(f"orders={len(scenario.orders):,} duration={scenario.duration_minutes:.1f} min", flush=True)
+    print(
+        f"orders={len(scenario.orders):,} duration={scenario.duration_minutes:.1f} min",
+        flush=True,
+    )
 
     station_nodes = tuple(
         int(node)
@@ -274,10 +263,35 @@ def main() -> None:
         if truthy(data.get("is_charging_station", False))
     )
     print(f"charging stations={len(station_nodes):,}", flush=True)
-    router = BatteryFeasibleRouter(graph, station_nodes=station_nodes, edge_weight=EDGE_WEIGHT)
+
     robots = create_default_fleet(graph, seed=scenario.seed)
     robot_by_id = {r.spec.id: r for r in robots}
     print(f"robots={len(robots):,} types={fleet_type_summary(robots)}", flush=True)
+
+    # Shared immutable routing services.  The charger index replaces repeated
+    # 272k-node cutoff Dijkstras inside every candidate route evaluation.
+    oracle = DistanceOracle(graph, edge_weight=EDGE_WEIGHT)
+    index_start = time.perf_counter()
+    print("building shared charger distance index...", flush=True)
+    charger_index = ChargerDistanceIndex(
+        graph,
+        station_nodes,
+        oracle=oracle,
+        edge_weight=EDGE_WEIGHT,
+        build_dense=True,
+    )
+    print(
+        f"charger index dense={charger_index.is_dense} "
+        f"build={time.perf_counter()-index_start:.1f}s",
+        flush=True,
+    )
+    router = BatteryFeasibleRouter(
+        graph,
+        station_nodes=station_nodes,
+        edge_weight=EDGE_WEIGHT,
+        distance_oracle=oracle,
+        charger_index=charger_index,
+    )
 
     station_state = {node: StationState() for node in station_nodes}
     plans: dict[int, PlanState] = {}
@@ -292,6 +306,14 @@ def main() -> None:
 
     for order in scenario.orders:
         push_event(order.request_time_min, 2, "order_arrival", order)
+
+    def get_direct_distance(order: Order) -> float:
+        direct = direct_cache.get(order.id)
+        if direct is None:
+            direct = direct_distance_m(graph, order)
+            direct_cache[order.id] = direct
+            oracle.remember_distance(order.pickup_node, order.dropoff_node, direct)
+        return direct
 
     def start_charge(
         robot_id: int,
@@ -310,7 +332,12 @@ def main() -> None:
         duration = energy_wh / DEFAULT_CHARGING_POWER_W * 60.0
         push_event(now + duration, 0, "charge_complete", (robot_id, station_node))
 
-    def request_charge(robot_id: int, station_node: int, energy_wh: float, now: float) -> None:
+    def request_charge(
+        robot_id: int,
+        station_node: int,
+        energy_wh: float,
+        now: float,
+    ) -> None:
         state = station_state[station_node]
         if state.active < DEFAULT_NUMBER_OF_PORTS:
             start_charge(robot_id, station_node, energy_wh, now)
@@ -326,7 +353,12 @@ def main() -> None:
             action = plan.actions[plan.action_index]
             plan.action_index += 1
             if action.kind == "travel":
-                push_event(now + action.value / robot.spec.speed_mps / 60.0, 1, "robot_ready", robot_id)
+                push_event(
+                    now + action.value / robot.spec.speed_mps / 60.0,
+                    1,
+                    "robot_ready",
+                    robot_id,
+                )
                 return
             if action.kind == "pickup":
                 plan.pickup_completed_at_min = now + PICKUP_HANDLING_MIN
@@ -337,35 +369,50 @@ def main() -> None:
                 request_charge(robot_id, action.node_id, action.value, now)
                 return
             if action.kind == "dropoff":
-                push_event(now + DROPOFF_HANDLING_MIN, 0, "delivery_complete", robot_id)
+                push_event(
+                    now + DROPOFF_HANDLING_MIN,
+                    0,
+                    "delivery_complete",
+                    robot_id,
+                )
                 return
         raise RuntimeError("robot plan exhausted without dropoff")
 
-    def nearest_feasible_robot_and_route(order: Order):
-        excluded_robot_ids: set[int] = set()
-        while True:
-            robot = nearest_available_capable_robot(
-                graph,
-                order,
-                robots,
-                excluded_robot_ids=excluded_robot_ids,
-            )
-            if robot is None:
-                return None
+    def nearest_feasible_robot_and_quote(
+        order: Order,
+    ) -> tuple[object, BatteryRouteQuote, float] | None:
+        direct = get_direct_distance(order)
+        for robot, start_to_pickup in candidate_robots_in_distance_order(
+            order,
+            robots,
+            oracle,
+        ):
             try:
-                route = router.plan(robot, order.pickup_node, order.dropoff_node)
+                quote = router.evaluate(
+                    robot,
+                    order.pickup_node,
+                    order.dropoff_node,
+                    start_to_pickup_m=start_to_pickup,
+                    pickup_to_dropoff_m=direct,
+                )
             except NoFeasibleBatteryRoute:
-                excluded_robot_ids.add(robot.spec.id)
                 continue
-            return robot, route
+            return robot, quote, direct
+        return None
 
-    def assign_order(order: Order, robot, route: BatteryFeasibleRoute, now: float) -> None:
-        direct = direct_cache.get(order.id)
-        if direct is None:
-            direct = direct_distance_m(graph, order)
-            direct_cache[order.id] = direct
-        deadline = delivery_deadline_min(order.request_time_min, direct, order.importance)
-        actions = build_actions(graph, route)
+    def assign_order(
+        order: Order,
+        robot,
+        route: BatteryRouteQuote,
+        direct: float,
+        now: float,
+    ) -> None:
+        deadline = delivery_deadline_min(
+            order.request_time_min,
+            direct,
+            order.importance,
+        )
+        actions = build_actions(router, route)
 
         robot.available = False
         robot.current_order_id = order.id
@@ -381,7 +428,10 @@ def main() -> None:
         metrics.route_distances_m.append(route.total_distance_m)
         metrics.direct_distances_m.append(direct)
         metrics.planned_service_times.append(
-            route.travel_time_min + route.charging_time_min + PICKUP_HANDLING_MIN + DROPOFF_HANDLING_MIN
+            route.travel_time_min
+            + route.charging_time_min
+            + PICKUP_HANDLING_MIN
+            + DROPOFF_HANDLING_MIN
         )
         metrics.assignments_by_type[
             getattr(robot.spec, "display_name", type(robot.spec).__name__)
@@ -394,12 +444,12 @@ def main() -> None:
         while pending:
             assigned = False
             for idx, order in enumerate(pending):
-                feasible = nearest_feasible_robot_and_route(order)
+                feasible = nearest_feasible_robot_and_quote(order)
                 if feasible is None:
                     continue
-                robot, route = feasible
+                robot, route, direct = feasible
                 pending.pop(idx)
-                assign_order(order, robot, route, now)
+                assign_order(order, robot, route, direct, now)
                 assigned = True
                 break
             if not assigned:
@@ -471,16 +521,24 @@ def main() -> None:
         )
 
     queue_total = float(sum(metrics.queue_waits_min))
-    peak_queues = sorted((state.peak_queue for state in station_state.values()), reverse=True)
+    peak_queues = sorted(
+        (state.peak_queue for state in station_state.values()),
+        reverse=True,
+    )
     results = {
         "scenario": scenario.graph_name,
         "scenario_seed": scenario.seed,
         "orders": len(scenario.orders),
         "robots": len(robots),
-        "fleet_types": {str(k.value): int(v) for k, v in fleet_type_summary(robots).items()},
+        "fleet_types": {
+            str(k.value): int(v)
+            for k, v in fleet_type_summary(robots).items()
+        },
         "charging_stations": len(station_nodes),
         "charger_power_w": DEFAULT_CHARGING_POWER_W,
         "ports_per_station": DEFAULT_NUMBER_OF_PORTS,
+        "routing_index_dense": charger_index.is_dense,
+        "routing_index_build_seconds": time.perf_counter() - index_start,
         "delivered": delivered,
         "on_time": metrics.on_time,
         "on_time_pct": 100.0 * metrics.on_time / delivered,
@@ -499,10 +557,16 @@ def main() -> None:
         "total_robot_distance_km": float(sum(metrics.route_distances_m)) / 1000.0,
         "charge_sessions": metrics.charge_sessions,
         "queued_charge_sessions": metrics.queued_charge_sessions,
-        "queued_charge_pct": 100.0 * metrics.queued_charge_sessions / max(1, metrics.charge_sessions),
+        "queued_charge_pct": (
+            100.0 * metrics.queued_charge_sessions / max(1, metrics.charge_sessions)
+        ),
         "total_charger_queue_wait_min": queue_total,
-        "mean_queue_wait_if_queued_min": float(np.mean(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0,
-        "median_queue_wait_if_queued_min": float(np.median(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0,
+        "mean_queue_wait_if_queued_min": (
+            float(np.mean(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0
+        ),
+        "median_queue_wait_if_queued_min": (
+            float(np.median(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0
+        ),
         "max_queue_wait_min": max(metrics.queue_waits_min, default=0.0),
         "max_station_queue_length": peak_queues[0] if peak_queues else 0,
         "second_max_station_queue_length": peak_queues[1] if len(peak_queues) > 1 else 0,
