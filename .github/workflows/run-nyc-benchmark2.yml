@@ -6,8 +6,7 @@ on:
     paths:
       - '.github/workflows/run-nyc-benchmark2.yml'
       - 'scripts/run_nyc_benchmark2.py'
-      - 'scripts/run_nyc_benchmark2_diagnostic.py'
-      - 'scripts/run_nyc_benchmark2_fixed.py'
+      - 'scripts/run_nyc_benchmark2_fast.py'
       - 'scripts/initialize_chargers.py'
       - 'src/delivery_fleet/robot.py'
       - 'src/delivery_fleet/routing.py'
@@ -34,8 +33,7 @@ jobs:
       - name: Compile benchmark 2
         run: |
           python -m py_compile scripts/run_nyc_benchmark2.py
-          python -m py_compile scripts/run_nyc_benchmark2_diagnostic.py
-          python -m py_compile scripts/run_nyc_benchmark2_fixed.py
+          python -m py_compile scripts/run_nyc_benchmark2_fast.py
 
       - name: Download NYC graph artifact
         env:
@@ -45,17 +43,12 @@ jobs:
           gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
           ls -lh data/graphs/new_york_city.graphml
 
-      - name: Initialize charging stations
-        env:
-          PYTHONPATH: src
-        run: python scripts/initialize_chargers.py data/graphs/new_york_city.graphml
-
       - name: Run benchmark 2
         env:
           PYTHONPATH: src
         run: |
           set -o pipefail
-          python scripts/run_nyc_benchmark2_fixed.py | tee benchmark2.log
+          python scripts/run_nyc_benchmark2_fast.py | tee benchmark2.log
 
       - name: Upload benchmark 2 results
         if: always()
