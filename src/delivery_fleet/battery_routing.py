@@ -1,14 +1,14 @@
 """Optimal battery-feasible routing through charging stations.
 
+The expensive street-graph work is delegated to the shared routing layer.  A
+policy can first call :meth:`BatteryFeasibleRouter.evaluate` for many candidate
+assignments and only materialize the full node-by-node path for the route it
+actually commits.
+
 For the V1 model all charging stations have the same charging power, charging
 is linear and partial charging is allowed, and there is no charger queueing
-cost in route planning. Under those assumptions, for a route of total distance
-D the minimum charging time is a monotone function of D. Therefore the
-minimum-time feasible route is exactly the minimum-distance feasible route.
-
-The router searches a meta-graph of charging stops while enforcing the order
-robot_location -> pickup -> dropoff and a final battery reserve sufficient to
-reach the nearest charger from the dropoff.
+cost in route planning. Under those assumptions minimum feasible total time is
+obtained by the minimum-distance battery-feasible route.
 """
 
 from __future__ import annotations
@@ -26,13 +26,14 @@ from .charging import (
     DISTANCE_TO_NEAREST_CHARGING_STATION_M_ATTR,
 )
 from .robot import RobotState
+from .routing import ChargerDistanceIndex, DistanceOracle
 
 NodeId = Hashable
-_EPS = 1e-8
+_EPS = 1e-3  # dense charger index stores city-scale distances as float32
 
 
 class NoFeasibleBatteryRoute(RuntimeError):
-    """Raised when the selected robot cannot safely serve the requested route."""
+    """Raised when a robot cannot safely serve the requested route."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +43,31 @@ class ChargeEvent:
     duration_min: float
     battery_before_wh: float
     battery_after_wh: float
+
+
+@dataclass(frozen=True, slots=True)
+class RouteQuoteSegment:
+    """A route segment described only by semantic waypoints and exact distance."""
+
+    waypoints: tuple[NodeId, ...]
+    distance_m: float
+    ends_at_charger: bool
+
+
+@dataclass(frozen=True, slots=True)
+class BatteryRouteQuote:
+    """Cheap exact route evaluation before street-node path materialization."""
+
+    pickup_node: NodeId
+    dropoff_node: NodeId
+    segments: tuple[RouteQuoteSegment, ...]
+    charging_events: tuple[ChargeEvent, ...]
+    total_distance_m: float
+    travel_time_min: float
+    charging_time_min: float
+    total_time_min: float
+    arrival_battery_wh: float
+    required_dropoff_reserve_wh: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,8 +107,14 @@ class _MetaEdge:
     waypoints: tuple[NodeId, ...]
 
 
+def _truthy(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes"}
+
+
 class BatteryFeasibleRouter:
-    """Find the fastest safe route for one already-selected robot."""
+    """Evaluate and materialize safe routes using shared immutable indices."""
 
     def __init__(
         self,
@@ -90,6 +122,9 @@ class BatteryFeasibleRouter:
         station_nodes: Iterable[NodeId] | None = None,
         *,
         edge_weight: str = "length",
+        distance_oracle: DistanceOracle | None = None,
+        charger_index: ChargerDistanceIndex | None = None,
+        build_dense_charger_index: bool = True,
     ) -> None:
         if graph.is_directed():
             raise ValueError("battery router currently expects an undirected graph")
@@ -102,7 +137,7 @@ class BatteryFeasibleRouter:
             station_nodes = [
                 node
                 for node, data in graph.nodes(data=True)
-                if bool(data.get("is_charging_station"))
+                if _truthy(data.get("is_charging_station", False))
             ]
         self.station_nodes = tuple(sorted(set(station_nodes), key=lambda x: str(x)))
         self.station_set = set(self.station_nodes)
@@ -120,41 +155,28 @@ class BatteryFeasibleRouter:
                 "for every node"
             )
 
-        self._station_neighbor_cache: dict[
-            tuple[NodeId, float], dict[NodeId, float]
-        ] = {}
-
-    def _distances_within(self, source: NodeId, cutoff_m: float) -> dict[NodeId, float]:
-        return dict(
-            nx.single_source_dijkstra_path_length(
-                self.graph,
-                source,
-                cutoff=max(0.0, cutoff_m),
-                weight=self.edge_weight,
-            )
+        self.distance_oracle = distance_oracle or DistanceOracle(
+            graph,
+            edge_weight=edge_weight,
         )
+        if charger_index is None:
+            charger_index = ChargerDistanceIndex(
+                graph,
+                self.station_nodes,
+                oracle=self.distance_oracle,
+                edge_weight=edge_weight,
+                build_dense=build_dense_charger_index,
+            )
+        if set(charger_index.station_nodes) != self.station_set:
+            raise ValueError("charger index stations do not match router stations")
+        self.charger_index = charger_index
 
-    def _station_neighbors(
-        self, source: NodeId, cutoff_m: float
-    ) -> dict[NodeId, float]:
-        key = (source, round(float(cutoff_m), 6))
-        if source in self.station_set and key in self._station_neighbor_cache:
-            return self._station_neighbor_cache[key]
-
-        distances = self._distances_within(source, cutoff_m)
-        result = {
-            station: float(distances[station])
-            for station in self.station_nodes
-            if station in distances and station != source
-        }
-        if source in self.station_set:
-            self._station_neighbor_cache[key] = result
-        return result
-
-    def _path_length(self, path: list[NodeId]) -> float:
+    def _path_length(self, path: tuple[NodeId, ...] | list[NodeId]) -> float:
         total = 0.0
         for a, b in zip(path, path[1:]):
             data = self.graph.get_edge_data(a, b)
+            if data is None:
+                raise RuntimeError(f"materialized path contains missing edge {a!r}->{b!r}")
             if self.graph.is_multigraph():
                 total += min(
                     float(attrs.get(self.edge_weight, 1.0))
@@ -164,48 +186,53 @@ class BatteryFeasibleRouter:
                 total += float(data.get(self.edge_weight, 1.0))
         return total
 
-    def _materialize_segment(
-        self,
-        edge: _MetaEdge,
-        *,
-        ends_at_charger: bool,
-    ) -> RouteSegment:
-        waypoints = edge.waypoints
-        if not waypoints:
-            raise RuntimeError("internal route edge has no waypoints")
+    def _materialize_segment(self, segment: RouteQuoteSegment) -> RouteSegment:
+        if not segment.waypoints:
+            raise RuntimeError("route segment has no waypoints")
 
-        full_path: list[NodeId] = [waypoints[0]]
-        for a, b in zip(waypoints, waypoints[1:]):
+        full_path: list[NodeId] = [segment.waypoints[0]]
+        for a, b in zip(segment.waypoints, segment.waypoints[1:]):
             if a == b:
                 continue
-            leg = nx.shortest_path(
-                self.graph,
-                source=a,
-                target=b,
-                weight=self.edge_weight,
-                method="dijkstra",
-            )
+            leg = self.charger_index.path(a, b)
             full_path.extend(leg[1:])
 
         actual_distance = self._path_length(full_path)
+        # The dense station index stores float32 distances, so allow a few cm
+        # of representation error when validating the reconstructed exact path.
         if not math.isclose(
-            actual_distance, edge.distance_m, rel_tol=1e-8, abs_tol=1e-6
+            actual_distance,
+            segment.distance_m,
+            rel_tol=2e-6,
+            abs_tol=0.05,
         ):
-            raise RuntimeError("materialized route length disagrees with meta route")
+            raise RuntimeError(
+                "materialized route length disagrees with route quote: "
+                f"{actual_distance} != {segment.distance_m}"
+            )
 
         return RouteSegment(
-            waypoints=waypoints,
+            waypoints=segment.waypoints,
             node_path=tuple(full_path),
             distance_m=float(actual_distance),
-            ends_at_charger=ends_at_charger,
+            ends_at_charger=segment.ends_at_charger,
         )
 
-    def plan(
+    def evaluate(
         self,
         robot: RobotState,
         pickup_node: NodeId,
         dropoff_node: NodeId,
-    ) -> BatteryFeasibleRoute:
+        *,
+        start_to_pickup_m: float | None = None,
+        pickup_to_dropoff_m: float | None = None,
+    ) -> BatteryRouteQuote:
+        """Return an exact cost/feasibility quote without building street paths.
+
+        Optional known pair distances let a policy reuse work it already did
+        while ranking candidates (for example the outward nearest-robot search).
+        """
+
         if pickup_node not in self.graph or dropoff_node not in self.graph:
             raise ValueError("pickup and dropoff must be graph nodes")
         if pickup_node == dropoff_node:
@@ -213,8 +240,8 @@ class BatteryFeasibleRouter:
 
         start = robot.node_id
         spec = robot.spec
-        full_range = spec.full_battery_range_m
-        current_range = robot.remaining_range_m
+        full_range = float(spec.full_battery_range_m)
+        current_range = float(robot.remaining_range_m)
         reserve_distance = float(
             self.graph.nodes[dropoff_node][
                 DISTANCE_TO_NEAREST_CHARGING_STATION_M_ATTR
@@ -231,8 +258,42 @@ class BatteryFeasibleRouter:
                 "robot is already below the safety reserve needed to reach a charger"
             )
 
-        u_dist = self._distances_within(pickup_node, full_range)
-        v_dist = self._distances_within(dropoff_node, full_range)
+        # These are O(number_of_stations) lookups with the dense index.  The
+        # old implementation ran two large cutoff Dijkstras per candidate.
+        pickup_station_dist = self.charger_index.distances_to_stations(
+            pickup_node,
+            cutoff_m=full_range,
+        )
+        dropoff_station_dist = self.charger_index.distances_to_stations(
+            dropoff_node,
+            cutoff_m=full_range,
+        )
+
+        if pickup_to_dropoff_m is None:
+            pickup_to_dropoff_m = self.distance_oracle.distance(
+                pickup_node,
+                dropoff_node,
+            )
+        else:
+            pickup_to_dropoff_m = float(pickup_to_dropoff_m)
+            self.distance_oracle.remember_distance(
+                pickup_node,
+                dropoff_node,
+                pickup_to_dropoff_m,
+            )
+
+        if start_to_pickup_m is None:
+            if start in self.station_set:
+                start_to_pickup_m = pickup_station_dist.get(start)
+                if start_to_pickup_m is None:
+                    # It can be outside full range; exact pair distance is still
+                    # useful to decide that direct pickup is impossible.
+                    start_to_pickup_m = self.charger_index.distance(start, pickup_node)
+            else:
+                start_to_pickup_m = self.distance_oracle.distance(start, pickup_node)
+        else:
+            start_to_pickup_m = float(start_to_pickup_m)
+            self.distance_oracle.remember_distance(start, pickup_node, start_to_pickup_m)
 
         START = ("start",)
         DONE = ("done",)
@@ -245,6 +306,21 @@ class BatteryFeasibleRouter:
                 return full_range if start_is_station else current_range
             return full_range
 
+        def station_neighbors(source: NodeId, cutoff_m: float) -> dict[NodeId, float]:
+            if source in self.station_set:
+                return self.charger_index.station_neighbors(source, cutoff_m)
+            return self.charger_index.distances_to_stations(
+                source,
+                cutoff_m=cutoff_m,
+                include_self=False,
+            )
+
+        def distance_station_to_pickup(source: NodeId) -> float | None:
+            if source == start:
+                return float(start_to_pickup_m)
+            value = pickup_station_dist.get(source)
+            return None if value is None else float(value)
+
         def neighbors(state: tuple):
             if state == DONE:
                 return
@@ -254,18 +330,18 @@ class BatteryFeasibleRouter:
             available_range = departure_range(state)
 
             if phase == "pre":
-                for station, distance in self._station_neighbors(
-                    source, available_range
+                for station, distance in station_neighbors(
+                    source,
+                    available_range,
                 ).items():
                     yield (
                         ("pre", station),
-                        _MetaEdge(distance, (source, station)),
+                        _MetaEdge(float(distance), (source, station)),
                     )
 
-                d_to_pickup = u_dist.get(source)
+                d_to_pickup = distance_station_to_pickup(source)
                 if d_to_pickup is None or d_to_pickup > available_range + _EPS:
                     return
-                d_to_pickup = float(d_to_pickup)
 
                 if pickup_node in self.station_set:
                     yield (
@@ -274,10 +350,7 @@ class BatteryFeasibleRouter:
                     )
                     return
 
-                for station in self.station_nodes:
-                    d_from_pickup = u_dist.get(station)
-                    if d_from_pickup is None:
-                        continue
+                for station, d_from_pickup in pickup_station_dist.items():
                     segment_distance = d_to_pickup + float(d_from_pickup)
                     if segment_distance <= available_range + _EPS:
                         yield (
@@ -288,31 +361,24 @@ class BatteryFeasibleRouter:
                             ),
                         )
 
-                d_pickup_to_dropoff = u_dist.get(dropoff_node)
-                if d_pickup_to_dropoff is not None:
-                    segment_distance = d_to_pickup + float(d_pickup_to_dropoff)
-                    if (
-                        segment_distance + reserve_distance
-                        <= available_range + _EPS
-                    ):
-                        yield (
-                            DONE,
-                            _MetaEdge(
-                                segment_distance,
-                                (source, pickup_node, dropoff_node),
-                            ),
-                        )
+                direct_segment = d_to_pickup + pickup_to_dropoff_m
+                if direct_segment + reserve_distance <= available_range + _EPS:
+                    yield (
+                        DONE,
+                        _MetaEdge(
+                            direct_segment,
+                            (source, pickup_node, dropoff_node),
+                        ),
+                    )
                 return
 
-            for station, distance in self._station_neighbors(
-                source, full_range
-            ).items():
+            for station, distance in station_neighbors(source, full_range).items():
                 yield (
                     ("post", station),
-                    _MetaEdge(distance, (source, station)),
+                    _MetaEdge(float(distance), (source, station)),
                 )
 
-            d_to_dropoff = v_dist.get(source)
+            d_to_dropoff = dropoff_station_dist.get(source)
             if d_to_dropoff is not None:
                 d_to_dropoff = float(d_to_dropoff)
                 if d_to_dropoff + reserve_distance <= full_range + _EPS:
@@ -357,11 +423,15 @@ class BatteryFeasibleRouter:
         meta_edges.reverse()
 
         segments = tuple(
-            self._materialize_segment(edge, ends_at_charger=ends_at_charger)
+            RouteQuoteSegment(
+                waypoints=edge.waypoints,
+                distance_m=float(edge.distance_m),
+                ends_at_charger=ends_at_charger,
+            )
             for edge, ends_at_charger in meta_edges
         )
 
-        battery = robot.battery_wh
+        battery = float(robot.battery_wh)
         charge_events: list[ChargeEvent] = []
         total_charging_time = 0.0
 
@@ -372,11 +442,11 @@ class BatteryFeasibleRouter:
                 segment.distance_m * spec.energy_per_meter_wh
                 + required_after_segment
             )
-            if required_departure > spec.battery_capacity_wh + 1e-6:
+            if required_departure > spec.battery_capacity_wh + 1e-4:
                 raise RuntimeError("meta route contains an infeasible battery segment")
 
             if battery + _EPS < required_departure:
-                start_node = segment.node_path[0]
+                start_node = segment.waypoints[0]
                 if start_node not in self.station_set:
                     raise RuntimeError("route requires charging at a non-station node")
 
@@ -396,18 +466,18 @@ class BatteryFeasibleRouter:
                 )
 
             battery -= segment.distance_m * spec.energy_per_meter_wh
-            if battery < -1e-6:
+            if battery < -1e-4:
                 raise RuntimeError("battery became negative on a feasible route")
             battery = max(0.0, battery)
 
-        if battery + 1e-6 < reserve_wh:
+        if battery + 1e-4 < reserve_wh:
             raise RuntimeError("route violates required dropoff charger reserve")
 
         total_distance = sum(segment.distance_m for segment in segments)
         travel_time = total_distance / spec.speed_mps / 60.0
         total_time = travel_time + total_charging_time
 
-        return BatteryFeasibleRoute(
+        return BatteryRouteQuote(
             pickup_node=pickup_node,
             dropoff_node=dropoff_node,
             segments=segments,
@@ -419,3 +489,47 @@ class BatteryFeasibleRouter:
             arrival_battery_wh=float(battery),
             required_dropoff_reserve_wh=float(reserve_wh),
         )
+
+    def materialize(
+        self,
+        quote: BatteryRouteQuote,
+        *,
+        speed_mps: float,
+    ) -> BatteryFeasibleRoute:
+        """Build node-by-node street paths only for a route that will be used."""
+
+        segments = tuple(self._materialize_segment(segment) for segment in quote.segments)
+        actual_total_distance = sum(segment.distance_m for segment in segments)
+        actual_travel_time = actual_total_distance / float(speed_mps) / 60.0
+        return BatteryFeasibleRoute(
+            pickup_node=quote.pickup_node,
+            dropoff_node=quote.dropoff_node,
+            segments=segments,
+            charging_events=quote.charging_events,
+            total_distance_m=float(actual_total_distance),
+            travel_time_min=float(actual_travel_time),
+            charging_time_min=quote.charging_time_min,
+            total_time_min=float(actual_travel_time + quote.charging_time_min),
+            arrival_battery_wh=quote.arrival_battery_wh,
+            required_dropoff_reserve_wh=quote.required_dropoff_reserve_wh,
+        )
+
+    def plan(
+        self,
+        robot: RobotState,
+        pickup_node: NodeId,
+        dropoff_node: NodeId,
+        *,
+        start_to_pickup_m: float | None = None,
+        pickup_to_dropoff_m: float | None = None,
+    ) -> BatteryFeasibleRoute:
+        """Compatibility helper: evaluate and immediately materialize one route."""
+
+        quote = self.evaluate(
+            robot,
+            pickup_node,
+            dropoff_node,
+            start_to_pickup_m=start_to_pickup_m,
+            pickup_to_dropoff_m=pickup_to_dropoff_m,
+        )
+        return self.materialize(quote, speed_mps=robot.spec.speed_mps)
