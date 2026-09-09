@@ -12,9 +12,9 @@ with the smallest planned request completion time using only currently known
 commitments. Planned delivery time includes battery-feasible charger detours and
 charging duration but deliberately does not predict future charger queue waits.
 
-This also introduces the waiting-order schedule needed by a later reassignment
-policy: scheduled-but-not-started orders can queue behind the active delivery.
-Benchmark 4 itself never reassigns them.
+The expensive candidate comparison is batched by robot type using the tiny
+compiled charger meta graph. The canonical battery router is called only for the
+predicted winner (and exact ties / numeric fallbacks).
 """
 
 from collections import deque
@@ -23,6 +23,7 @@ import sys
 import time
 import types
 
+import fast_battery_meta as fast_meta
 import run_nyc_benchmark2_fast as fast
 
 
@@ -119,8 +120,6 @@ def _load_benchmark4_namespace() -> dict[str, object]:
         )
 
     def queued_delivery_wait_elapsed(robot_id: int, now: float) -> float:
-        # Include charger waiting already experienced by the active delivery.
-        # Future queue waits remain unknown and are intentionally not predicted.
         for state in station_state.values():
             for request in state.queue:
                 if (
@@ -226,25 +225,30 @@ def _load_benchmark4_namespace() -> dict[str, object]:
             return None
 
         handling = PICKUP_HANDLING_MIN + DROPOFF_HANDLING_MIN
-        ranked: list[tuple[float, int, Candidate]] = []
-        for candidate in candidates:
-            start_delay = max(0.0, candidate.route_start_time_min - now)
-            direct_travel = (
-                candidate.decision_to_pickup_m + direct
-            ) / candidate.robot.spec.speed_mps / 60.0
-            lower_bound = start_delay + direct_travel + handling
-            ranked.append((lower_bound, candidate.robot.spec.id, candidate))
-        ranked.sort(key=lambda item: (item[0], item[1]))
+        ranked = fast_meta.rank_candidates(
+            router,
+            candidates,
+            pickup_node=order.pickup_node,
+            dropoff_node=order.dropoff_node,
+            pickup_to_dropoff_m=direct,
+            now_min=now,
+            handling_min=handling,
+        )
+        finite_ranked = [row for row in ranked if math.isfinite(row.completion_time_min)]
+        B4_STATS["no_feasible_route"] += float(len(ranked) - len(finite_ranked))
+        if not finite_ranked:
+            return None
 
         best: tuple[Candidate, BatteryRouteQuote, float] | None = None
         best_completion = math.inf
         best_robot_id = math.inf
 
-        for index, (lower_bound, robot_id, candidate) in enumerate(ranked):
-            if lower_bound > best_completion + 1e-12:
-                B4_STATS["lower_bound_pruned"] += float(len(ranked) - index)
+        for index, scored in enumerate(finite_ranked):
+            if scored.completion_time_min > best_completion + 1e-9:
+                B4_STATS["lower_bound_pruned"] += float(len(finite_ranked) - index)
                 break
 
+            candidate = scored.candidate
             snapshot = RobotState(
                 spec=candidate.robot.spec,
                 node_id=candidate.route_start_node,
@@ -269,8 +273,21 @@ def _load_benchmark4_namespace() -> dict[str, object]:
                     time.perf_counter() - eval_started
                 )
 
+            if not math.isclose(
+                quote.total_time_min,
+                scored.route_time_min,
+                rel_tol=2e-6,
+                abs_tol=1e-2,
+            ):
+                raise RuntimeError(
+                    "fast battery meta score disagrees with canonical router: "
+                    f"robot={scored.robot_id} fast={scored.route_time_min} "
+                    f"canonical={quote.total_time_min}"
+                )
+
             start_delay = max(0.0, candidate.route_start_time_min - now)
             exact_completion = start_delay + quote.total_time_min + handling
+            robot_id = scored.robot_id
             if (
                 exact_completion < best_completion - 1e-12
                 or (
@@ -483,6 +500,12 @@ def _load_benchmark4_namespace() -> dict[str, object]:
             B4_STATS["route_evaluations"]
             / max(1.0, B4_STATS["selection_calls"])
         ),
+        "battery_meta_batch_seconds": float(fast_meta.FAST_META_STATS["seconds"]),
+        "battery_meta_batch_mean_ms": (
+            1000.0 * fast_meta.FAST_META_STATS["seconds"]
+            / max(1.0, fast_meta.FAST_META_STATS["calls"])
+        ),
+        "battery_meta_type_solves": int(fast_meta.FAST_META_STATS["type_solves"]),
         "assignments_to_busy_robots": int(B4_STATS["assignments_to_busy_robots"]),
         "max_waiting_orders_on_robot": int(B4_STATS["max_waiting_orders_on_robot"]),
 '''
@@ -494,6 +517,7 @@ def _load_benchmark4_namespace() -> dict[str, object]:
     module.__package__ = None
     module.__dict__["B4_STATS"] = B4_STATS
     module.__dict__["deque"] = deque
+    module.__dict__["fast_meta"] = fast_meta
     sys.modules[module_name] = module
     exec(compile(source, str(fast.TARGET), "exec"), module.__dict__)
     return module.__dict__
@@ -513,6 +537,8 @@ def main() -> None:
         elapsed = time.perf_counter() - started
         evals = int(B4_STATS["route_evaluations"])
         eval_seconds = float(B4_STATS["route_evaluate_seconds"])
+        meta_calls = int(fast_meta.FAST_META_STATS["calls"])
+        meta_seconds = float(fast_meta.FAST_META_STATS["seconds"])
         print(
             "BENCHMARK4_POLICY_STATS "
             f"selection_calls={int(B4_STATS['selection_calls'])} "
@@ -520,7 +546,10 @@ def main() -> None:
             f"route_evaluations={evals} "
             f"route_eval_seconds={eval_seconds:.3f} "
             f"route_eval_mean_ms={1000.0 * eval_seconds / max(1, evals):.3f} "
-            f"lower_bound_pruned={int(B4_STATS['lower_bound_pruned'])} "
+            f"meta_batch_seconds={meta_seconds:.3f} "
+            f"meta_batch_mean_ms={1000.0 * meta_seconds / max(1, meta_calls):.3f} "
+            f"meta_type_solves={int(fast_meta.FAST_META_STATS['type_solves'])} "
+            f"pruned={int(B4_STATS['lower_bound_pruned'])} "
             f"no_feasible={int(B4_STATS['no_feasible_route'])} "
             f"busy_assignments={int(B4_STATS['assignments_to_busy_robots'])} "
             f"max_waiting={int(B4_STATS['max_waiting_orders_on_robot'])}",
