@@ -1,0 +1,66 @@
+name: Run NYC benchmark 3
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/run-nyc-benchmark3.yml'
+      - 'scripts/run_nyc_benchmark3.py'
+      - 'scripts/run_nyc_benchmark2.py'
+      - 'scripts/run_nyc_benchmark2_fast.py'
+      - 'scripts/initialize_chargers.py'
+      - 'src/delivery_fleet/robot.py'
+      - 'src/delivery_fleet/routing.py'
+      - 'src/delivery_fleet/battery_routing.py'
+      - 'src/delivery_fleet/charging.py'
+      - 'src/delivery_fleet/fleet.py'
+      - 'src/delivery_fleet/deadlines.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install numpy scipy networkx
+
+      - name: Compile benchmark 3
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark2.py
+          python -m py_compile scripts/run_nyc_benchmark2_fast.py
+          python -m py_compile scripts/run_nyc_benchmark3.py
+
+      - name: Download NYC graph artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+          ls -lh data/graphs/new_york_city.graphml
+
+      - name: Run benchmark 3
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark3.py | tee benchmark3.log
+
+      - name: Upload benchmark 3 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyc-benchmark3-results
+          path: |
+            benchmark3_results.json
+            benchmark3.log
+          if-no-files-found: warn
