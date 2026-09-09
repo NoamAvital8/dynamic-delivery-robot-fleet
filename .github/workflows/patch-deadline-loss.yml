@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           python -m py_compile scripts/run_nyc_benchmark.py scripts/run_nyc_benchmark2.py scripts/run_nyc_benchmark3.py scripts/run_nyc_benchmark4.py
-          python -m pip install -q pytest
+          python -m pip install -q pytest networkx numpy scipy
           PYTHONPATH=src pytest -q tests/test_deadlines.py
 
       - name: Commit patch
