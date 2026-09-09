@@ -1,0 +1,128 @@
+name: Run all NYC benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/run-all-nyc-benchmarks.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run Benchmark 1
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark_fast.py | tee benchmark1.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allrun-benchmark1
+          path: |
+            benchmark_results.json
+            benchmark1.log
+
+  benchmark2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run Benchmark 2
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark2_fast2.py | tee benchmark2.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allrun-benchmark2
+          path: |
+            benchmark2_results.json
+            benchmark2.log
+
+  benchmark3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run Benchmark 3
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark3.py | tee benchmark3.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allrun-benchmark3
+          path: |
+            benchmark3_results.json
+            benchmark3.log
+
+  benchmark4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run Benchmark 4
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark4.py | tee benchmark4.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allrun-benchmark4
+          path: |
+            benchmark4_results.json
+            benchmark4.log
