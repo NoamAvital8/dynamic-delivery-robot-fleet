@@ -25,11 +25,11 @@ from .charging import (
     DEFAULT_CHARGING_POWER_W,
     DISTANCE_TO_NEAREST_CHARGING_STATION_M_ATTR,
 )
-from .robot import RobotState
+from .robot import BATTERY_EPS_WH, RobotState
 from .routing import ChargerDistanceIndex, DistanceOracle
 
 NodeId = Hashable
-_EPS = 1e-3  # dense charger index stores city-scale distances as float32
+_DISTANCE_EPS_M = 1e-3  # dense charger index stores city-scale distances as float32
 
 
 class NoFeasibleBatteryRoute(RuntimeError):
@@ -198,8 +198,6 @@ class BatteryFeasibleRouter:
             full_path.extend(leg[1:])
 
         actual_distance = self._path_length(full_path)
-        # The dense station index stores float32 distances, so allow a few cm
-        # of representation error when validating the reconstructed exact path.
         if not math.isclose(
             actual_distance,
             segment.distance_m,
@@ -253,13 +251,14 @@ class BatteryFeasibleRouter:
         start_nearest_distance = float(
             self.graph.nodes[start][DISTANCE_TO_NEAREST_CHARGING_STATION_M_ATTR]
         )
-        if not start_is_station and current_range + _EPS < start_nearest_distance:
+        if (
+            not start_is_station
+            and current_range + _DISTANCE_EPS_M < start_nearest_distance
+        ):
             raise NoFeasibleBatteryRoute(
                 "robot is already below the safety reserve needed to reach a charger"
             )
 
-        # These are O(number_of_stations) lookups with the dense index.  The
-        # old implementation ran two large cutoff Dijkstras per candidate.
         pickup_station_dist = self.charger_index.distances_to_stations(
             pickup_node,
             cutoff_m=full_range,
@@ -286,8 +285,6 @@ class BatteryFeasibleRouter:
             if start in self.station_set:
                 start_to_pickup_m = pickup_station_dist.get(start)
                 if start_to_pickup_m is None:
-                    # It can be outside full range; exact pair distance is still
-                    # useful to decide that direct pickup is impossible.
                     start_to_pickup_m = self.charger_index.distance(start, pickup_node)
             else:
                 start_to_pickup_m = self.distance_oracle.distance(start, pickup_node)
@@ -340,7 +337,10 @@ class BatteryFeasibleRouter:
                     )
 
                 d_to_pickup = distance_station_to_pickup(source)
-                if d_to_pickup is None or d_to_pickup > available_range + _EPS:
+                if (
+                    d_to_pickup is None
+                    or d_to_pickup > available_range + _DISTANCE_EPS_M
+                ):
                     return
 
                 if pickup_node in self.station_set:
@@ -352,7 +352,7 @@ class BatteryFeasibleRouter:
 
                 for station, d_from_pickup in pickup_station_dist.items():
                     segment_distance = d_to_pickup + float(d_from_pickup)
-                    if segment_distance <= available_range + _EPS:
+                    if segment_distance <= available_range + _DISTANCE_EPS_M:
                         yield (
                             ("post", station),
                             _MetaEdge(
@@ -362,7 +362,10 @@ class BatteryFeasibleRouter:
                         )
 
                 direct_segment = d_to_pickup + pickup_to_dropoff_m
-                if direct_segment + reserve_distance <= available_range + _EPS:
+                if (
+                    direct_segment + reserve_distance
+                    <= available_range + _DISTANCE_EPS_M
+                ):
                     yield (
                         DONE,
                         _MetaEdge(
@@ -381,7 +384,10 @@ class BatteryFeasibleRouter:
             d_to_dropoff = dropoff_station_dist.get(source)
             if d_to_dropoff is not None:
                 d_to_dropoff = float(d_to_dropoff)
-                if d_to_dropoff + reserve_distance <= full_range + _EPS:
+                if (
+                    d_to_dropoff + reserve_distance
+                    <= full_range + _DISTANCE_EPS_M
+                ):
                     yield (
                         DONE,
                         _MetaEdge(d_to_dropoff, (source, dropoff_node)),
@@ -401,7 +407,7 @@ class BatteryFeasibleRouter:
 
             for next_state, edge in neighbors(state):
                 candidate = distance_so_far + edge.distance_m
-                if candidate + _EPS < best.get(next_state, math.inf):
+                if candidate + _DISTANCE_EPS_M < best.get(next_state, math.inf):
                     best[next_state] = candidate
                     previous[next_state] = (state, edge)
                     heapq.heappush(
@@ -442,10 +448,10 @@ class BatteryFeasibleRouter:
                 segment.distance_m * spec.energy_per_meter_wh
                 + required_after_segment
             )
-            if required_departure > spec.battery_capacity_wh + 1e-4:
+            if required_departure > spec.battery_capacity_wh + BATTERY_EPS_WH:
                 raise RuntimeError("meta route contains an infeasible battery segment")
 
-            if battery + _EPS < required_departure:
+            if battery + BATTERY_EPS_WH < required_departure:
                 start_node = segment.waypoints[0]
                 if start_node not in self.station_set:
                     raise RuntimeError("route requires charging at a non-station node")
@@ -466,11 +472,11 @@ class BatteryFeasibleRouter:
                 )
 
             battery -= segment.distance_m * spec.energy_per_meter_wh
-            if battery < -1e-4:
+            if battery < -BATTERY_EPS_WH:
                 raise RuntimeError("battery became negative on a feasible route")
             battery = max(0.0, battery)
 
-        if battery + 1e-4 < reserve_wh:
+        if battery + BATTERY_EPS_WH < reserve_wh:
             raise RuntimeError("route violates required dropoff charger reserve")
 
         total_distance = sum(segment.distance_m for segment in segments)
