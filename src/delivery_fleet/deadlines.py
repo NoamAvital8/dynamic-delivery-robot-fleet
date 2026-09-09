@@ -1,4 +1,4 @@
-"""Distance- and importance-dependent delivery deadlines.
+"""Distance- and importance-dependent delivery deadlines and loss.
 
 V1 deadlines are relative to request release time and use the direct graph
 shortest-path distance between pickup and drop-off:
@@ -10,6 +10,14 @@ shortest-path distance between pickup and drop-off:
 
 Distance is measured in meters, speed in meters/second, and all returned times
 are in minutes.
+
+The delivery loss uses elapsed request-to-delivery time ``T`` and the relative
+deadline allowance ``D`` (not the absolute simulation-time deadline):
+
+    loss = w * min(D, T) + (w + 1)^2 * max(0, T - D)
+
+Thus every minute up to the deadline has the regular importance weight ``w``,
+while every minute after the deadline has the larger weight ``(w + 1)^2``.
 """
 
 from __future__ import annotations
@@ -73,4 +81,32 @@ def delivery_deadline_min(
         reference_speed_mps=reference_speed_mps,
         fixed_buffer_min=fixed_buffer_min,
         importance_slack_min=importance_slack_min,
+    )
+
+
+def delivery_loss(
+    delivery_time_min: float,
+    deadline_allowance_min: float,
+    importance: float,
+) -> float:
+    """Return deadline-aware loss for one delivered order.
+
+    ``delivery_time_min`` is elapsed request-to-delivery time ``T`` and
+    ``deadline_allowance_min`` is the allowed request-to-delivery duration ``D``.
+    The first ``min(D, T)`` minutes cost ``importance`` per minute. Any lateness
+    beyond ``D`` costs ``(importance + 1)^2`` per minute.
+    """
+
+    if delivery_time_min < 0:
+        raise ValueError("delivery_time_min cannot be negative")
+    if deadline_allowance_min < 0:
+        raise ValueError("deadline_allowance_min cannot be negative")
+    if importance <= 0:
+        raise ValueError("importance must be positive")
+
+    regular_minutes = min(deadline_allowance_min, delivery_time_min)
+    late_minutes = max(0.0, delivery_time_min - deadline_allowance_min)
+    return (
+        importance * regular_minutes
+        + (importance + 1.0) ** 2 * late_minutes
     )
