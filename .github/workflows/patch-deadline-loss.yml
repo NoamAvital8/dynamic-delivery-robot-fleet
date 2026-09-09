@@ -1,0 +1,89 @@
+name: Patch deadline-aware benchmark loss
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-deadline-loss.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Benchmark 1 and Benchmark 2 objective
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path('scripts/run_nyc_benchmark.py'),
+              Path('scripts/run_nyc_benchmark2.py'),
+          ]
+
+          for path in paths:
+              text = path.read_text(encoding='utf-8')
+
+              old_import = 'from delivery_fleet.deadlines import delivery_deadline_min'
+              new_import = 'from delivery_fleet.deadlines import delivery_deadline_min, delivery_loss'
+              if new_import not in text:
+                  if old_import not in text:
+                      raise RuntimeError(f'{path}: deadline import anchor not found')
+                  text = text.replace(old_import, new_import, 1)
+
+              old_loss = '            metrics.weighted_wait_objective += plan.order.importance * delivery_time\n'
+              new_loss = (
+                  '            deadline_allowance_min = (\n'
+                  '                plan.deadline_min - plan.order.request_time_min\n'
+                  '            )\n'
+                  '            metrics.weighted_wait_objective += delivery_loss(\n'
+                  '                delivery_time,\n'
+                  '                deadline_allowance_min,\n'
+                  '                plan.order.importance,\n'
+                  '            )\n'
+              )
+              if 'metrics.weighted_wait_objective += delivery_loss(' not in text:
+                  if old_loss not in text:
+                      raise RuntimeError(f'{path}: old objective anchor not found')
+                  text = text.replace(old_loss, new_loss, 1)
+
+              old_result = '        "weighted_wait_objective": metrics.weighted_wait_objective,\n'
+              new_result = (
+                  '        "loss_formula": "w*min(D,T)+(w+1)^2*max(0,T-D)",\n'
+                  '        "loss_objective": metrics.weighted_wait_objective,\n'
+                  '        "weighted_wait_objective": metrics.weighted_wait_objective,\n'
+              )
+              if '"loss_objective": metrics.weighted_wait_objective' not in text:
+                  if old_result not in text:
+                      raise RuntimeError(f'{path}: result objective anchor not found')
+                  text = text.replace(old_result, new_result, 1)
+
+              path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate syntax and objective tests
+        shell: bash
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark.py scripts/run_nyc_benchmark2.py scripts/run_nyc_benchmark3.py scripts/run_nyc_benchmark4.py
+          python -m pip install -q pytest
+          PYTHONPATH=src pytest -q tests/test_deadlines.py
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No patch needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/run_nyc_benchmark.py scripts/run_nyc_benchmark2.py
+          git commit -m 'Use deadline-aware loss in benchmarks'
+          git push
