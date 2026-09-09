@@ -37,7 +37,7 @@ from delivery_fleet.battery_routing import (
     NoFeasibleBatteryRoute,
 )
 from delivery_fleet.charging import DEFAULT_CHARGING_POWER_W, DEFAULT_NUMBER_OF_PORTS
-from delivery_fleet.deadlines import delivery_deadline_min
+from delivery_fleet.deadlines import delivery_deadline_min, delivery_loss
 from delivery_fleet.fleet import create_default_fleet, fleet_type_summary
 from delivery_fleet.robot import RobotActivity, RobotNodeArrivalEvent, RobotState
 from delivery_fleet.routing import ChargerDistanceIndex, DistanceOracle
@@ -847,7 +847,14 @@ def main() -> None:
             delivery_time = now - plan.order.request_time_min
             metrics.delivery_times.append(delivery_time)
             metrics.actual_service_times.append(now - plan.assigned_at_min)
-            metrics.weighted_wait_objective += plan.order.importance * delivery_time
+            deadline_allowance_min = (
+                plan.deadline_min - plan.order.request_time_min
+            )
+            metrics.weighted_wait_objective += delivery_loss(
+                delivery_time,
+                deadline_allowance_min,
+                plan.order.importance,
+            )
             if now <= plan.deadline_min + EPS:
                 metrics.on_time += 1
             if now <= scenario.duration_minutes + EPS:
@@ -935,6 +942,8 @@ def main() -> None:
         "delivered": delivered,
         "on_time": metrics.on_time,
         "on_time_pct": 100.0 * metrics.on_time / max(1, delivered),
+        "loss_formula": "w*min(D,T)+(w+1)^2*max(0,T-D)",
+        "loss_objective": metrics.weighted_wait_objective,
         "weighted_wait_objective": metrics.weighted_wait_objective,
         "mean_request_to_delivery_min": float(np.mean(metrics.delivery_times)),
         "median_request_to_delivery_min": float(np.median(metrics.delivery_times)),
