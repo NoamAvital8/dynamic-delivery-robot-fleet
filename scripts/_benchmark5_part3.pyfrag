@@ -1,0 +1,418 @@
+                        battery_wh=battery,
+                        available=False,
+                    )
+                    start_to_first = exact_distance(node, int(stop.node_id), special_rows)
+                    if lookahead is None:
+                        prefix = plan_final_target(
+                            snapshot_robot,
+                            int(stop.node_id),
+                            start_to_target_m=start_to_first,
+                        )
+                    else:
+                        first_to_next = exact_distance(
+                            int(stop.node_id),
+                            int(lookahead),
+                            special_rows,
+                        )
+                        quote = evaluate_pair_from_committed_state(
+                            router,
+                            snapshot_robot,
+                            int(stop.node_id),
+                            int(lookahead),
+                            start_to_pickup_m=start_to_first,
+                            pickup_to_dropoff_m=first_to_next,
+                        )
+                        prefix = prefix_from_pair_quote(
+                            snapshot_robot,
+                            quote,
+                            int(stop.node_id),
+                        )
+
+                steps.append(
+                    StepPlan(
+                        stop=stop,
+                        start_node=node,
+                        start_battery_wh=battery,
+                        phases=prefix.phases,
+                        route_time_min=prefix.total_time_min,
+                        route_distance_m=prefix.total_distance_m,
+                        arrival_battery_wh=prefix.arrival_battery_wh,
+                    )
+                )
+                now += prefix.total_time_min
+                total_distance += prefix.total_distance_m
+                node = int(stop.node_id)
+                battery = float(prefix.arrival_battery_wh)
+
+                if stop.kind == "pickup":
+                    now += PICKUP_HANDLING_MIN
+                else:
+                    now += DROPOFF_HANDLING_MIN
+                    completion[stop.order_id] = float(now)
+
+            if new_order_id not in completion:
+                raise RuntimeError("candidate sequence never completed the new order")
+
+            projected_loss = 0.0
+            for order_id, state in order_states.items():
+                done_at = completion.get(order_id)
+                if done_at is None:
+                    raise RuntimeError(f"candidate sequence did not complete order {order_id}")
+                allowance = state.deadline_min - state.order.request_time_min
+                projected_loss += delivery_loss(
+                    done_at - state.order.request_time_min,
+                    allowance,
+                    state.order.importance,
+                )
+
+            return SequenceEvaluation(
+                steps=tuple(steps),
+                completion_by_order=completion,
+                total_distance_m=float(total_distance),
+                projected_loss=float(projected_loss),
+                new_completion_time_min=float(completion[new_order_id]),
+            )
+        finally:
+            B5_STATS["exact_sequence_seconds"] += time.perf_counter() - started
+
+    def sequence_completion_lower_bound(
+        robot: RobotState,
+        snapshot: DecisionSnapshot,
+        stops: tuple[ServiceStop, ...],
+        new_order_id: int,
+        special_rows: dict[int, np.ndarray],
+    ) -> float:
+        now = float(snapshot.time_min)
+        node = int(snapshot.node_id)
+        for stop in stops:
+            distance = lower_bound_distance(node, int(stop.node_id), special_rows)
+            now += distance / robot.spec.speed_mps / 60.0
+            now += PICKUP_HANDLING_MIN if stop.kind == "pickup" else DROPOFF_HANDLING_MIN
+            node = int(stop.node_id)
+            if stop.kind == "dropoff" and stop.order_id == new_order_id:
+                return float(now)
+        return math.inf
+
+    def choose_insertion(order: Order, now: float) -> InsertionChoice | None:
+        B5_STATS["selection_calls"] += 1.0
+        pickup_row = distance_row(oracle, order.pickup_node)
+        dropoff_row = distance_row(oracle, order.dropoff_node)
+        special_rows = {
+            int(order.pickup_node): pickup_row,
+            int(order.dropoff_node): dropoff_row,
+        }
+        direct = get_direct_distance(order, pickup_row)
+        direct_distance_cache[order.id] = direct
+
+        pickup_stop = ServiceStop(order.id, "pickup", int(order.pickup_node))
+        dropoff_stop = ServiceStop(order.id, "dropoff", int(order.dropoff_node))
+
+        robot_rows: list[tuple[float, int, DecisionSnapshot]] = []
+        for robot in robots:
+            if not robot.can_hold(order.item):
+                continue
+            snapshot = decision_snapshot(robot, now)
+            if snapshot is None:
+                continue
+            start_to_pickup = row_distance(pickup_row, snapshot.node_id)
+            universal_lb = (
+                snapshot.time_min
+                + start_to_pickup / robot.spec.speed_mps / 60.0
+                + PICKUP_HANDLING_MIN
+                + direct / robot.spec.speed_mps / 60.0
+                + DROPOFF_HANDLING_MIN
+            )
+            robot_rows.append((float(universal_lb), robot.spec.id, snapshot))
+
+        robot_rows.sort(key=lambda row: (row[0], row[1]))
+        best: InsertionChoice | None = None
+        best_completion = math.inf
+        best_loss = math.inf
+        best_distance = math.inf
+
+        for robot_index, (universal_lb, robot_id, snapshot) in enumerate(robot_rows):
+            if universal_lb >= best_completion - 1e-9:
+                B5_STATS["robots_lb_pruned"] += float(len(robot_rows) - robot_index)
+                break
+            B5_STATS["robots_considered"] += 1.0
+            robot = robot_by_id[robot_id]
+            schedule = schedules[robot_id]
+            existing = tuple(schedule.stops)
+
+            new_state = ActiveOrder(
+                order=order,
+                direct_distance_m=direct,
+                deadline_min=delivery_deadline_min(
+                    order.request_time_min,
+                    direct,
+                    order.importance,
+                ),
+                assigned_at_min=float(now),
+                picked_up=False,
+            )
+            order_states = dict(schedule.orders)
+            order_states[order.id] = new_state
+
+            candidates: list[tuple[float, int, int, tuple[ServiceStop, ...]]] = []
+            for pickup_pos, dropoff_pos, stops in _enumerate_insertions(
+                existing, pickup_stop, dropoff_stop
+            ):
+                B5_STATS["insertion_candidates"] += 1.0
+                if not _capacity_feasible(robot, stops, order_states):
+                    B5_STATS["capacity_pruned"] += 1.0
+                    continue
+                lb = sequence_completion_lower_bound(
+                    robot,
+                    snapshot,
+                    stops,
+                    order.id,
+                    special_rows,
+                )
+                if lb >= best_completion - 1e-9:
+                    B5_STATS["insertion_lb_pruned"] += 1.0
+                    continue
+                candidates.append((lb, pickup_pos, dropoff_pos, stops))
+
+            candidates.sort(key=lambda row: (row[0], row[1], row[2]))
+            for candidate_index, (lb, pickup_pos, dropoff_pos, stops) in enumerate(candidates):
+                if lb >= best_completion - 1e-9:
+                    B5_STATS["insertion_lb_pruned"] += float(
+                        len(candidates) - candidate_index
+                    )
+                    break
+                try:
+                    evaluation = evaluate_sequence(
+                        robot,
+                        snapshot,
+                        stops,
+                        order_states,
+                        order.id,
+                        special_rows,
+                    )
+                except NoFeasibleBatteryRoute:
+                    B5_STATS["no_feasible_sequence"] += 1.0
+                    continue
+
+                completion = evaluation.new_completion_time_min
+                loss = evaluation.projected_loss
+                distance = evaluation.total_distance_m
+                better = (
+                    completion < best_completion - 1e-9
+                    or (
+                        math.isclose(completion, best_completion, abs_tol=1e-9, rel_tol=0.0)
+                        and (
+                            loss < best_loss - 1e-6
+                            or (
+                                math.isclose(loss, best_loss, abs_tol=1e-6, rel_tol=0.0)
+                                and (
+                                    distance < best_distance - 1e-6
+                                    or (
+                                        math.isclose(
+                                            distance,
+                                            best_distance,
+                                            abs_tol=1e-6,
+                                            rel_tol=0.0,
+                                        )
+                                        and (
+                                            best is None
+                                            or (robot_id, pickup_pos, dropoff_pos)
+                                            < (best.robot_id, best.pickup_pos, best.dropoff_pos)
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+                if better:
+                    best_completion = completion
+                    best_loss = loss
+                    best_distance = distance
+                    best = InsertionChoice(
+                        robot_id=robot_id,
+                        pickup_pos=pickup_pos,
+                        dropoff_pos=dropoff_pos,
+                        stops=stops,
+                        evaluation=evaluation,
+                        snapshot=snapshot,
+                    )
+
+        return best
+
+    def cancel_editable_route_for_replan(robot: RobotState, now: float, was_busy: bool) -> None:
+        robot_id = robot.spec.id
+        active_phases[robot_id].clear()
+        phase_version[robot_id] = -1
+
+        if robot.activity is RobotActivity.MOVING:
+            robot.replan_from_decision_node((robot.decision_node,))
+            if was_busy:
+                B5_STATS["interrupted_delivery_routes"] += 1.0
+            else:
+                metrics.interrupted_repositioning += 1
+            return
+        if robot.activity is RobotActivity.CHARGING:
+            interrupt_charge(robot, now)
+        elif robot.activity is RobotActivity.WAITING:
+            cancel_stationary_wait(robot)
+        elif robot.activity is RobotActivity.IDLE:
+            if robot.remaining_route:
+                robot.clear_movement_plan()
+        else:
+            raise RuntimeError(f"unsupported replan activity {robot.activity}")
+
+    def commit_assignment(order: Order, choice: InsertionChoice, now: float) -> None:
+        robot = robot_by_id[choice.robot_id]
+        schedule = schedules[choice.robot_id]
+        was_busy = bool(schedule.orders)
+        old_stop_count = len(schedule.stops)
+
+        if was_busy:
+            B5_STATS["assignments_to_busy_robots"] += 1.0
+        if choice.pickup_pos != old_stop_count or choice.dropoff_pos != old_stop_count + 1:
+            B5_STATS["non_append_insertions"] += 1.0
+
+        direct = direct_distance_cache[order.id]
+        schedule.orders[order.id] = ActiveOrder(
+            order=order,
+            direct_distance_m=direct,
+            deadline_min=delivery_deadline_min(
+                order.request_time_min,
+                direct,
+                order.importance,
+            ),
+            assigned_at_min=float(now),
+            picked_up=False,
+        )
+        schedule.stops = list(choice.stops)
+        schedule.version += 1
+        schedule.prepared_steps = list(choice.evaluation.steps)
+
+        B5_STATS["max_remaining_stops"] = max(
+            B5_STATS["max_remaining_stops"], float(len(schedule.stops))
+        )
+        B5_STATS["max_active_orders"] = max(
+            B5_STATS["max_active_orders"], float(len(schedule.orders))
+        )
+
+        metrics.assignment_waits.append(now - order.request_time_min)
+        metrics.direct_distances_m.append(direct)
+        metrics.planned_service_times.append(
+            choice.evaluation.new_completion_time_min - now
+        )
+        metrics.assignments_by_type[
+            getattr(robot.spec, "display_name", type(robot.spec).__name__)
+        ] += 1
+        if now <= scenario.duration_minutes + EPS:
+            metrics.assigned_by_scenario_end += 1
+
+        cancel_editable_route_for_replan(robot, now, was_busy)
+        robot.available = False
+        robot.current_order_id = schedule.stops[0].order_id if schedule.stops else None
+
+        if robot.activity is not RobotActivity.MOVING:
+            continue_delivery(robot.spec.id, now)
+
+    def dispatch_pending(now: float) -> None:
+        while pending:
+            assigned = False
+            for index, order in enumerate(tuple(pending)):
+                choice = choose_insertion(order, now)
+                if choice is None:
+                    continue
+                pending.pop(index)
+                commit_assignment(order, choice, now)
+                assigned = True
+                break
+            if not assigned:
+                return
+
+    def begin_background_return(robot: RobotState, now: float) -> None:
+        robot_id = robot.spec.id
+        if schedules[robot_id].orders or robot_id in service_lock:
+            return
+        robot.current_order_id = None
+        if robot.battery_wh >= robot.spec.battery_capacity_wh - 1e-8:
+            robot.activity = RobotActivity.IDLE
+            robot.available = True
+            return
+        station = nearest_station(int(robot.node_id))
+        if int(robot.node_id) == station:
+            energy = robot.spec.battery_capacity_wh - robot.battery_wh
+            request_charge(robot_id, station, energy, now, "background")
+            return
+        path = charger_index.path(int(robot.node_id), station)
+        robot.activity = RobotActivity.IDLE
+        robot.available = False
+        robot.set_planned_path(path)
+        event = robot.depart_next_edge(graph, now, edge_weight=EDGE_WEIGHT)
+        if event is None:
+            raise RuntimeError("background route had no edge")
+        push_event(event.time_min, 1, "background_node_arrival", event)
+
+    def path_distance(path: tuple[int, ...]) -> float:
+        total = 0.0
+        for a, b in zip(path, path[1:]):
+            data = graph.get_edge_data(a, b)
+            if graph.is_multigraph():
+                total += min(float(attrs.get(EDGE_WEIGHT, 1.0)) for attrs in data.values())
+            else:
+                total += float(data.get(EDGE_WEIGHT, 1.0))
+        return total
+
+    def start_travel_phase(robot: RobotState, phase: RoutePhase, now: float) -> None:
+        if phase.kind != "travel":
+            raise RuntimeError("start_travel_phase received non-travel phase")
+        source = int(robot.node_id)
+        target = int(phase.target_node)
+        if source == target:
+            continue_delivery(robot.spec.id, now)
+            return
+        path = charger_index.path(source, target)
+        actual = path_distance(tuple(int(x) for x in path))
+        if not math.isclose(actual, phase.distance_m, rel_tol=2e-6, abs_tol=0.1):
+            raise RuntimeError(
+                f"materialized phase distance {actual} != planned {phase.distance_m}"
+            )
+        robot.set_planned_path(path)
+        event = robot.depart_next_edge(graph, now, edge_weight=EDGE_WEIGHT)
+        if event is None:
+            raise RuntimeError("travel phase had no edge")
+        push_event(event.time_min, 1, "delivery_node_arrival", event)
+
+    def compute_first_step(robot: RobotState, now: float) -> StepPlan:
+        schedule = schedules[robot.spec.id]
+        if not schedule.stops:
+            raise RuntimeError("compute_first_step without service stops")
+        snapshot = DecisionSnapshot(int(robot.node_id), float(now), float(robot.battery_wh))
+        stops = tuple(schedule.stops)
+        stop = stops[0]
+        if int(robot.node_id) == int(stop.node_id):
+            prefix = PrefixPlan((), 0.0, 0.0, float(robot.battery_wh))
+        else:
+            start_to_first = exact_distance(int(robot.node_id), int(stop.node_id))
+            lookahead = first_distinct_later_node(stops, 0)
+            snapshot_robot = RobotState(
+                spec=robot.spec,
+                node_id=int(robot.node_id),
+                battery_wh=float(robot.battery_wh),
+                available=False,
+            )
+            if lookahead is None:
+                prefix = plan_final_target(
+                    snapshot_robot,
+                    int(stop.node_id),
+                    start_to_target_m=start_to_first,
+                )
+            else:
+                first_to_next = exact_distance(int(stop.node_id), int(lookahead))
+                quote = evaluate_pair_from_committed_state(
+                    router,
+                    snapshot_robot,
+                    int(stop.node_id),
+                    int(lookahead),
+                    start_to_pickup_m=start_to_first,
+                    pickup_to_dropoff_m=first_to_next,
+                )
+                prefix = prefix_from_pair_quote(snapshot_robot, quote, int(stop.node_id))
+        return StepPlan(
