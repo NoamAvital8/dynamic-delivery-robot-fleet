@@ -1,0 +1,53 @@
+name: Validate B5 loss optimization
+
+on:
+  push:
+    paths:
+      - '.github/workflows/validate-b5-loss-optimization.yml'
+      - 'scripts/run_nyc_benchmark5_loss.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install numpy scipy networkx pytest
+      - name: Compile and test
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark5_loss.py
+          pytest -q
+      - name: Download OSM graphs artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Create Tel Aviv scenario
+        env:
+          PYTHONPATH: src
+        run: python scripts/create_tel_aviv_small_scenario.py
+      - name: Run optimized B5
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark5_loss.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output b5_optimized.json | tee b5_optimized.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b5-loss-optimization-validation
+          path: |
+            b5_optimized.json
+            b5_optimized.log
