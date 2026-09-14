@@ -1,0 +1,97 @@
+name: Run Tel Aviv small benchmark comparison
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/run-tel-aviv-small-comparison.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install numpy scipy networkx pytest
+      - name: Compile and test
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark5_loss.py scripts/create_tel_aviv_small_scenario.py
+          pytest -q
+      - name: Download OSM graphs artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+          ls -lh data/graphs/tel_aviv.graphml
+      - name: Create small Tel Aviv scenario
+        env:
+          PYTHONPATH: src
+        run: python scripts/create_tel_aviv_small_scenario.py
+      - name: Run Benchmark 1
+        env:
+          PYTHONPATH: src
+        run: |
+          mkdir -p tel_aviv_results
+          python scripts/run_nyc_benchmark_fast.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b1.json | tee tel_aviv_results/b1.log
+      - name: Run Benchmark 2
+        env:
+          PYTHONPATH: src
+        run: python scripts/run_nyc_benchmark2_fast.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b2.json | tee tel_aviv_results/b2.log
+      - name: Run Benchmark 3
+        env:
+          PYTHONPATH: src
+        run: python scripts/run_nyc_benchmark3.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b3.json | tee tel_aviv_results/b3.log
+      - name: Run Benchmark 4
+        env:
+          PYTHONPATH: src
+        run: python scripts/run_nyc_benchmark4.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b4.json | tee tel_aviv_results/b4.log
+      - name: Run Benchmark 5 loss objective
+        env:
+          PYTHONPATH: src
+        run: python scripts/run_nyc_benchmark5_loss.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b5.json | tee tel_aviv_results/b5.log
+      - name: Build comparison
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          out = []
+          for i in range(1, 6):
+              p = Path(f'tel_aviv_results/b{i}.json')
+              r = json.loads(p.read_text())
+              out.append({
+                  'benchmark': i,
+                  'policy': r.get('policy'),
+                  'selection_objective': r.get('selection_objective'),
+                  'orders': r.get('orders'),
+                  'robots': r.get('robots'),
+                  'loss': r.get('loss_objective', r.get('weighted_wait_objective')),
+                  'on_time_pct': r.get('on_time_pct'),
+                  'mean_delivery_min': r.get('mean_request_to_delivery_min'),
+                  'median_delivery_min': r.get('median_request_to_delivery_min'),
+                  'p95_delivery_min': r.get('p95_request_to_delivery_min'),
+                  'total_distance_km': r.get('total_robot_distance_km'),
+                  'simulation_finish_hours': r.get('simulation_finish_hours'),
+                  'wall_clock_seconds': r.get('wall_clock_seconds'),
+              })
+          Path('tel_aviv_results/comparison.json').write_text(json.dumps(out, indent=2))
+          print(json.dumps(out, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tel-aviv-small-b1-b5
+          path: |
+            tel_aviv_results/
+            data/scenarios/tel_aviv_small_3h_seed42.json
