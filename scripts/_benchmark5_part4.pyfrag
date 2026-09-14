@@ -1,0 +1,361 @@
+            stop=stop,
+            start_node=int(robot.node_id),
+            start_battery_wh=float(robot.battery_wh),
+            phases=prefix.phases,
+            route_time_min=prefix.total_time_min,
+            route_distance_m=prefix.total_distance_m,
+            arrival_battery_wh=prefix.arrival_battery_wh,
+        )
+
+    def start_service(robot_id: int, now: float) -> None:
+        robot = robot_by_id[robot_id]
+        schedule = schedules[robot_id]
+        if not schedule.stops:
+            raise RuntimeError("start_service without stop")
+        stop = schedule.stops[0]
+        if int(robot.node_id) != int(stop.node_id):
+            raise RuntimeError("service started at wrong node")
+        service_token[robot_id] += 1
+        token = service_token[robot_id]
+        service_lock[robot_id] = (token, stop)
+        robot.activity = RobotActivity.IDLE
+        robot.available = False
+        duration = PICKUP_HANDLING_MIN if stop.kind == "pickup" else DROPOFF_HANDLING_MIN
+        push_event(now + duration, 0, "service_complete", (robot_id, token))
+
+    def continue_delivery(robot_id: int, now: float) -> None:
+        robot = robot_by_id[robot_id]
+        schedule = schedules[robot_id]
+        if not schedule.orders:
+            begin_background_return(robot, now)
+            return
+        if robot_id in service_lock:
+            return
+        if robot.activity in {RobotActivity.MOVING, RobotActivity.CHARGING, RobotActivity.WAITING}:
+            return
+        if not schedule.stops:
+            raise RuntimeError("active schedule has no stops")
+
+        robot.available = False
+        robot.current_order_id = schedule.stops[0].order_id
+        if int(robot.node_id) == int(schedule.stops[0].node_id):
+            active_phases[robot_id].clear()
+            phase_version[robot_id] = schedule.version
+            start_service(robot_id, now)
+            return
+
+        if phase_version[robot_id] != schedule.version or not active_phases[robot_id]:
+            step = None
+            if schedule.prepared_steps:
+                candidate = schedule.prepared_steps[0]
+                if (
+                    candidate.stop == schedule.stops[0]
+                    and candidate.start_node == int(robot.node_id)
+                    and math.isclose(
+                        candidate.start_battery_wh,
+                        robot.battery_wh,
+                        rel_tol=0.0,
+                        abs_tol=0.05,
+                    )
+                ):
+                    step = candidate
+                    B5_STATS["prepared_step_hits"] += 1.0
+            if step is None:
+                B5_STATS["prepared_step_misses"] += 1.0
+                step = compute_first_step(robot, now)
+            active_phases[robot_id] = deque(step.phases)
+            phase_version[robot_id] = schedule.version
+
+        if not active_phases[robot_id]:
+            if int(robot.node_id) != int(schedule.stops[0].node_id):
+                raise RuntimeError("empty phase list before reaching service stop")
+            start_service(robot_id, now)
+            return
+
+        phase = active_phases[robot_id].popleft()
+        if phase.kind == "charge":
+            if int(robot.node_id) != int(phase.target_node):
+                raise RuntimeError("charge phase at wrong node")
+            request_charge(
+                robot_id,
+                int(phase.target_node),
+                float(phase.energy_wh),
+                now,
+                "delivery",
+            )
+            return
+        start_travel_phase(robot, phase, now)
+
+    delivered = 0
+    now = 0.0
+    last_progress = time.perf_counter()
+
+    while events:
+        now, _, _, kind, payload = heapq.heappop(events)
+
+        if kind == "order_arrival":
+            pending.append(payload)
+            dispatch_pending(now)
+
+        elif kind in {"background_node_arrival", "delivery_node_arrival"}:
+            event = payload
+            assert isinstance(event, RobotNodeArrivalEvent)
+            robot = robot_by_id[event.robot_id]
+            if not robot.is_moving:
+                continue
+            edge_m = float(robot.current_edge_distance_m or 0.0)
+            robot.arrive_at_next_node(event)
+            if kind == "delivery_node_arrival":
+                delivery_distance_m += edge_m
+            else:
+                background_distance_m += edge_m
+
+            robot_id = robot.spec.id
+            if schedules[robot_id].orders:
+                if robot.remaining_route:
+                    next_event = robot.depart_next_edge(graph, now, edge_weight=EDGE_WEIGHT)
+                    if next_event is None:
+                        raise RuntimeError("delivery path unexpectedly stopped")
+                    push_event(next_event.time_min, 1, "delivery_node_arrival", next_event)
+                else:
+                    continue_delivery(robot_id, now)
+                continue
+
+            if pending:
+                dispatch_pending(now)
+            if schedules[robot_id].orders:
+                continue_delivery(robot_id, now)
+                continue
+
+            if robot.remaining_route:
+                next_event = robot.depart_next_edge(graph, now, edge_weight=EDGE_WEIGHT)
+                if next_event is None:
+                    raise RuntimeError("background path unexpectedly stopped")
+                push_event(next_event.time_min, 1, "background_node_arrival", next_event)
+            else:
+                station = int(robot.node_id)
+                if station not in router.station_set:
+                    raise RuntimeError("background route ended at non-charger")
+                energy = robot.spec.battery_capacity_wh - robot.battery_wh
+                request_charge(robot_id, station, energy, now, "background")
+                if pending:
+                    dispatch_pending(now)
+
+        elif kind == "charge_complete":
+            robot_id, station_node, token = payload
+            robot_id, station_node = int(robot_id), int(station_node)
+            state = station_state[station_node]
+            session = state.active.get(robot_id)
+            if session is None or session.token != int(token):
+                continue
+            del state.active[robot_id]
+            robot = robot_by_id[robot_id]
+            robot.battery_wh = min(
+                robot.spec.battery_capacity_wh,
+                session.start_battery_wh + session.energy_wh,
+            )
+            robot.activity = RobotActivity.IDLE
+            fill_free_ports(station_node, now)
+            if schedules[robot_id].orders:
+                continue_delivery(robot_id, now)
+            else:
+                robot.available = True
+                if pending:
+                    dispatch_pending(now)
+
+        elif kind == "service_complete":
+            robot_id, token = payload
+            robot_id, token = int(robot_id), int(token)
+            locked = service_lock.get(robot_id)
+            if locked is None or locked[0] != token:
+                continue
+            _, stop = service_lock.pop(robot_id)
+            schedule = schedules[robot_id]
+            robot = robot_by_id[robot_id]
+            if not schedule.stops or schedule.stops[0] != stop:
+                raise RuntimeError("service completion no longer matches route front")
+            schedule.stops.pop(0)
+            if schedule.prepared_steps and schedule.prepared_steps[0].stop == stop:
+                schedule.prepared_steps.pop(0)
+            active_phases[robot_id].clear()
+            phase_version[robot_id] = schedule.version
+
+            state = schedule.orders[stop.order_id]
+            if stop.kind == "pickup":
+                if state.picked_up:
+                    raise RuntimeError("order picked up twice")
+                state.picked_up = True
+            else:
+                if not state.picked_up:
+                    raise RuntimeError("dropoff before pickup")
+                delivery_time = now - state.order.request_time_min
+                metrics.delivery_times.append(delivery_time)
+                metrics.actual_service_times.append(now - state.assigned_at_min)
+                allowance = state.deadline_min - state.order.request_time_min
+                metrics.weighted_wait_objective += delivery_loss(
+                    delivery_time,
+                    allowance,
+                    state.order.importance,
+                )
+                if now <= state.deadline_min + EPS:
+                    metrics.on_time += 1
+                if now <= scenario.duration_minutes + EPS:
+                    metrics.delivered_by_scenario_end += 1
+                del schedule.orders[stop.order_id]
+                delivered += 1
+
+            robot.activity = RobotActivity.IDLE
+            robot.available = False
+            robot.current_order_id = schedule.stops[0].order_id if schedule.stops else None
+
+            if pending:
+                dispatch_pending(now)
+            if schedules[robot_id].orders:
+                continue_delivery(robot_id, now)
+            else:
+                robot.current_order_id = None
+                begin_background_return(robot, now)
+
+        else:
+            raise RuntimeError(f"unknown event kind: {kind}")
+
+        if (
+            delivered == len(scenario.orders)
+            and not pending
+            and not any(schedule.orders for schedule in schedules.values())
+            and not service_lock
+        ):
+            break
+
+        if time.perf_counter() - last_progress >= 30.0:
+            busy = sum(1 for schedule in schedules.values() if schedule.orders)
+            scheduled = sum(len(schedule.orders) for schedule in schedules.values())
+            print(
+                f"progress delivered={delivered}/{len(scenario.orders)} "
+                f"pending={len(pending)} busy_robots={busy} active_orders={scheduled} "
+                f"sim_t={now:.1f} wall={time.perf_counter()-wall_start:.1f}s",
+                flush=True,
+            )
+            last_progress = time.perf_counter()
+
+    if (
+        pending
+        or any(schedule.orders for schedule in schedules.values())
+        or service_lock
+        or delivered != len(scenario.orders)
+    ):
+        raise RuntimeError(
+            "simulation ended incomplete: "
+            f"delivered={delivered}, pending={len(pending)}, "
+            f"active_orders={sum(len(s.orders) for s in schedules.values())}, "
+            f"service_locked={len(service_lock)}"
+        )
+
+    peak_queues = sorted(
+        (state.peak_queue for state in station_state.values()), reverse=True
+    )
+    charge_sessions = metrics.delivery_charge_sessions + metrics.background_charge_sessions
+    queued_sessions = (
+        metrics.queued_delivery_charge_sessions + metrics.queued_background_charge_sessions
+    )
+    total_distance_m = delivery_distance_m + background_distance_m
+
+    results = {
+        "benchmark": 5,
+        "policy": "reactive_insertion_interruptible_busy_routes",
+        "selection_objective": "earliest_new_request_completion_time",
+        "insertion_rule": "insert_new_pickup_and_dropoff_anywhere_feasible_preserving_existing_stop_order",
+        "reroute_rule": "current_graph_edge_is_immutable_then_route_may_change",
+        "scenario": scenario.graph_name,
+        "scenario_seed": scenario.seed,
+        "orders": len(scenario.orders),
+        "robots": len(robots),
+        "fleet_types": {
+            str(key.value): int(value) for key, value in fleet_type_summary(robots).items()
+        },
+        "charging_stations": len(station_nodes),
+        "charger_power_w": DEFAULT_CHARGING_POWER_W,
+        "ports_per_station": DEFAULT_NUMBER_OF_PORTS,
+        "routing_index_dense": charger_index.is_dense,
+        "routing_index_build_seconds": index_seconds,
+        "delivered": delivered,
+        "on_time": metrics.on_time,
+        "on_time_pct": 100.0 * metrics.on_time / max(1, delivered),
+        "loss_formula": "w*min(D,T)+(w+1)^2*max(0,T-D)",
+        "loss_objective": metrics.weighted_wait_objective,
+        "weighted_wait_objective": metrics.weighted_wait_objective,
+        "mean_request_to_delivery_min": float(np.mean(metrics.delivery_times)),
+        "median_request_to_delivery_min": float(np.median(metrics.delivery_times)),
+        "p95_request_to_delivery_min": _percentile(metrics.delivery_times, 95),
+        "mean_assignment_wait_min": float(np.mean(metrics.assignment_waits)),
+        "median_assignment_wait_min": float(np.median(metrics.assignment_waits)),
+        "p95_assignment_wait_min": _percentile(metrics.assignment_waits, 95),
+        "mean_actual_service_min": float(np.mean(metrics.actual_service_times)),
+        "mean_planned_service_no_queue_min": float(np.mean(metrics.planned_service_times)),
+        "mean_direct_distance_km": float(np.mean(metrics.direct_distances_m)) / 1000.0,
+        "median_direct_distance_km": float(np.median(metrics.direct_distances_m)) / 1000.0,
+        "mean_delivery_route_distance_km": delivery_distance_m / max(1, delivered) / 1000.0,
+        "delivery_route_distance_km": delivery_distance_m / 1000.0,
+        "background_reposition_distance_km": background_distance_m / 1000.0,
+        "total_robot_distance_km": total_distance_m / 1000.0,
+        "distance_metric_note": "B5 delivery distance is physical shared robot travel counted once",
+        "charge_sessions": charge_sessions,
+        "delivery_charge_sessions": metrics.delivery_charge_sessions,
+        "background_charge_sessions": metrics.background_charge_sessions,
+        "queued_charge_sessions": queued_sessions,
+        "queued_delivery_charge_sessions": metrics.queued_delivery_charge_sessions,
+        "queued_background_charge_sessions": metrics.queued_background_charge_sessions,
+        "queued_charge_pct": 100.0 * queued_sessions / max(1, charge_sessions),
+        "total_charger_queue_wait_min": float(sum(metrics.queue_waits_min)),
+        "mean_queue_wait_if_queued_min": (
+            float(np.mean(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0
+        ),
+        "median_queue_wait_if_queued_min": (
+            float(np.median(metrics.queue_waits_min)) if metrics.queue_waits_min else 0.0
+        ),
+        "max_queue_wait_min": max(metrics.queue_waits_min, default=0.0),
+        "max_station_queue_length": peak_queues[0] if peak_queues else 0,
+        "second_max_station_queue_length": peak_queues[1] if len(peak_queues) > 1 else 0,
+        "interrupted_repositioning": metrics.interrupted_repositioning,
+        "interrupted_charge_queue": metrics.interrupted_charge_queue,
+        "interrupted_background_charging": metrics.interrupted_background_charging,
+        "assigned_by_scenario_end": metrics.assigned_by_scenario_end,
+        "delivered_by_scenario_end": metrics.delivered_by_scenario_end,
+        "simulation_finish_min": now if scenario.orders else 0.0,
+        "simulation_finish_hours": (now / 60.0) if scenario.orders else 0.0,
+        "assignments_by_robot_type": dict(metrics.assignments_by_type),
+        "candidate_selection_calls": int(B5_STATS["selection_calls"]),
+        "candidate_robots_considered": int(B5_STATS["robots_considered"]),
+        "candidate_robots_lb_pruned": int(B5_STATS["robots_lb_pruned"]),
+        "insertion_candidates": int(B5_STATS["insertion_candidates"]),
+        "capacity_pruned_insertions": int(B5_STATS["capacity_pruned"]),
+        "insertion_lb_pruned": int(B5_STATS["insertion_lb_pruned"]),
+        "exact_sequence_evaluations": int(B5_STATS["exact_sequence_evaluations"]),
+        "exact_sequence_seconds": float(B5_STATS["exact_sequence_seconds"]),
+        "exact_sequence_mean_ms": (
+            1000.0 * B5_STATS["exact_sequence_seconds"]
+            / max(1.0, B5_STATS["exact_sequence_evaluations"])
+        ),
+        "no_feasible_sequence": int(B5_STATS["no_feasible_sequence"]),
+        "assignments_to_busy_robots": int(B5_STATS["assignments_to_busy_robots"]),
+        "non_append_insertions": int(B5_STATS["non_append_insertions"]),
+        "interrupted_delivery_routes": int(B5_STATS["interrupted_delivery_routes"]),
+        "interrupted_delivery_charging": int(B5_STATS["interrupted_delivery_charging"]),
+        "interrupted_delivery_charge_queue": int(B5_STATS["interrupted_delivery_charge_queue"]),
+        "max_remaining_stops": int(B5_STATS["max_remaining_stops"]),
+        "max_active_orders_on_robot": int(B5_STATS["max_active_orders"]),
+        "prepared_step_hits": int(B5_STATS["prepared_step_hits"]),
+        "prepared_step_misses": int(B5_STATS["prepared_step_misses"]),
+        "compiled_dijkstra_calls": int(fast._fast_dijkstra_calls),
+        "compiled_dijkstra_cache_hits": int(fast._fast_dijkstra_cache_hits),
+        "compiled_dijkstra_seconds": float(fast._fast_dijkstra_seconds),
+        "wall_clock_seconds": time.perf_counter() - wall_start,
+    }
+
+    args.output.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    print("BENCHMARK5_RESULTS_JSON")
+    print(json.dumps(results, indent=2), flush=True)
+
+
+if __name__ == "__main__":
+    main()
