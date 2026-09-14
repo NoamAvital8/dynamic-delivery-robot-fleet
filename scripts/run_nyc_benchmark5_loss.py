@@ -3,21 +3,24 @@ from __future__ import annotations
 """Benchmark 5 with incremental deadline-aware loss as the insertion objective.
 
 This runner reuses Benchmark 5's simulator and interruptible insertion machinery,
-but corrects the decision objective.  For each robot/insertion candidate it
+but corrects the decision objective. For each robot/insertion candidate it
 minimizes
 
     Delta L = projected_loss_after_insertion - projected_loss_before_insertion
 
-for the affected robot.  Losses of every other robot are unchanged by that
+for the affected robot. Losses of every other robot are unchanged by that
 candidate and therefore cancel from the global comparison.
 
-The lower bounds remain admissible: the candidate's total projected loss is at
-least the new request's own loss, so
+The optimized version keeps the same exact decision objective while adding two
+important accelerations for large scenarios:
 
-    Delta L >= lower_bound(new_request_loss) - baseline_robot_loss.
-
-That lets us keep much of B5's pruning without reverting to the incorrect
-"finish the newest request first" behavior.
+1. Candidate pruning uses a lower bound on the *total loss of every affected
+   order*, not only the new order. The bound ignores charging time and uses
+   shortest-path/haversine distance lower bounds, so it is admissible.
+2. Baseline route loss is cached per robot decision state. While a robot is
+   traversing the same immutable edge, many request arrivals share the same
+   decision node/time/battery and remaining stop sequence, so the expensive
+   baseline projection can be reused exactly.
 """
 
 import math
@@ -51,6 +54,8 @@ def _patch_source(source: str) -> str:
         "docstring objective",
     )
 
+    # Allow evaluate_sequence to project an existing route without designating a
+    # newly inserted order. This is used to compute the baseline loss.
     source = _replace_once(
         source,
         "        new_order_id: int,\n"
@@ -78,6 +83,104 @@ def _patch_source(source: str) -> str:
         "                    else math.inf\n"
         "                ),\n",
         "optional completion value",
+    )
+
+    # One-entry-per-robot baseline cache. Keeping only the latest decision state
+    # bounds memory while capturing the common case where several requests arrive
+    # before the robot finishes its current immutable graph edge.
+    source = _replace_once(
+        source,
+        "    direct_distance_cache: dict[int, float] = {}\n\n"
+        "    delivery_distance_m = 0.0\n",
+        "    direct_distance_cache: dict[int, float] = {}\n"
+        "    baseline_projection_cache: dict[int, tuple[object, float]] = {}\n\n"
+        "    delivery_distance_m = 0.0\n",
+        "baseline projection cache",
+    )
+
+    # Strengthen the admissible candidate lower bound. The previous corrected
+    # B5 bounded only the new order's loss; on NYC that was much too weak and
+    # caused millions of unnecessary exact multi-stop battery evaluations.
+    old_lb_function = '''    def sequence_completion_lower_bound(
+        robot: RobotState,
+        snapshot: DecisionSnapshot,
+        stops: tuple[ServiceStop, ...],
+        new_order_id: int,
+        special_rows: dict[int, np.ndarray],
+    ) -> float:
+        now = float(snapshot.time_min)
+        node = int(snapshot.node_id)
+        for stop in stops:
+            distance = lower_bound_distance(node, int(stop.node_id), special_rows)
+            now += distance / robot.spec.speed_mps / 60.0
+            now += PICKUP_HANDLING_MIN if stop.kind == "pickup" else DROPOFF_HANDLING_MIN
+            node = int(stop.node_id)
+            if stop.kind == "dropoff" and stop.order_id == new_order_id:
+                return float(now)
+        return math.inf
+
+    def choose_insertion(order: Order, now: float) -> InsertionChoice | None:
+'''
+    new_lb_function = '''    def sequence_completion_lower_bound(
+        robot: RobotState,
+        snapshot: DecisionSnapshot,
+        stops: tuple[ServiceStop, ...],
+        new_order_id: int,
+        special_rows: dict[int, np.ndarray],
+    ) -> float:
+        now = float(snapshot.time_min)
+        node = int(snapshot.node_id)
+        for stop in stops:
+            distance = lower_bound_distance(node, int(stop.node_id), special_rows)
+            now += distance / robot.spec.speed_mps / 60.0
+            now += PICKUP_HANDLING_MIN if stop.kind == "pickup" else DROPOFF_HANDLING_MIN
+            node = int(stop.node_id)
+            if stop.kind == "dropoff" and stop.order_id == new_order_id:
+                return float(now)
+        return math.inf
+
+    def sequence_loss_lower_bound(
+        robot: RobotState,
+        snapshot: DecisionSnapshot,
+        stops: tuple[ServiceStop, ...],
+        order_states: dict[int, ActiveOrder],
+        special_rows: dict[int, np.ndarray],
+    ) -> float:
+        """Admissible lower bound on total projected loss for a stop sequence.
+
+        Travel uses exact distances when already available and otherwise a
+        shortest-path row for the new request or haversine distance. Charging
+        time is omitted. Therefore every projected drop-off is no later than in
+        the exact battery-feasible evaluation, and delivery_loss is monotone in
+        completion time.
+        """
+        projected_time = float(snapshot.time_min)
+        node = int(snapshot.node_id)
+        lower_loss = 0.0
+        for stop in stops:
+            distance = lower_bound_distance(node, int(stop.node_id), special_rows)
+            projected_time += distance / robot.spec.speed_mps / 60.0
+            projected_time += (
+                PICKUP_HANDLING_MIN if stop.kind == "pickup" else DROPOFF_HANDLING_MIN
+            )
+            node = int(stop.node_id)
+            if stop.kind == "dropoff":
+                state = order_states[stop.order_id]
+                allowance = state.deadline_min - state.order.request_time_min
+                lower_loss += delivery_loss(
+                    projected_time - state.order.request_time_min,
+                    allowance,
+                    state.order.importance,
+                )
+        return float(lower_loss)
+
+    def choose_insertion(order: Order, now: float) -> InsertionChoice | None:
+'''
+    source = _replace_once(
+        source,
+        old_lb_function,
+        new_lb_function,
+        "total-loss lower bound helper",
     )
 
     source = _replace_once(
@@ -110,6 +213,10 @@ def _patch_source(source: str) -> str:
         "old completion-based robot pruning",
     )
 
+    # Compute baseline exactly, but reuse it when the robot's decision state and
+    # remaining sequence are unchanged. Baseline does not depend on the new
+    # request's two distance rows, so use an empty special-row map to maximize
+    # cache reuse without changing the route semantics.
     source = _replace_once(
         source,
         "            order_states = dict(schedule.orders)\n"
@@ -120,10 +227,21 @@ def _patch_source(source: str) -> str:
         "            # Other robots are identical across alternatives, so they cancel.\n"
         "            baseline_loss = 0.0\n"
         "            if existing:\n"
-        "                baseline_evaluation = evaluate_sequence(\n"
-        "                    robot, snapshot, existing, order_states, None, special_rows\n"
+        "                baseline_key = (\n"
+        "                    existing,\n"
+        "                    int(snapshot.node_id),\n"
+        "                    float(snapshot.time_min),\n"
+        "                    round(float(snapshot.battery_wh), 6),\n"
         "                )\n"
-        "                baseline_loss = float(baseline_evaluation.projected_loss)\n\n"
+        "                cached_baseline = baseline_projection_cache.get(robot_id)\n"
+        "                if cached_baseline is not None and cached_baseline[0] == baseline_key:\n"
+        "                    baseline_loss = float(cached_baseline[1])\n"
+        "                else:\n"
+        "                    baseline_evaluation = evaluate_sequence(\n"
+        "                        robot, snapshot, existing, order_states, None, {}\n"
+        "                    )\n"
+        "                    baseline_loss = float(baseline_evaluation.projected_loss)\n"
+        "                    baseline_projection_cache[robot_id] = (baseline_key, baseline_loss)\n\n"
         "            robot_new_loss_lb = delivery_loss(\n"
         "                max(0.0, universal_lb - order.request_time_min),\n"
         "                new_allowance,\n"
@@ -137,10 +255,10 @@ def _patch_source(source: str) -> str:
         "            candidates: list[\n"
         "                tuple[float, float, int, int, tuple[ServiceStop, ...]]\n"
         "            ] = []\n",
-        "baseline incremental loss",
+        "cached baseline incremental loss",
     )
 
-    old = '''                lb = sequence_completion_lower_bound(
+    old_candidates = '''                lb = sequence_completion_lower_bound(
                     robot,
                     snapshot,
                     stops,
@@ -160,19 +278,21 @@ def _patch_source(source: str) -> str:
                     )
                     break
 '''
-    new = '''                completion_lb = sequence_completion_lower_bound(
+    new_candidates = '''                completion_lb = sequence_completion_lower_bound(
                     robot,
                     snapshot,
                     stops,
                     order.id,
                     special_rows,
                 )
-                new_loss_lb = delivery_loss(
-                    max(0.0, completion_lb - order.request_time_min),
-                    new_allowance,
-                    order.importance,
+                projected_loss_lb = sequence_loss_lower_bound(
+                    robot,
+                    snapshot,
+                    stops,
+                    order_states,
+                    special_rows,
                 )
-                delta_lb = new_loss_lb - baseline_loss
+                delta_lb = projected_loss_lb - baseline_loss
                 if delta_lb >= best_delta_loss - 1e-9:
                     B5_STATS["insertion_lb_pruned"] += 1.0
                     continue
@@ -194,7 +314,12 @@ def _patch_source(source: str) -> str:
                     )
                     break
 '''
-    source = _replace_once(source, old, new, "loss lower-bound candidate pruning")
+    source = _replace_once(
+        source,
+        old_candidates,
+        new_candidates,
+        "total-loss candidate pruning",
+    )
 
     comparison_pattern = re.compile(
         r'''                completion = evaluation\.new_completion_time_min\n'''
@@ -276,7 +401,8 @@ def _patch_source(source: str) -> str:
         source,
         '        "selection_objective": "earliest_new_request_completion_time",\n',
         '        "selection_objective": "minimum_incremental_projected_deadline_aware_loss",\n'
-        '        "candidate_score": "projected_loss_after_minus_projected_loss_before",\n',
+        '        "candidate_score": "projected_loss_after_minus_projected_loss_before",\n'
+        '        "optimization": "all-order-loss-lower-bound-plus-baseline-state-cache",\n',
         "result objective metadata",
     )
     return source
