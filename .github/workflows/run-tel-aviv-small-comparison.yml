@@ -21,7 +21,7 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: pip install numpy scipy networkx pytest
-      - name: Compile and test
+      - name: Compile and test optimized corrected B5
         env:
           PYTHONPATH: src
         run: |
@@ -34,7 +34,7 @@ jobs:
           mkdir -p data/graphs
           gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
           ls -lh data/graphs/new_york_city.graphml
-      - name: Run corrected Benchmark 5 on NYC
+      - name: Run optimized corrected Benchmark 5 on NYC
         env:
           PYTHONPATH: src
         run: |
@@ -44,6 +44,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: nyc-b5-loss-large-test
+          name: nyc-b5-loss-large-test-optimized
           path: |
             nyc_b5_loss_results/
