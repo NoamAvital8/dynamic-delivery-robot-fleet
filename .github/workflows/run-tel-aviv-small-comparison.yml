@@ -1,4 +1,4 @@
-name: Run Tel Aviv small benchmark comparison
+name: Run NYC corrected Benchmark 5 large test
 
 on:
   workflow_dispatch:
@@ -11,9 +11,9 @@ permissions:
   actions: read
 
 jobs:
-  compare:
+  benchmark5:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,7 +25,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          python -m py_compile scripts/run_nyc_benchmark5_loss.py scripts/create_tel_aviv_small_scenario.py
+          python -m py_compile scripts/run_nyc_benchmark5.py scripts/run_nyc_benchmark5_loss.py src/delivery_fleet/insertion_routing.py
           pytest -q
       - name: Download OSM graphs artifact
         env:
@@ -33,74 +33,17 @@ jobs:
         run: |
           mkdir -p data/graphs
           gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
-          ls -lh data/graphs/tel_aviv.graphml
-      - name: Create small Tel Aviv scenario
-        env:
-          PYTHONPATH: src
-        run: python scripts/create_tel_aviv_small_scenario.py
-      - name: Run Benchmark 1
+          ls -lh data/graphs/new_york_city.graphml
+      - name: Run corrected Benchmark 5 on NYC
         env:
           PYTHONPATH: src
         run: |
           set -o pipefail
-          mkdir -p tel_aviv_results
-          python scripts/run_nyc_benchmark_fast.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b1.json | tee tel_aviv_results/b1.log
-      - name: Run Benchmark 2
-        env:
-          PYTHONPATH: src
-        run: |
-          set -o pipefail
-          python scripts/run_nyc_benchmark2_fast2.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b2.json | tee tel_aviv_results/b2.log
-      - name: Run Benchmark 3
-        env:
-          PYTHONPATH: src
-        run: |
-          set -o pipefail
-          python scripts/run_nyc_benchmark3.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b3.json | tee tel_aviv_results/b3.log
-      - name: Run Benchmark 4
-        env:
-          PYTHONPATH: src
-        run: |
-          set -o pipefail
-          python scripts/run_nyc_benchmark4.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b4.json | tee tel_aviv_results/b4.log
-      - name: Run Benchmark 5 loss objective
-        env:
-          PYTHONPATH: src
-        run: |
-          set -o pipefail
-          python scripts/run_nyc_benchmark5_loss.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b5.json | tee tel_aviv_results/b5.log
-      - name: Build comparison
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          out = []
-          for i in range(1, 6):
-              p = Path(f'tel_aviv_results/b{i}.json')
-              r = json.loads(p.read_text())
-              out.append({
-                  'benchmark': i,
-                  'policy': r.get('policy'),
-                  'selection_objective': r.get('selection_objective'),
-                  'orders': r.get('orders'),
-                  'robots': r.get('robots'),
-                  'loss': r.get('loss_objective', r.get('weighted_wait_objective')),
-                  'on_time_pct': r.get('on_time_pct'),
-                  'mean_delivery_min': r.get('mean_request_to_delivery_min'),
-                  'median_delivery_min': r.get('median_request_to_delivery_min'),
-                  'p95_delivery_min': r.get('p95_request_to_delivery_min'),
-                  'total_distance_km': r.get('total_robot_distance_km'),
-                  'simulation_finish_hours': r.get('simulation_finish_hours'),
-                  'wall_clock_seconds': r.get('wall_clock_seconds'),
-              })
-          Path('tel_aviv_results/comparison.json').write_text(json.dumps(out, indent=2))
-          print(json.dumps(out, indent=2))
-          PY
+          mkdir -p nyc_b5_loss_results
+          python scripts/run_nyc_benchmark5_loss.py --graph data/graphs/new_york_city.graphml --scenario data/scenarios/nyc_reference_12h_seed42.json --output nyc_b5_loss_results/b5_loss.json | tee nyc_b5_loss_results/b5_loss.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tel-aviv-small-b1-b5
+          name: nyc-b5-loss-large-test
           path: |
-            tel_aviv_results/
-            data/scenarios/tel_aviv_small_3h_seed42.json
+            nyc_b5_loss_results/
