@@ -1,0 +1,47 @@
+name: Run NYC Benchmark 5
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/run-nyc-benchmark5.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx pytest
+      - name: Compile Benchmark 5
+        run: python -m py_compile scripts/run_nyc_benchmark5.py src/delivery_fleet/insertion_routing.py
+      - name: Run unit tests
+        env:
+          PYTHONPATH: src
+        run: pytest -q
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run Benchmark 5
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark5.py | tee benchmark5.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark5-results
+          path: |
+            benchmark5_results.json
+            benchmark5.log
