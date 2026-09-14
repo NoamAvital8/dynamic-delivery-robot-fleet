@@ -42,24 +42,33 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
+          set -o pipefail
           mkdir -p tel_aviv_results
           python scripts/run_nyc_benchmark_fast.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b1.json | tee tel_aviv_results/b1.log
       - name: Run Benchmark 2
         env:
           PYTHONPATH: src
-        run: python scripts/run_nyc_benchmark2_fast.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b2.json | tee tel_aviv_results/b2.log
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark2_fast2.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b2.json | tee tel_aviv_results/b2.log
       - name: Run Benchmark 3
         env:
           PYTHONPATH: src
-        run: python scripts/run_nyc_benchmark3.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b3.json | tee tel_aviv_results/b3.log
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark3.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b3.json | tee tel_aviv_results/b3.log
       - name: Run Benchmark 4
         env:
           PYTHONPATH: src
-        run: python scripts/run_nyc_benchmark4.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b4.json | tee tel_aviv_results/b4.log
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark4.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b4.json | tee tel_aviv_results/b4.log
       - name: Run Benchmark 5 loss objective
         env:
           PYTHONPATH: src
-        run: python scripts/run_nyc_benchmark5_loss.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b5.json | tee tel_aviv_results/b5.log
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark5_loss.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output tel_aviv_results/b5.json | tee tel_aviv_results/b5.log
       - name: Build comparison
         run: |
           python - <<'PY'
