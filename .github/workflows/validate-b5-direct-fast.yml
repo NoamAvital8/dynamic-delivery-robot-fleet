@@ -1,0 +1,70 @@
+name: Validate exact direct B5 fast paths
+
+on:
+  push:
+    paths:
+      - 'scripts/run_nyc_benchmark5_loss_direct_fast.py'
+      - 'src/delivery_fleet/fast_pair_routing.py'
+      - '.github/workflows/validate-b5-direct-fast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install numpy scipy networkx pytest
+      - name: Compile and test
+        env: {PYTHONPATH: src}
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark5_loss_direct_fast.py src/delivery_fleet/fast_pair_routing.py
+          pytest -q
+      - name: Download graphs
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Create scenario
+        env: {PYTHONPATH: src}
+        run: python scripts/create_tel_aviv_small_scenario.py
+      - name: Reference
+        env: {PYTHONPATH: src}
+        run: python scripts/run_nyc_benchmark5_loss.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output reference.json > reference.log
+      - name: Direct-fast
+        env: {PYTHONPATH: src}
+        run: python scripts/run_nyc_benchmark5_loss_direct_fast.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output fast.json > fast.log
+      - name: Compare
+        run: |
+          python - <<'PY'
+          import json, math
+          a=json.load(open('reference.json')); b=json.load(open('fast.json'))
+          keys=['delivered','on_time','loss_objective','mean_request_to_delivery_min','median_request_to_delivery_min','p95_request_to_delivery_min','total_robot_distance_km','total_charger_queue_wait_min','simulation_finish_min','assignments_by_robot_type','assignments_to_busy_robots','non_append_insertions','interrupted_delivery_routes','max_remaining_stops','max_active_orders_on_robot']
+          for k in keys:
+              x,y=a[k],b[k]
+              if isinstance(x,float): assert math.isclose(x,y,rel_tol=0,abs_tol=1e-8),(k,x,y)
+              else: assert x==y,(k,x,y)
+          print('EXACT_POLICY_MATCH')
+          print('reference',a['wall_clock_seconds'])
+          print('fast',b['wall_clock_seconds'])
+          print('speedup',a['wall_clock_seconds']/b['wall_clock_seconds'])
+          print('reference exact seconds',a['exact_sequence_seconds'])
+          print('fast exact seconds',b['exact_sequence_seconds'])
+          print('reference exact evals',a['exact_sequence_evaluations'])
+          print('fast exact evals',b['exact_sequence_evaluations'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b5-direct-fast-validation
+          path: |
+            reference.json
+            fast.json
+            reference.log
+            fast.log
