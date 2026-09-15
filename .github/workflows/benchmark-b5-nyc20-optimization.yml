@@ -1,0 +1,84 @@
+name: Benchmark B5 NYC20 optimization
+
+on:
+  push:
+    paths:
+      - '.github/workflows/benchmark-b5-nyc20-optimization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install numpy scipy networkx pytest
+      - name: Compile and test
+        env: {PYTHONPATH: src}
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark5_loss_cached.py src/delivery_fleet/routing_query_cache.py src/delivery_fleet/fast_pair_routing.py
+          pytest -q
+      - name: Download NYC graph
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Build first-20-minute NYC scenario
+        run: |
+          python - <<'PY'
+          import json
+          src='data/scenarios/nyc_reference_12h_seed42.json'
+          d=json.load(open(src))
+          d['duration_minutes']=20.0
+          d['orders']=[o for o in d['orders'] if o['request_time_min'] <= 20.0]
+          json.dump(d,open('nyc20.json','w'),indent=2)
+          print('orders',len(d['orders']))
+          PY
+      - name: Run corrected reference
+        env: {PYTHONPATH: src}
+        run: |
+          /usr/bin/time -f 'REFERENCE_REAL=%e' python scripts/run_nyc_benchmark5_loss.py \
+            --graph data/graphs/new_york_city.graphml --scenario nyc20.json \
+            --output reference.json | tee reference.log
+      - name: Run exact optimized
+        env: {PYTHONPATH: src}
+        run: |
+          /usr/bin/time -f 'OPTIMIZED_REAL=%e' python scripts/run_nyc_benchmark5_loss_cached.py \
+            --graph data/graphs/new_york_city.graphml --scenario nyc20.json \
+            --output optimized.json | tee optimized.log
+      - name: Verify and report speedup
+        run: |
+          python - <<'PY'
+          import json, math
+          a=json.load(open('reference.json')); b=json.load(open('optimized.json'))
+          keys=['delivered','on_time','loss_objective','mean_request_to_delivery_min','median_request_to_delivery_min','p95_request_to_delivery_min','total_robot_distance_km','total_charger_queue_wait_min','simulation_finish_min','assignments_by_robot_type','assignments_to_busy_robots','non_append_insertions','interrupted_delivery_routes','max_remaining_stops','max_active_orders_on_robot']
+          for k in keys:
+              x,y=a[k],b[k]
+              if isinstance(x,float): assert math.isclose(x,y,rel_tol=0,abs_tol=1e-8),(k,x,y)
+              else: assert x==y,(k,x,y)
+          print('EXACT_POLICY_MATCH')
+          print('orders',a['orders'])
+          print('reference_wall',a['wall_clock_seconds'])
+          print('optimized_wall',b['wall_clock_seconds'])
+          print('speedup',a['wall_clock_seconds']/b['wall_clock_seconds'])
+          print('reference_exact_seconds',a['exact_sequence_seconds'])
+          print('optimized_exact_seconds',b['exact_sequence_seconds'])
+          print('reference_evals',a['exact_sequence_evaluations'])
+          print('optimized_evals',b['exact_sequence_evaluations'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b5-nyc20-optimization
+          path: |
+            nyc20.json
+            reference.json
+            optimized.json
+            reference.log
+            optimized.log
