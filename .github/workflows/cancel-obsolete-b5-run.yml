@@ -1,0 +1,20 @@
+name: Cancel obsolete slow B5 run
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cancel-obsolete-b5-run.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel obsolete checkpointed NYC run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel 34947172004 --repo "$GITHUB_REPOSITORY" || true
