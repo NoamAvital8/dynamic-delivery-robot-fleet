@@ -1,0 +1,77 @@
+name: Validate B5 checkpoint resume
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/validate-b5-checkpoint.yml'
+      - 'scripts/run_nyc_benchmark5_loss_checkpoint.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx pytest
+      - name: Compile and test
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark5_loss_checkpoint.py
+          pytest -q
+      - name: Download OSM graphs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Create Tel Aviv scenario
+        env:
+          PYTHONPATH: src
+        run: python scripts/create_tel_aviv_small_scenario.py
+      - name: Force checkpoint
+        env:
+          PYTHONPATH: src
+          B5_CHECKPOINT_OUT: checkpoint.pkl
+          B5_MAX_SEGMENT_WALL_SECONDS: '3'
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark5_loss_checkpoint.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output first.json | tee first.log
+          test -f checkpoint.pkl
+          test ! -f first.json
+      - name: Resume to completion
+        env:
+          PYTHONPATH: src
+          B5_RESUME_CHECKPOINT: checkpoint.pkl
+        run: |
+          set -o pipefail
+          python scripts/run_nyc_benchmark5_loss_checkpoint.py --graph data/graphs/tel_aviv.graphml --scenario data/scenarios/tel_aviv_small_3h_seed42.json --output resumed.json | tee resumed.log
+      - name: Verify exact result
+        run: |
+          python - <<'PY'
+          import json, math
+          r = json.load(open('resumed.json'))
+          expected = 4600.362249889454
+          assert math.isclose(r['loss_objective'], expected, rel_tol=0.0, abs_tol=1e-9), (r['loss_objective'], expected)
+          assert r['delivered'] == 112
+          assert r['on_time'] == 112
+          assert r['non_append_insertions'] == 3
+          print('checkpoint/resume matches reference exactly')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: b5-checkpoint-validation
+          path: |
+            checkpoint.pkl
+            first.log
+            resumed.log
+            resumed.json
