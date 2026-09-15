@@ -1,0 +1,231 @@
+name: Run NYC corrected B5 checkpointed
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/run-nyc-b5-checkpointed.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  GRAPH: data/graphs/new_york_city.graphml
+  SCENARIO: data/scenarios/nyc_reference_12h_seed42.json
+  RESULT: nyc_b5_checkpointed/b5_loss.json
+  SEGMENT_SECONDS: '15000'
+
+jobs:
+  chunk1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    outputs:
+      finished: ${{ steps.status.outputs.finished }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx pytest
+      - name: Compile and test
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m py_compile scripts/run_nyc_benchmark5_loss_checkpoint.py
+          pytest -q
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run chunk 1
+        env:
+          PYTHONPATH: src
+          B5_CHECKPOINT_OUT: nyc_b5_checkpointed/checkpoint1.pkl
+          B5_MAX_SEGMENT_WALL_SECONDS: ${{ env.SEGMENT_SECONDS }}
+        run: |
+          set -o pipefail
+          mkdir -p nyc_b5_checkpointed
+          python scripts/run_nyc_benchmark5_loss_checkpoint.py --graph "$GRAPH" --scenario "$SCENARIO" --output "$RESULT" | tee nyc_b5_checkpointed/chunk1.log
+      - id: status
+        name: Detect completion
+        run: |
+          if [ -f "$RESULT" ]; then echo 'finished=true' >> "$GITHUB_OUTPUT"; else echo 'finished=false' >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nyc-b5-loss-chunk1
+          path: nyc_b5_checkpointed/
+
+  chunk2:
+    needs: chunk1
+    if: needs.chunk1.outputs.finished != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    outputs:
+      finished: ${{ steps.status.outputs.finished }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - uses: actions/download-artifact@v4
+        with:
+          name: nyc-b5-loss-chunk1
+          path: resume
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run chunk 2
+        env:
+          PYTHONPATH: src
+          B5_RESUME_CHECKPOINT: resume/checkpoint1.pkl
+          B5_CHECKPOINT_OUT: nyc_b5_checkpointed/checkpoint2.pkl
+          B5_MAX_SEGMENT_WALL_SECONDS: ${{ env.SEGMENT_SECONDS }}
+        run: |
+          set -o pipefail
+          mkdir -p nyc_b5_checkpointed
+          python scripts/run_nyc_benchmark5_loss_checkpoint.py --graph "$GRAPH" --scenario "$SCENARIO" --output "$RESULT" | tee nyc_b5_checkpointed/chunk2.log
+      - id: status
+        name: Detect completion
+        run: |
+          if [ -f "$RESULT" ]; then echo 'finished=true' >> "$GITHUB_OUTPUT"; else echo 'finished=false' >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nyc-b5-loss-chunk2
+          path: nyc_b5_checkpointed/
+
+  chunk3:
+    needs: chunk2
+    if: needs.chunk2.result == 'success' && needs.chunk2.outputs.finished != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    outputs:
+      finished: ${{ steps.status.outputs.finished }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - uses: actions/download-artifact@v4
+        with:
+          name: nyc-b5-loss-chunk2
+          path: resume
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run chunk 3
+        env:
+          PYTHONPATH: src
+          B5_RESUME_CHECKPOINT: resume/checkpoint2.pkl
+          B5_CHECKPOINT_OUT: nyc_b5_checkpointed/checkpoint3.pkl
+          B5_MAX_SEGMENT_WALL_SECONDS: ${{ env.SEGMENT_SECONDS }}
+        run: |
+          set -o pipefail
+          mkdir -p nyc_b5_checkpointed
+          python scripts/run_nyc_benchmark5_loss_checkpoint.py --graph "$GRAPH" --scenario "$SCENARIO" --output "$RESULT" | tee nyc_b5_checkpointed/chunk3.log
+      - id: status
+        name: Detect completion
+        run: |
+          if [ -f "$RESULT" ]; then echo 'finished=true' >> "$GITHUB_OUTPUT"; else echo 'finished=false' >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nyc-b5-loss-chunk3
+          path: nyc_b5_checkpointed/
+
+  chunk4:
+    needs: chunk3
+    if: needs.chunk3.result == 'success' && needs.chunk3.outputs.finished != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    outputs:
+      finished: ${{ steps.status.outputs.finished }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - uses: actions/download-artifact@v4
+        with:
+          name: nyc-b5-loss-chunk3
+          path: resume
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run chunk 4
+        env:
+          PYTHONPATH: src
+          B5_RESUME_CHECKPOINT: resume/checkpoint3.pkl
+          B5_CHECKPOINT_OUT: nyc_b5_checkpointed/checkpoint4.pkl
+          B5_MAX_SEGMENT_WALL_SECONDS: ${{ env.SEGMENT_SECONDS }}
+        run: |
+          set -o pipefail
+          mkdir -p nyc_b5_checkpointed
+          python scripts/run_nyc_benchmark5_loss_checkpoint.py --graph "$GRAPH" --scenario "$SCENARIO" --output "$RESULT" | tee nyc_b5_checkpointed/chunk4.log
+      - id: status
+        name: Detect completion
+        run: |
+          if [ -f "$RESULT" ]; then echo 'finished=true' >> "$GITHUB_OUTPUT"; else echo 'finished=false' >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nyc-b5-loss-chunk4
+          path: nyc_b5_checkpointed/
+
+  chunk5:
+    needs: chunk4
+    if: needs.chunk4.result == 'success' && needs.chunk4.outputs.finished != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    outputs:
+      finished: ${{ steps.status.outputs.finished }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy scipy networkx
+      - uses: actions/download-artifact@v4
+        with:
+          name: nyc-b5-loss-chunk4
+          path: resume
+      - name: Download NYC graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/graphs
+          gh run download 34031808055 --repo "$GITHUB_REPOSITORY" --name osm-graphs --dir data/graphs
+      - name: Run final chunk
+        env:
+          PYTHONPATH: src
+          B5_RESUME_CHECKPOINT: resume/checkpoint4.pkl
+        run: |
+          set -o pipefail
+          mkdir -p nyc_b5_checkpointed
+          python scripts/run_nyc_benchmark5_loss_checkpoint.py --graph "$GRAPH" --scenario "$SCENARIO" --output "$RESULT" | tee nyc_b5_checkpointed/chunk5.log
+      - id: status
+        name: Verify completion
+        run: |
+          test -f "$RESULT"
+          echo 'finished=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nyc-b5-loss-final
+          path: nyc_b5_checkpointed/
