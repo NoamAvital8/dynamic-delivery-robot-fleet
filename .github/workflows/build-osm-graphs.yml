@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/build-osm-graphs.yml'
       - 'scripts/download_osm_graph.py'
+      - 'scripts/initialize_demand_clusters.py'
+      - 'src/delivery_fleet/spatial_demand.py'
   workflow_dispatch:
 
 jobs:
@@ -21,11 +23,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install osmnx networkx
+          pip install osmnx networkx scikit-learn
 
       - name: Download and build graphs
         run: |
           python scripts/download_osm_graph.py all
+
+      - name: Initialize demand clusters offline
+        env:
+          PYTHONPATH: src
+        run: |
+          python scripts/initialize_demand_clusters.py data/graphs/*.graphml
 
       - name: Show graph sizes
         run: |
