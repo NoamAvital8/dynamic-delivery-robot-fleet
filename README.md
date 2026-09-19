@@ -77,14 +77,16 @@ We will use **HDBSCAN** to discover spatial demand regions because it can identi
 
 Raw HDBSCAN is not sufficient by itself because it may label some observations as noise and therefore does not guarantee that every graph node belongs to a cluster.
 
-The planned solution is:
+The implemented solution is:
 
 1. run HDBSCAN to identify the high-density spatial structure;
-2. choose a representative/medoid for every resulting cluster;
-3. assign every graph node not already covered to its nearest cluster representative;
-4. perform this coverage step offline using graph distance, e.g. one multi-source shortest-path computation from all cluster representatives.
+2. choose a representative node for every resulting cluster;
+3. assign every HDBSCAN noise node to its nearest cluster representative by graph shortest-path distance;
+4. save the final cluster id directly on every graph node as `in_cluster`.
 
-Thus HDBSCAN determines the demand structure, while the second step creates a complete partition of the graph needed by the online policy.
+The clustering and the graph-distance coverage step are run **offline during graph initialization**, not in the online decision loop. The generated GraphML therefore already contains a complete partition and cluster lookup during simulation is \(O(1)\).
+
+Thus HDBSCAN determines the demand structure, while the coverage step guarantees that every graph node belongs to exactly one cluster.
 
 If this approach is unstable, graph \(k\)-medoids or another full-partition method will be used as a comparison baseline.
 
@@ -149,25 +151,42 @@ $$
 \mu_{z,c}=q_z\bar{\Lambda}_c.
 $$
 
-We parameterize the Gamma prior using a weak pseudo-observation time \(\tau_0\):
+We use a size-aware Gamma prior without interpreting the prior as fabricated historical observations.
 
-$$
-a_{z,c}=\tau_0\mu_{z,c},
+Let \(\eta>0\) control the concentration/strength of the prior and let \(\Lambda_c^0\) be the configured city-wide expected arrival rate for importance class \(c\), expressed in orders per minute. Then
+
+$
+a^{(0)}_{z,c}=\eta q_z,
 \qquad
-b_{z,c}=\tau_0.
-$$
+b^{(0)}_c=\frac{\eta}{\Lambda_c^0}.
+$
 
-The initial value will be
+Therefore
 
-$$
-\tau_0 = 30\text{ minutes},
-$$
+$
+E[\lambda_{z,c}]
+=
+\frac{a^{(0)}_{z,c}}{b^{(0)}_c}
+=
+q_z\Lambda_c^0.
+$
 
-with sensitivity tests such as 15, 30, and 60 minutes.
+The key intuition is that **cluster size controls the prior mean**: if a cluster contains 20% of the pickup-capable graph nodes, then before observing online demand it receives 20% of the prior city-wide request rate for that importance level.
 
-This makes the prior interpretable: it carries roughly \(\tau_0\) minutes of prior evidence, while online observations gradually dominate it.
+When an order arrives, only the matching \((z,c)\) event count increases. Elapsed simulation time is exposure for every \((z,c)\) pair. If \(n_{z,c}(t)\) matching orders have arrived by time \(t\), then
 
-The cluster-size term must use graph coverage size such as the number of eligible nodes, not the number of historical HDBSCAN points, because the latter would directly encode past demand twice.
+$
+\lambda_{z,c}\mid data
+\sim
+\mathrm{Gamma}
+\left(
+a^{(0)}_{z,c}+n_{z,c}(t),
+\;
+b^{(0)}_c+t
+\right).
+$
+
+The cluster-size term uses graph coverage size, not the number of historical HDBSCAN samples, so past demand is not counted twice.
 
 ## 4. Score for choosing which concrete robots to reserve
 
@@ -175,17 +194,21 @@ The FCNN determines **how many** robots of each type belong to each reservation 
 
 For a reservation threshold \(c\), define the set of priorities protected by that threshold as \(\mathcal P(c)\).
 
-The posterior demand weight of cluster \(z\) is
+First define the expected relevant workload in cluster \(z\):
 
-$$
+$
+W_{z,c}
+=
+\sum_{p\ge c}\hat{\lambda}_{z,p}.
+$
+
+Then normalize it into a demand weight:
+
+$
 w_{z,c}
 =
-\frac{
-\sum_{p\in\mathcal P(c)}\hat{\lambda}_{z,p}
-}{
-\sum_j\sum_{p\in\mathcal P(c)}\hat{\lambda}_{j,p}
-}.
-$$
+\frac{W_{z,c}}{\sum_j W_{j,c}}.
+$
 
 For robot \(r\):
 
@@ -217,6 +240,19 @@ $$
 Within each robot type, the robots with the smallest score are selected for the more restrictive high-priority reservation strata.
 
 This score directly combines predicted spatial demand, current workload/availability, location, robot speed, and battery/charging state.
+
+### Intuition for summing over all clusters
+
+We do not score a robot only by the cluster it currently occupies. Cluster borders are artificial and robots are mobile. A robot may be physically just outside a high-demand cluster yet be much faster to reach its demand than a robot located inside that cluster but far from its active area.
+
+The score is therefore a **demand-weighted expected response time**:
+
+- high \(W_{z,c}\) means cluster \(z\) is expected to generate many requests of importance \(c\) or higher;
+- such a cluster receives a large weight;
+- a robot with small response time to that busy cluster receives a better (lower) total score;
+- low-demand clusters have little influence on the score.
+
+Importantly, we multiply response time by demand weight rather than divide by demand. Dividing by a small demand value would make nearly irrelevant clusters create very large penalties.
 
 ### Capacity safeguard
 
@@ -281,7 +317,9 @@ Here:
 - \(\hat T_o^{(i,k)}\) is the estimated delivery time after the candidate insertion;
 - \(\hat T_o^0\) is the estimated delivery time before inserting the new order.
 
-Therefore the heuristic explicitly estimates the **incremental loss caused by the assignment**, including delays to packages already being carried or scheduled.
+Therefore the heuristic explicitly estimates the **incremental loss caused by the assignment over all affected orders**, including delays to packages already being carried or scheduled.
+
+This is essential because a robot can carry several orders at once. A robot may deliver the new order quickly but delay an existing high-importance order enough to create a much larger total penalty. Such a robot should receive a worse score even if the new order alone looks attractive.
 
 **Lower is better.**
 
@@ -350,6 +388,8 @@ where \(C_K\) is the heuristic shortlist.
 
 Thus, the shortlist is approximate, but the final choice **within the shortlist** is the true greedy minimum-loss decision under the current known set of orders.
 
+For each shortlisted robot, the exact search considers all precedence-feasible pickup/dropoff insertion positions while preserving feasibility. Because a robot may already carry several orders, the exact score is the cumulative change in loss of **all orders affected by that robot's new route**, not the loss of the newly arrived order alone.
+
 ### Later predictive extension
 
 A later version will move beyond purely current-order greedy loss.
@@ -416,12 +456,12 @@ The comparison between frozen-time and latency-aware simulation will show whethe
 
 The simulator currently supports heterogeneous robots, battery-aware routing, charging stations and queues, interruptible return-to-charge behavior, busy-robot scheduling, and reactive pickup/dropoff insertion.
 
-The next implementation phase will focus on:
+Current implementation work on this branch includes:
 
-1. HDBSCAN-based spatial regions with complete graph coverage;
-2. Gamma-Poisson online demand estimation;
-3. concrete-robot reservation scoring;
-4. the cheap incremental-loss candidate heuristic;
-5. top-\(K\) pruning and exact greedy selection.
+1. offline HDBSCAN spatial regions with complete graph coverage and persisted `in_cluster` node labels;
+2. the size-aware Gamma-Poisson model for every \((cluster, importance)\) pair;
+3. demand-weighted reservation scoring infrastructure.
 
-The FCNN training procedure and predictive future-order objective are intentionally deferred to later phases.
+The next coding steps are the cheap all-order incremental-loss candidate heuristic, top-\(K\) pruning integration, and the final reservation-policy wiring.
+
+The FCNN training procedure, predictive future-order objective, full ablation study, and latency-aware simulator are intentionally deferred to later phases.
