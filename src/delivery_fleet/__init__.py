@@ -76,6 +76,16 @@ from .scenario_creator import (
     ScenarioCreator,
     constant_demand_profile,
 )
+from .spatial_demand import (
+    CLUSTER_NODE_ATTR,
+    CLUSTER_REPRESENTATIVE_ATTR,
+    GammaPoissonDemandModel,
+    GammaPosterior,
+    SpatialClusterSummary,
+    annotate_hdbscan_clusters,
+    summarize_existing_clusters,
+    weighted_reservation_score,
+)
 
 __all__ = [
     "Assignment",
@@ -91,6 +101,8 @@ __all__ = [
     "ChargingSession",
     "ChargingStation",
     "ChargingStationRuntime",
+    "CLUSTER_NODE_ATTR",
+    "CLUSTER_REPRESENTATIVE_ATTR",
     "CONTINUE_UNTIL_ALL_RELEASED_ORDERS_FINISH",
     "DEADLINE_FIXED_BUFFER_MIN",
     "DEADLINE_IMPORTANCE_SLACK_MIN",
@@ -104,6 +116,8 @@ __all__ = [
     "DROPOFF_SERVICE_TIME_MIN",
     "DistanceOracle",
     "Enduro",
+    "GammaPoissonDemandModel",
+    "GammaPosterior",
     "ImportanceDistribution",
     "Item",
     "ItemDistribution",
@@ -130,8 +144,10 @@ __all__ = [
     "RouteSegment",
     "Scenario",
     "ScenarioCreator",
+    "SpatialClusterSummary",
     "SpeedyMcQueen",
     "add_charging_stations",
+    "annotate_hdbscan_clusters",
     "annotate_nearest_charging_stations",
     "constant_demand_profile",
     "create_default_fleet",
@@ -143,4 +159,6 @@ __all__ = [
     "nearest_station_data",
     "robot_count_for_graph",
     "select_charging_station_nodes",
+    "summarize_existing_clusters",
+    "weighted_reservation_score",
 ]
