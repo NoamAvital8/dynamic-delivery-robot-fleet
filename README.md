@@ -15,11 +15,11 @@ We study online planning and assignment for a heterogeneous fleet of autonomous 
 
 ## Primary objective
 
-The current benchmarks use a deadline- and importance-aware delivery loss. For a request with request-to-delivery time `T`, allowed duration `D`, and importance `w`:
+The current benchmarks use a deadline- and importance-aware delivery loss. For a request with request-to-delivery time \(T\), allowed duration \(D\), and importance \(w\):
 
-\[
+$$
 L(T,D,w)=w\min(D,T)+(w+1)^2\max(0,T-D).
-\]
+$$
 
 The first term rewards shorter delivery time before the deadline, while lateness receives a much larger importance-dependent penalty.
 
@@ -34,273 +34,394 @@ The first term rewards shorter delivery time before the deadline, while lateness
 7. Proposed algorithm
 8. Optional offline oracle for small instances
 
-## Proposed anticipatory algorithm
+# Proposed anticipatory algorithm
 
-The proposed method extends the capacity-reservation idea from the scalable anticipatory DPDP policy to a **heterogeneous robot fleet**.
+The proposed method extends the capacity-reservation idea of Ghiani et al. to a **heterogeneous robot fleet**, and adds spatial demand estimation and computationally cheap robot pruning.
 
-At every decision epoch, the policy performs two main tasks:
+At a high level:
 
-1. determine how much capacity of each robot type should be reserved for high-importance requests;
-2. assign the newly arrived request using a fast heuristic shortlist followed by exact loss evaluation.
+**online demand estimation → FCNN reservation fractions → choose concrete reserved robots → cheap candidate scoring → top-\(K\) shortlist → exact greedy loss minimization**
 
-The intended pipeline is:
+## 1. Heterogeneous FCNN reservation fractions
 
-[
-	ext{online demand estimation}
-ightarrow
-	ext{FCNN reservation policy}
-ightarrow
-	ext{select concrete reserved robots}
-ightarrow
-	ext{cheap assignment heuristic}
-ightarrow
-	ext{top-}K	ext{ candidate robots}
-ightarrow
-	ext{exact incremental-loss evaluation}.
-]
+Ghiani et al. use a multi-layer feed-forward neural network to map estimated demand features to the capacity-reservation vector \(\alpha\).
 
-### 1. Heterogeneous reservation fractions
+In the original paper:
 
-Instead of learning one global reservation vector for a homogeneous fleet, the FCNN predicts a reservation distribution for each robot type.
+- the input has \(C+1\) values;
+- the first \(C\) inputs are the predicted proportions of requests in each priority class;
+- the last input is the predicted total number of requests per vehicle;
+- there is one hidden layer with \(C\) neurons;
+- the activation function is \(\tanh\);
+- the output is \(\alpha=(\alpha_1,\ldots,\alpha_C)\);
+- \(\sum_c \alpha_c=1\);
+- training targets are generated offline by testing candidate \(\alpha\) configurations under perfect information and selecting the best one.
 
-For robot type (k) and importance threshold (c),
+Our extension is to a heterogeneous fleet. For robot type \(k\) and priority class \(c\),
 
-[
-alpha_{k,c}
-]
+$$
+\alpha_{k,c}
+$$
 
-denotes the fraction of robots of type (k) that should be restricted to requests of importance (c) or higher.
+denotes the fraction of robots of type \(k\) assigned to the reservation stratum that may serve class \(c\) and higher-priority classes.
 
-A single model should predict the reservation vectors jointly so that the decisions for the different robot types and importance levels remain consistent.
+The intended model will predict all robot-type reservation vectors jointly, so that the outputs remain mutually consistent.
 
-Candidate FCNN inputs include:
+Likely additional input features for our setting include robot-type workload, availability, battery statistics, spatial demand estimates, and time within the horizon.
 
-- estimated demand by importance level;
-- total workload per robot;
-- current backlog by importance;
-- fraction of robots busy/idle by type;
-- battery-state statistics;
-- current spatial demand estimates;
-- time within the planning horizon.
+**Implementation and training of the FCNN are intentionally deferred to a later phase.**
 
-Training is performed offline. For generated training instances, candidate reservation configurations are evaluated using simulation, and the best-performing configuration is used as the supervised target.
+## 2. Spatial demand regions: HDBSCAN with full graph coverage
 
-### 2. Online spatial demand estimation
+We will use **HDBSCAN** to discover spatial demand regions because it can identify clusters with different densities and does not require a single global \(\varepsilon\) value as DBSCAN does.
 
-Reservation fractions determine **how many** robots should be protected, but not **which physical robots** should be selected.
+Raw HDBSCAN is not sufficient by itself because it may label some observations as noise and therefore does not guarantee that every graph node belongs to a cluster.
 
-Pickup locations are therefore divided into spatial demand regions, initially using a method such as DBSCAN. For each cluster (z) and importance class (c), the policy maintains an arrival-rate estimate
+The planned solution is:
 
-[
-lambda_{z,c}.
-]
+1. run HDBSCAN to identify the high-density spatial structure;
+2. choose a representative/medoid for every resulting cluster;
+3. assign every graph node not already covered to its nearest cluster representative;
+4. perform this coverage step offline using graph distance, e.g. one multi-source shortest-path computation from all cluster representatives.
 
-A Gamma-Poisson Bayesian model is used:
+Thus HDBSCAN determines the demand structure, while the second step creates a complete partition of the graph needed by the online policy.
 
-[
-lambda_{z,c}sim mathrm{Gamma}(a_{z,c},b_{z,c}).
-]
+If this approach is unstable, graph \(k\)-medoids or another full-partition method will be used as a comparison baseline.
 
-After observing (n) requests in the cluster during an exposure interval (Delta t),
+## 3. Bayesian arrival-rate estimate for each cluster and priority
 
-[
-lambda_{z,c}mid data
-sim
-mathrm{Gamma}(a_{z,c}+n,;b_{z,c}+Delta t).
-]
+For each spatial cluster \(z\) and priority class \(c\), requests are modeled as a Poisson arrival process with an unknown rate
 
-This provides a stable online estimate even for rare high-importance requests and naturally implements a prior-to-posterior update.
+$$
+\lambda_{z,c}.
+$$
 
-Demand may change over time, so a forgetting/window mechanism can later be added if needed.
+We use a Gamma prior with the **rate** parameterization:
 
-### 3. Topology-informed spatial prior
+$$
+\lambda_{z,c}\sim \mathrm{Gamma}(a_{z,c},b_{z,c}),
+$$
 
-The prior should not simply assume that graph centrality equals demand.
+so that
 
-Instead, graph topology may be used to create a **weak prior** for regional demand. Candidate prior features include:
+$$
+E[\lambda_{z,c}] = \frac{a_{z,c}}{b_{z,c}}.
+$$
 
-- closeness/accessibility;
-- node density;
-- average shortest-path distance to the service region;
-- local connectivity;
-- betweenness centrality.
+After observing \(n_{z,c}\) requests during an observation time \(\Delta t\),
 
-Observed request data should dominate the prior as evidence accumulates.
+$$
+\lambda_{z,c}\mid data
+\sim
+\mathrm{Gamma}
+\left(
+a_{z,c}+n_{z,c},
+b_{z,c}+\Delta t
+\right).
+$$
 
-The experiments will compare at least:
+The posterior mean used by the policy is therefore
 
-- a uniform/weak prior;
-- a topology-informed prior.
-
-This will determine whether graph structure actually helps estimate demand rather than assuming that it does.
-
-### 4. Selecting the concrete robots to reserve
-
-Once the FCNN predicts the required reservation fractions, the policy must choose the actual robots assigned to each importance threshold.
-
-A reservation heuristic will rank robots according to how well positioned they are for predicted high-importance demand.
-
-Conceptually,
-
-[
-H_{mathrm{reserve}}(r,c)
-approx
-	ext{expected response time of robot }r
-	ext{ to predicted demand with importance }ge c.
-]
-
-The score should use the posterior regional demand estimates as weights and may consider:
-
-- the robot's expected usable location;
-- robot type and speed;
-- current workload;
-- battery state and charging needs;
-- predicted high-priority demand near that location.
-
-The exact form of this heuristic is still to be finalized and will be evaluated empirically.
-
-A feasibility safeguard is also required: reservation must never make every large-capacity robot unavailable to lower-priority requests. At least one robot capable of serving the largest package class remains generally accessible. This can later be generalized to a minimum open-capacity constraint per package-size class.
-
-### 5. Fast heuristic candidate selection for a new request
-
-Evaluating exact insertion loss for every robot is expensive because each robot may have several possible pickup/dropoff insertion positions and battery-feasible routes.
-
-The proposed policy therefore first computes a **cheap estimate** for every eligible robot without running a full shortest-path/insertion search for every ((robot, pickup, destination)) combination.
-
-The heuristic estimates the time-related consequences of assigning the new request:
-
-[
-hat T
+$$
+\hat{\lambda}_{z,c}
 =
-	ext{existing workload}
-+
-	ext{estimated travel time}
-+
-	ext{estimated charging time}
-+
-	ext{service time}.
-]
+\frac{a_{z,c}+n_{z,c}}
+     {b_{z,c}+\Delta t}.
+$$
 
-The estimate should account for:
+### Size-aware prior
 
-- approximate robot-to-pickup and pickup-to-destination travel time;
-- robot speed;
-- battery level and capacity;
+The prior will be uniform **per pickup-capable graph node**, not uniform per cluster. A larger cluster therefore receives a larger expected request rate simply because it contains more possible pickup locations.
+
+Let
+
+$$
+q_z=\frac{|V_z|}{\sum_j |V_j|}
+$$
+
+be the fraction of pickup-capable graph nodes belonging to cluster \(z\).
+
+Let \(\bar{\Lambda}_c\) be the prior total arrival rate for priority class \(c\), estimated only from training/historical data and not from hidden information in the test instance.
+
+Then the prior mean for cluster \(z\) is
+
+$$
+\mu_{z,c}=q_z\bar{\Lambda}_c.
+$$
+
+We parameterize the Gamma prior using a weak pseudo-observation time \(\tau_0\):
+
+$$
+a_{z,c}=\tau_0\mu_{z,c},
+\qquad
+b_{z,c}=\tau_0.
+$$
+
+The initial value will be
+
+$$
+\tau_0 = 30\text{ minutes},
+$$
+
+with sensitivity tests such as 15, 30, and 60 minutes.
+
+This makes the prior interpretable: it carries roughly \(\tau_0\) minutes of prior evidence, while online observations gradually dominate it.
+
+The cluster-size term must use graph coverage size such as the number of eligible nodes, not the number of historical HDBSCAN points, because the latter would directly encode past demand twice.
+
+## 4. Score for choosing which concrete robots to reserve
+
+The FCNN determines **how many** robots of each type belong to each reservation stratum. We must then decide **which physical robots** are assigned to those strata.
+
+For a reservation threshold \(c\), define the set of priorities protected by that threshold as \(\mathcal P(c)\).
+
+The posterior demand weight of cluster \(z\) is
+
+$$
+w_{z,c}
+=
+\frac{
+\sum_{p\in\mathcal P(c)}\hat{\lambda}_{z,p}
+}{
+\sum_j\sum_{p\in\mathcal P(c)}\hat{\lambda}_{j,p}
+}.
+$$
+
+For robot \(r\):
+
+- \(a_r\): estimated time until the robot reaches its next state from which its route can be changed;
+- \(u_r\): graph node of that state;
+- \(m_z\): representative/medoid of cluster \(z\);
+- \(v_r\): robot speed;
+- \(\tilde d(u_r,m_z)\): cheap/precomputed distance estimate;
+- \(\tilde C(r,z)\): estimated charging delay needed to respond from that state to cluster \(z\).
+
+The reservation score is
+
+$$
+H_{\mathrm{reserve}}(r,c)
+=
+\sum_z
+w_{z,c}
+\left[
+a_r
++
+\frac{\tilde d(u_r,m_z)}{v_r}
++
+\tilde C(r,z)
+\right].
+$$
+
+**Lower is better.**
+
+Within each robot type, the robots with the smallest score are selected for the more restrictive high-priority reservation strata.
+
+This score directly combines predicted spatial demand, current workload/availability, location, robot speed, and battery/charging state.
+
+### Capacity safeguard
+
+Reservation is not allowed to remove all large-capacity robots from general service.
+
+At minimum, one robot capable of carrying the largest package class must remain available to all priority classes. This can later be generalized to a minimum open-capability constraint for every payload/volume class.
+
+## 5. Cheap candidate-assignment score for a new request
+
+For a newly arrived request \(j\), we do **not** want to run an exact shortest-path and battery-aware insertion search for every robot.
+
+First, hard feasibility filters remove robots that cannot carry the package or are not allowed to serve its priority class.
+
+For every remaining robot, we evaluate possible pickup/dropoff insertion positions using **cheap travel-time estimates** rather than exact route planning.
+
+For any pair of nodes \(x,y\),
+
+$$
+\tilde{\tau}_r(x,y)
+=
+\frac{\tilde d(x,y)}{v_r},
+$$
+
+where \(\tilde d\) is an \(O(1)\) or precomputed approximation to graph distance. One candidate implementation is geographic distance multiplied by a calibrated graph-stretch factor, potentially estimated separately for pairs of spatial regions.
+
+For robot \(r\), let \(S_r\) be its current ordered stop sequence. For each precedence-feasible insertion of pickup \(p_j\) and delivery \(d_j\), construct an approximate sequence
+
+$$
+\tilde S_r^{(i,k)}.
+$$
+
+We propagate estimated completion times through that sequence using:
+
+- approximate travel time;
+- service time;
+- current battery;
 - energy consumption;
-- estimated charging duration;
-- additional waiting time introduced to packages already assigned to the robot.
+- estimated charging duration when the approximate energy trajectory requires charging.
 
-The heuristic then estimates the same quantity that the exact algorithm ultimately minimizes:
+No exact shortest-path or exact battery-routing search is performed at this stage.
 
-[
-widehat{Delta L}_r
+For each current order \(o\) assigned to \(r\), and for the new order \(j\), use the same project loss function on the estimated delivery time.
+
+The cheap assignment score is
+
+$$
+H_{\mathrm{assign}}(r,j)
 =
-widehat{L}_{after}
+\min_{i<k}
+\left[
+\sum_{o\in O_r\cup\{j\}}
+L(\hat T_o^{(i,k)},D_o,w_o)
 -
-widehat{L}_{before}.
-]
+\sum_{o\in O_r}
+L(\hat T_o^{\,0},D_o,w_o)
+\right].
+$$
 
-Thus, the heuristic is not merely a nearest-robot rule; it is an inexpensive approximation to the true incremental objective.
+Here:
 
-### 6. Candidate pruning and exact evaluation
+- \(O_r\) is the set of orders currently assigned to robot \(r\);
+- \(\hat T_o^{(i,k)}\) is the estimated delivery time after the candidate insertion;
+- \(\hat T_o^0\) is the estimated delivery time before inserting the new order.
 
-Robots are ranked by the cheap heuristic.
+Therefore the heuristic explicitly estimates the **incremental loss caused by the assignment**, including delays to packages already being carried or scheduled.
 
-Only the best (K) robots, or the best (x%) of eligible robots, are passed to the expensive exact search.
+**Lower is better.**
 
-For these shortlisted robots, the planner performs the full insertion evaluation, including:
+## 6. Top-\(K\) robot pruning
 
-- feasible pickup/dropoff insertion positions;
-- graph routing;
-- battery feasibility;
-- charging time;
-- effects on already-assigned packages;
-- deadlines and importance-weighted loss.
+All eligible robots are ranked using
 
-The selected robot is
+$$
+H_{\mathrm{assign}}(r,j).
+$$
 
-[
-r^*
+Only the best \(K\) robots, or the best \(x\%\) of eligible robots, are passed to the expensive exact search.
+
+This first-stage pruning is added on top of the exact lower-bound pruning and battery-routing optimizations already present in the project.
+
+## 7. Tuning the shortlist
+
+For small and medium instances where exhaustive evaluation is practical, full robot search provides the ground truth.
+
+For different values of \(K\) or \(x\%\), we will measure
+
+$$
+\mathrm{Recall@K}
 =
-argmin_{rin	ext{CandidateSet}}
-Delta L_r.
-]
-
-The existing exact lower-bound pruning and cached/vectorized battery-routing optimizations remain useful inside this shortlisted search.
-
-### 7. Tuning the shortlist
-
-The shortlist size is a parameter to be tuned experimentally.
-
-For small or medium instances where exhaustive robot evaluation is affordable, the full search provides ground truth.
-
-For different values of (K) or (x%), we will measure:
-
-[
-mathrm{Recall@K}
-=
-P(	ext{globally best robot is contained in the heuristic top-}K),
-]
+P(\text{globally best robot is contained in the heuristic top-}K)
+$$
 
 and
 
-[
-mathrm{Regret}
+$$
+\mathrm{Regret}
 =
-L_{mathrm{shortlist}}
+L_{\mathrm{shortlist}}
 -
-L_{mathrm{full search}}.
-]
+L_{\mathrm{full\ search}}.
+$$
 
-The main trade-off is therefore:
+We will also measure wall-clock decision time.
 
-[
-	ext{planning runtime}
-leftrightarrow
-	ext{decision quality}.
-]
+The goal is to find a shortlist size that gives a large computational reduction with negligible degradation in solution quality.
 
-The objective is to retain nearly all of the solution quality while evaluating only a small fraction of the fleet exactly.
+## 8. Exact greedy selection on the shortlisted robots
 
-## Experimental decomposition
+The current final decision is intentionally **greedy with respect to all known orders at the current decision epoch**.
 
-The proposed components will also be evaluated separately so that the contribution of each part can be identified.
+For each shortlisted robot \(r\), the planner performs the full exact insertion search and computes
+
+$$
+\Delta L_{\mathrm{exact}}(r,j)
+=
+L_{\mathrm{current\ orders\ after\ assigning}\ j\ \mathrm{to}\ r}
+-
+L_{\mathrm{current\ orders\ before}}.
+$$
+
+The chosen robot is
+
+$$
+r^*
+=
+\arg\min_{r\in C_K}
+\Delta L_{\mathrm{exact}}(r,j),
+$$
+
+where \(C_K\) is the heuristic shortlist.
+
+Thus, the shortlist is approximate, but the final choice **within the shortlist** is the true greedy minimum-loss decision under the current known set of orders.
+
+### Later predictive extension
+
+A later version will move beyond purely current-order greedy loss.
+
+The intended future objective is conceptually
+
+$$
+\Delta L_{\mathrm{current}}(r,j)
++
+\gamma
+E\left[
+L_{\mathrm{future}}
+\mid
+\text{state after assigning }j\text{ to }r,
+\hat{\lambda}
+\right].
+$$
+
+Future requests can be generated or predicted using the learned spatial/priority demand model.
+
+This predictive component is deliberately left for a later phase; the first version will optimize the exact loss of currently known orders only.
+
+## 9. Experimental decomposition
+
+The components will be evaluated separately so that their individual contributions can be identified.
 
 Planned comparisons include:
 
 - no priority reservation vs. learned reservation;
 - homogeneous/global reservation vs. robot-type-specific reservation;
-- original recent-demand vehicle selection vs. spatial demand-aware reservation;
-- uniform prior vs. topology-informed prior;
-- exhaustive robot evaluation vs. heuristic top-(K);
-- different values of (K) / shortlist percentage;
+- original recent-demand reservation selection vs. the posterior spatial-demand reservation score;
+- uniform-per-cluster prior vs. size-aware prior;
+- HDBSCAN-based regions vs. an alternative full-partition clustering method;
+- exhaustive robot evaluation vs. heuristic top-\(K\);
+- different \(K\) / shortlist percentages;
+- different prior strengths \(\tau_0\);
 - different workload levels;
 - different fleet heterogeneity levels;
 - different graph structures;
-- different demand and importance distributions;
+- different demand and priority distributions;
 - different levels of travel-time stochasticity.
 
-## Benchmark environments
+## 10. Benchmark environments
 
 The project will combine controlled synthetic graphs/workloads with real road graphs and historical or semi-real demand traces.
 
-## Simulation time vs. planning compute time
+## 11. Simulation time vs. planning compute time
 
-The simulator is event-driven. When an event at simulated time `t` requires a planning/assignment decision, the simulated clock is held at `t` until the policy returns its decision. Wall-clock computation time is measured separately and does **not** make robots move forward in simulated time.
+The main simulator is event-driven. When an event at simulated time \(t\) requires a planning/assignment decision, the simulated clock is held at \(t\) until the policy returns its decision.
 
-This convention is intentional:
+Wall-clock computation time is measured separately.
 
-- **Hardware-independent comparisons.** Our main experimental question is whether one planning policy makes better routing/assignment decisions than another. If CPU time advanced the simulated world, the same algorithm could obtain a better delivery score simply by running on a faster machine, which would mix algorithm quality with hardware speed.
-- **Reproducibility.** Freezing simulated time gives the same simulated trajectory when the same deterministic policy/scenario is run on a laptop, a CI runner, or a more powerful server.
-- **Deployment compute can be provisioned independently.** A production fleet may use optimized and parallel hardware, while robot trips occur on a much slower physical timescale than planning computations.
-- **Planning latency is still reported.** Wall-clock runtime and decision/search statistics are recorded rather than treating computation as free.
+This is the main benchmark convention because it keeps comparisons hardware-independent and reproducible.
 
-A separate realism experiment will inject measured planning latency into the simulation. During planning, robots continue their already committed motion, and the resulting decision is applied to the state reached when computation finishes.
+Planning latency is nevertheless an important deployment metric, so a **later realism experiment** will explicitly inject measured computation time into the simulation:
 
-This allows the project to test directly whether the instantaneous-decision assumption materially changes system performance.
+1. planning begins at simulated time \(t\);
+2. robots continue their already committed physical motion while the planner computes;
+3. after the measured wall-clock planning delay, the action is applied to the state the system has actually reached.
+
+The comparison between frozen-time and latency-aware simulation will show whether the instantaneous-planning assumption materially affects the conclusions.
 
 ## Status
 
-The simulator currently supports heterogeneous robots, battery-aware routing, charging stations and queues, interruptible return-to-charge behavior, busy-robot scheduling, and reactive pickup/dropoff insertion. Benchmark and runtime optimization work is ongoing.
+The simulator currently supports heterogeneous robots, battery-aware routing, charging stations and queues, interruptible return-to-charge behavior, busy-robot scheduling, and reactive pickup/dropoff insertion.
 
-The next research phase is the implementation and evaluation of the heterogeneous reservation policy, online spatial-demand model, reservation heuristic, and top-(K) robot candidate pruning described above.
+The next implementation phase will focus on:
+
+1. HDBSCAN-based spatial regions with complete graph coverage;
+2. Gamma-Poisson online demand estimation;
+3. concrete-robot reservation scoring;
+4. the cheap incremental-loss candidate heuristic;
+5. top-\(K\) pruning and exact greedy selection.
+
+The FCNN training procedure and predictive future-order objective are intentionally deferred to later phases.
