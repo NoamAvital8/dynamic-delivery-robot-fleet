@@ -113,7 +113,6 @@ def test_online_pipeline_updates_posterior_and_produces_assignment() -> None:
     assignment = policy.update(
         10.0,
         snapshots,
-        backlog_by_importance={1.0: 0, 2.0: 0, 5.0: 1},
     )
     assert set(assignment.threshold_by_robot_id) == {0, 1, 2, 3}
     assert assignment.threshold_by_robot_id[3] == 1.0

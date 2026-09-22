@@ -18,76 +18,45 @@ import numpy as np
 
 @dataclass(frozen=True, slots=True)
 class ReservationFeatureSchema:
-    """Stable ordering for the online state passed to the FCNN."""
+    """Paper-aligned input ordering for the heterogeneous FCNN.
+
+    The paper uses C class proportions plus the total expected requests per
+    vehicle.  Heterogeneity changes the output to K x C; it does not duplicate
+    the workload input for every robot type.
+    """
 
     robot_types: tuple[str, ...]
     importance_levels: tuple[float, ...]
 
     @property
     def names(self) -> tuple[str, ...]:
-        names: list[str] = []
-        names.extend(f"demand_share.importance_{value:g}" for value in self.importance_levels)
-        names.extend(f"expected_per_robot.importance_{value:g}" for value in self.importance_levels)
-        names.extend(f"backlog_share.importance_{value:g}" for value in self.importance_levels)
-        names.extend(f"busy_fraction.{robot_type}" for robot_type in self.robot_types)
-        names.extend(f"mean_battery_fraction.{robot_type}" for robot_type in self.robot_types)
-        names.extend(("spatial_concentration", "charger_congestion", "remaining_horizon_fraction"))
+        names = [
+            f"predicted_request_share.importance_{value:g}"
+            for value in self.importance_levels
+        ]
+        names.append("predicted_total_requests_per_robot")
         return tuple(names)
 
 
 def build_reservation_features(
     schema: ReservationFeatureSchema,
     *,
-    demand_rate_per_minute: Mapping[float, float],
+    predicted_requests_by_importance: Mapping[float, float],
     fleet_count: int,
-    backlog_by_importance: Mapping[float, int],
-    busy_fraction_by_type: Mapping[str, float],
-    mean_battery_fraction_by_type: Mapping[str, float],
-    cluster_rate_per_minute: Mapping[tuple[int, float], float],
-    charger_congestion: float,
-    remaining_horizon_fraction: float,
 ) -> np.ndarray:
-    """Build a finite, dimensionless online reservation feature vector."""
+    """Build the paper's C normalized counts plus total requests per robot."""
 
     if fleet_count <= 0:
         raise ValueError("fleet_count must be positive")
     levels = schema.importance_levels
-    rates = np.asarray([float(demand_rate_per_minute.get(level, 0.0)) for level in levels])
-    if np.any(rates < 0) or not np.all(np.isfinite(rates)):
-        raise ValueError("demand rates must be finite and non-negative")
-    total_rate = float(np.sum(rates))
-    demand_share = rates / total_rate if total_rate > 0 else np.zeros_like(rates)
-    expected_per_robot = rates / float(fleet_count)
-
-    backlog = np.asarray([float(backlog_by_importance.get(level, 0)) for level in levels])
-    if np.any(backlog < 0) or not np.all(np.isfinite(backlog)):
-        raise ValueError("backlog counts must be finite and non-negative")
-    backlog_total = float(np.sum(backlog))
-    backlog_share = backlog / backlog_total if backlog_total > 0 else np.zeros_like(backlog)
-
-    busy = np.asarray([float(busy_fraction_by_type.get(name, 0.0)) for name in schema.robot_types])
-    battery = np.asarray([float(mean_battery_fraction_by_type.get(name, 0.0)) for name in schema.robot_types])
-    if np.any((busy < 0) | (busy > 1)) or np.any((battery < 0) | (battery > 1)):
-        raise ValueError("busy and battery fractions must be in [0, 1]")
-
-    cluster_totals: dict[int, float] = {}
-    for (cluster_id, _), value in cluster_rate_per_minute.items():
-        value = float(value)
-        if value < 0 or not math.isfinite(value):
-            raise ValueError("cluster rates must be finite and non-negative")
-        cluster_totals[int(cluster_id)] = cluster_totals.get(int(cluster_id), 0.0) + value
-    cluster_sum = sum(cluster_totals.values())
-    spatial_concentration = (
-        max(cluster_totals.values(), default=0.0) / cluster_sum if cluster_sum > 0 else 0.0
+    predicted = np.asarray(
+        [float(predicted_requests_by_importance.get(level, 0.0)) for level in levels]
     )
-
-    tail = np.asarray(
-        [spatial_concentration, float(charger_congestion), float(remaining_horizon_fraction)],
-        dtype=float,
-    )
-    if np.any((tail < 0) | (tail > 1)) or not np.all(np.isfinite(tail)):
-        raise ValueError("summary fractions must be finite and in [0, 1]")
-    return np.concatenate((demand_share, expected_per_robot, backlog_share, busy, battery, tail))
+    if np.any(predicted < 0) or not np.all(np.isfinite(predicted)):
+        raise ValueError("predicted request counts must be finite and non-negative")
+    total = float(np.sum(predicted))
+    shares = predicted / total if total > 0 else np.zeros_like(predicted)
+    return np.concatenate((shares, np.asarray([total / float(fleet_count)])))
 
 
 class ReservationFCNN:
@@ -99,11 +68,11 @@ class ReservationFCNN:
         robot_types: Sequence[str],
         importance_levels: Sequence[float],
         *,
-        hidden_dim: int = 32,
+        hidden_dim: int | None = None,
         seed: int = 42,
     ) -> None:
-        if input_dim <= 0 or hidden_dim <= 0:
-            raise ValueError("input_dim and hidden_dim must be positive")
+        if input_dim <= 0:
+            raise ValueError("input_dim must be positive")
         self.input_dim = int(input_dim)
         self.robot_types = tuple(str(value) for value in robot_types)
         self.importance_levels = tuple(float(value) for value in importance_levels)
@@ -113,8 +82,17 @@ class ReservationFCNN:
             raise ValueError("robot types must be unique")
         if tuple(sorted(self.importance_levels)) != self.importance_levels:
             raise ValueError("importance levels must be sorted ascending")
-        self.hidden_dim = int(hidden_dim)
+        if (
+            len(set(self.importance_levels)) != len(self.importance_levels)
+            or any(value <= 0 or not math.isfinite(value) for value in self.importance_levels)
+        ):
+            raise ValueError("importance levels must be unique, finite and positive")
         self.output_dim = len(self.robot_types) * len(self.importance_levels)
+        self.hidden_dim = (
+            len(self.importance_levels) if hidden_dim is None else int(hidden_dim)
+        )
+        if self.hidden_dim <= 0:
+            raise ValueError("hidden_dim must be positive")
         rng = np.random.default_rng(seed)
         self.w1 = rng.normal(0.0, math.sqrt(2.0 / self.input_dim), (self.input_dim, self.hidden_dim))
         self.b1 = np.zeros(self.hidden_dim)
@@ -256,6 +234,55 @@ class ReservationFCNN:
             for name in ("w1", "b1", "w2", "b2", "feature_mean", "feature_scale"):
                 setattr(model, name, np.asarray(data[name], dtype=float).copy())
         return model
+
+
+class FixedReservationModel:
+    """Constant alpha matrix used for perfect-information target evaluation."""
+
+    def __init__(
+        self,
+        robot_types: Sequence[str],
+        importance_levels: Sequence[float],
+        fractions_by_type: Mapping[str, Sequence[float]],
+    ) -> None:
+        self.robot_types = tuple(str(value) for value in robot_types)
+        self.importance_levels = tuple(float(value) for value in importance_levels)
+        self.input_dim = len(self.importance_levels) + 1
+        if len(set(self.robot_types)) != len(self.robot_types):
+            raise ValueError("robot types must be unique")
+        if (
+            tuple(sorted(self.importance_levels)) != self.importance_levels
+            or len(set(self.importance_levels)) != len(self.importance_levels)
+            or any(value <= 0 or not math.isfinite(value) for value in self.importance_levels)
+        ):
+            raise ValueError("importance levels must be sorted, unique, finite and positive")
+        if set(fractions_by_type) != set(self.robot_types):
+            raise ValueError("fixed fractions must cover exactly the model robot types")
+        self._fractions: dict[str, tuple[float, ...]] = {}
+        for robot_type in self.robot_types:
+            row = tuple(float(value) for value in fractions_by_type[robot_type])
+            if len(row) != len(self.importance_levels):
+                raise ValueError("every fixed fraction row must match importance levels")
+            if any(value < 0 or not math.isfinite(value) for value in row):
+                raise ValueError("fixed fractions must be finite and non-negative")
+            if not math.isclose(sum(row), 1.0, rel_tol=0.0, abs_tol=1e-8):
+                raise ValueError("fixed fractions for each type must sum to one")
+            self._fractions[robot_type] = row
+
+    def predict(self, features: np.ndarray) -> dict[str, tuple[float, ...]]:
+        values = np.asarray(features, dtype=float)
+        if values.shape != (self.input_dim,) or not np.all(np.isfinite(values)):
+            raise ValueError(f"features must have shape ({self.input_dim},) and be finite")
+        return dict(self._fractions)
+
+    @classmethod
+    def load(cls, path: str | Path) -> "FixedReservationModel":
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        return cls(
+            payload["robot_types"],
+            payload["importance_levels"],
+            payload["fractions_by_type"],
+        )
 
 
 def select_perfect_information_target(

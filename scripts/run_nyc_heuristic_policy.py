@@ -45,7 +45,9 @@ def _patch_heuristic(source: str) -> str:
         "    OnlineAnticipatoryReservation, ReservationRobotSnapshot,\n"
         ")\n"
         "from delivery_fleet.reservation import reservation_eligibility\n"
-        "from delivery_fleet.reservation_nn import ReservationFCNN\n"
+        "from delivery_fleet.reservation_nn import (\n"
+        "    FixedReservationModel, ReservationFCNN,\n"
+        ")\n"
         "from delivery_fleet.spatial_demand import haversine_node_distance_m\n",
         "Haversine import",
     )
@@ -88,6 +90,10 @@ def _patch_heuristic(source: str) -> str:
         "        help=\"Trained ReservationFCNN .npz file; omit to disable reservation.\",\n"
         "    )\n"
         "    parser.add_argument(\n"
+        "        \"--fixed-reservation-fractions\", type=Path, default=None,\n"
+        "        help=\"Fixed alpha JSON used only for offline target evaluation.\",\n"
+        "    )\n"
+        "    parser.add_argument(\n"
         "        \"--importance-prior-rates-per-hour\",\n"
         "        default='{\"1\": 120.0, \"2\": 22.5, \"5\": 7.5}',\n"
         "        help=\"Configured JSON mapping of importance to city-wide hourly rate.\",\n"
@@ -97,7 +103,12 @@ def _patch_heuristic(source: str) -> str:
         "    )\n"
         "    args = parser.parse_args()\n"
         "    if args.shortlist_k <= 0:\n"
-        "        parser.error(\"--shortlist-k must be positive\")\n",
+        "        parser.error(\"--shortlist-k must be positive\")\n"
+        "    if (\n"
+        "        args.reservation_model is not None\n"
+        "        and args.fixed_reservation_fractions is not None\n"
+        "    ):\n"
+        "        parser.error(\"choose either a trained model or fixed fractions, not both\")\n",
         "shortlist CLI",
     )
 
@@ -108,7 +119,10 @@ def _patch_heuristic(source: str) -> str:
         '    print(f"robots={len(robots):,} types={fleet_type_summary(robots)}", flush=True)\n\n'
         '    reservation_policy = None\n'
         '    reservation_assignment = None\n'
-        '    if args.reservation_model is not None:\n'
+        '    if (\n'
+        '        args.reservation_model is not None\n'
+        '        or args.fixed_reservation_fractions is not None\n'
+        '    ):\n'
         '        try:\n'
         '            prior_rates = {\n'
         '                float(key): float(value)\n'
@@ -118,7 +132,11 @@ def _patch_heuristic(source: str) -> str:
         '            }\n'
         '        except (TypeError, ValueError, json.JSONDecodeError) as exc:\n'
         '            parser.error(f"invalid importance prior rates JSON: {exc}")\n'
-        '        reservation_model = ReservationFCNN.load(args.reservation_model)\n'
+        '        reservation_model = (\n'
+        '            ReservationFCNN.load(args.reservation_model)\n'
+        '            if args.reservation_model is not None\n'
+        '            else FixedReservationModel.load(args.fixed_reservation_fractions)\n'
+        '        )\n'
         '        reservation_policy = OnlineAnticipatoryReservation(\n'
         '            graph, robots, reservation_model, prior_rates,\n'
         '            prior_concentration=args.prior_concentration,\n'
@@ -126,7 +144,11 @@ def _patch_heuristic(source: str) -> str:
         '            horizon_min=scenario.duration_minutes,\n'
         '            charger_power_w=DEFAULT_CHARGING_POWER_W,\n'
         '        )\n'
-        '        print(f"reservation model={args.reservation_model}", flush=True)\n\n'
+        '        print(\n'
+        '            f"reservation source="\n'
+        '            f"{args.reservation_model or args.fixed_reservation_fractions}",\n'
+        '            flush=True,\n'
+        '        )\n\n'
         '    oracle = DistanceOracle(graph, edge_weight=EDGE_WEIGHT)\n',
         "reservation initialization",
     )
@@ -230,16 +252,9 @@ def _patch_heuristic(source: str) -> str:
                     battery_wh=max(0.0, float(snapshot.battery_wh)),
                     busy=bool(schedules[robot.spec.id].orders),
                 )
-        backlog = Counter(float(item.importance) for item in pending)
-        occupied = sum(
-            len(state.active) + len(state.queue) for state in station_state.values()
-        )
-        charger_capacity = max(1, len(station_state) * DEFAULT_NUMBER_OF_PORTS)
         reservation_assignment = reservation_policy.update(
             now,
             snapshots,
-            backlog_by_importance=backlog,
-            charger_congestion=min(1.0, occupied / charger_capacity),
         )
         B5_STATS["reservation_updates"] += 1.0
 
@@ -405,10 +420,21 @@ def _patch_heuristic(source: str) -> str:
         '        "reservation_model": (\n'
         '            str(args.reservation_model) if args.reservation_model is not None else None\n'
         '        ),\n'
+        '        "fixed_reservation_fractions": (\n'
+        '            str(args.fixed_reservation_fractions)\n'
+        '            if args.fixed_reservation_fractions is not None else None\n'
+        '        ),\n'
         '        "reservation_updates": int(B5_STATS["reservation_updates"]),\n'
         '        "reservation_filtered_robots": int(B5_STATS["reservation_filtered_robots"]),\n'
         '        "shortlist_fallback_robots": int(B5_STATS["shortlist_fallback_robots"]),\n',
         "heuristic metadata",
+    )
+    source = _replace_once(
+        source,
+        '    args.output.write_text(json.dumps(results, indent=2), encoding="utf-8")\n',
+        '    args.output.parent.mkdir(parents=True, exist_ok=True)\n'
+        '    args.output.write_text(json.dumps(results, indent=2), encoding="utf-8")\n',
+        "output directory creation",
     )
     return source
 

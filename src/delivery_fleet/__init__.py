@@ -76,6 +76,7 @@ from .reservation import (
     reservation_eligibility,
 )
 from .reservation_nn import (
+    FixedReservationModel,
     ReservationFCNN,
     ReservationFeatureSchema,
     build_reservation_features,
@@ -135,6 +136,7 @@ __all__ = [
     "DROPOFF_SERVICE_TIME_MIN",
     "DistanceOracle",
     "Enduro",
+    "FixedReservationModel",
     "GammaPoissonDemandModel",
     "GammaPosterior",
     "ImportanceDistribution",

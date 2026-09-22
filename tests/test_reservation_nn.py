@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from delivery_fleet.reservation_nn import (
+    FixedReservationModel,
     ReservationFCNN,
     ReservationFeatureSchema,
     build_reservation_features,
@@ -36,18 +37,13 @@ def test_feature_builder_has_stable_schema_and_finite_values() -> None:
     schema = ReservationFeatureSchema(("a", "b"), (1.0, 5.0))
     features = build_reservation_features(
         schema,
-        demand_rate_per_minute={1.0: 2.0, 5.0: 1.0},
+        predicted_requests_by_importance={1.0: 20.0, 5.0: 10.0},
         fleet_count=4,
-        backlog_by_importance={1.0: 3, 5.0: 1},
-        busy_fraction_by_type={"a": 0.5, "b": 1.0},
-        mean_battery_fraction_by_type={"a": 0.8, "b": 0.4},
-        cluster_rate_per_minute={(0, 1.0): 2.0, (1, 5.0): 1.0},
-        charger_congestion=0.25,
-        remaining_horizon_fraction=0.75,
     )
     assert features.shape == (len(schema.names),)
     assert np.all(np.isfinite(features))
     np.testing.assert_allclose(features[:2], (2.0 / 3.0, 1.0 / 3.0))
+    assert features[2] == 7.5
 
 
 def test_perfect_information_target_uses_minimum_realized_loss() -> None:
@@ -57,3 +53,17 @@ def test_perfect_information_target_uses_minimum_realized_loss() -> None:
     )
     np.testing.assert_array_equal(chosen, candidates[1])
     assert loss == 3.0
+
+
+def test_fixed_reservation_model_validates_and_returns_constant_alpha() -> None:
+    model = FixedReservationModel(
+        ("a", "b"),
+        (1.0, 2.0, 5.0),
+        {"a": (0.5, 0.25, 0.25), "b": (1.0, 0.0, 0.0)},
+    )
+    assert model.input_dim == 4
+    assert model.predict(np.asarray((0.2, 0.3, 0.5, 4.0)))["a"] == (
+        0.5,
+        0.25,
+        0.25,
+    )

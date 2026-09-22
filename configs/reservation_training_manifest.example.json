@@ -1,0 +1,52 @@
+{
+  "robot_types": [
+    "speedy_mcqueen",
+    "middle_man",
+    "enduro",
+    "oomph"
+  ],
+  "importance_levels": [1.0, 2.0, 5.0],
+  "importance_prior_rates_per_hour": {
+    "1": 120.0,
+    "2": 22.5,
+    "5": 7.5
+  },
+  "prior_concentration": 4.0,
+  "shortlist_k": 10,
+  "instances": [
+    {
+      "id": "train_seed_000",
+      "graph": "../data/graphs/new_york_city.graphml",
+      "scenario": "../data/scenarios/training/nyc_train_seed000.json"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "no_reservation",
+      "fractions_by_type": {
+        "speedy_mcqueen": [1.0, 0.0, 0.0],
+        "middle_man": [1.0, 0.0, 0.0],
+        "enduro": [1.0, 0.0, 0.0],
+        "oomph": [1.0, 0.0, 0.0]
+      }
+    },
+    {
+      "id": "moderate_reservation",
+      "fractions_by_type": {
+        "speedy_mcqueen": [0.6, 0.3, 0.1],
+        "middle_man": [0.7, 0.2, 0.1],
+        "enduro": [0.6, 0.2, 0.2],
+        "oomph": [0.8, 0.15, 0.05]
+      }
+    },
+    {
+      "id": "strong_reservation",
+      "fractions_by_type": {
+        "speedy_mcqueen": [0.4, 0.35, 0.25],
+        "middle_man": [0.5, 0.3, 0.2],
+        "enduro": [0.4, 0.3, 0.3],
+        "oomph": [0.7, 0.2, 0.1]
+      }
+    }
+  ]
+}

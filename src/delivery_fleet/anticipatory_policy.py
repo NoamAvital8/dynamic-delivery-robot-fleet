@@ -15,6 +15,7 @@ from .reservation import (
     assign_reservation_thresholds,
 )
 from .reservation_nn import (
+    FixedReservationModel,
     ReservationFCNN,
     ReservationFeatureSchema,
     build_reservation_features,
@@ -45,7 +46,7 @@ class OnlineAnticipatoryReservation:
         self,
         graph: nx.Graph,
         robots: Iterable[RobotState],
-        model: ReservationFCNN,
+        model: ReservationFCNN | FixedReservationModel,
         importance_rates_per_hour: Mapping[float, float],
         *,
         prior_concentration: float = 4.0,
@@ -90,9 +91,6 @@ class OnlineAnticipatoryReservation:
         self,
         time_min: float,
         snapshots: Mapping[int, ReservationRobotSnapshot],
-        *,
-        backlog_by_importance: Mapping[float, int],
-        charger_congestion: float = 0.0,
     ) -> ReservationAssignment:
         """Predict strata and choose physical robots using ``H_reserve``."""
 
@@ -101,40 +99,25 @@ class OnlineAnticipatoryReservation:
         for robot in self.robots:
             type_robots[robot.spec.robot_type].append(robot)
 
-        demand_by_importance: dict[float, float] = {}
-        cluster_rates: dict[tuple[int, float], float] = {}
+        predicted_requests: dict[float, float] = {}
+        remaining_min = max(0.0, self.horizon_min - time_min)
         for importance in self.importance_levels:
-            total = 0.0
+            posterior_rate = 0.0
+            observed = 0
             for cluster_id in self.cluster_summary.cluster_sizes:
                 rate = self.demand.posterior(
                     cluster_id, importance, at_time_min=time_min
                 ).mean_per_minute
-                cluster_rates[(cluster_id, importance)] = rate
-                total += rate
-            demand_by_importance[importance] = total
-
-        busy_by_type: dict[str, float] = {}
-        battery_by_type: dict[str, float] = {}
-        for robot_type, members in type_robots.items():
-            available = [snapshots[robot.spec.id] for robot in members]
-            busy_by_type[robot_type.value] = sum(item.busy for item in available) / len(available)
-            battery_by_type[robot_type.value] = sum(
-                max(0.0, min(1.0, item.battery_wh / robot.spec.battery_capacity_wh))
-                for robot, item in zip(members, available, strict=True)
-            ) / len(available)
+                posterior_rate += rate
+                observed += self.demand.count(cluster_id, importance)
+            # Paper-equivalent whole-horizon count: requests already observed
+            # plus the posterior expected arrivals over the remaining horizon.
+            predicted_requests[importance] = observed + posterior_rate * remaining_min
 
         features = build_reservation_features(
             self.schema,
-            demand_rate_per_minute=demand_by_importance,
+            predicted_requests_by_importance=predicted_requests,
             fleet_count=len(self.robots),
-            backlog_by_importance=backlog_by_importance,
-            busy_fraction_by_type=busy_by_type,
-            mean_battery_fraction_by_type=battery_by_type,
-            cluster_rate_per_minute=cluster_rates,
-            charger_congestion=float(charger_congestion),
-            remaining_horizon_fraction=max(
-                0.0, min(1.0, (self.horizon_min - time_min) / self.horizon_min)
-            ),
         )
         fractions_by_name = self.model.predict(features)
         fractions = {

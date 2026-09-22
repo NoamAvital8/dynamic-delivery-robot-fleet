@@ -66,11 +66,18 @@ $$
 
 denotes the fraction of robots of type \(k\) assigned to the reservation stratum that may serve class \(c\) and higher-priority classes.
 
-The implemented model predicts all robot-type reservation vectors jointly. A separate softmax is applied to every robot type, so each type's fractions are non-negative and sum exactly to one.
+The implemented model keeps the paper's **\(C+1\) inputs**:
 
-Likely additional input features for our setting include robot-type workload, availability, battery statistics, spatial demand estimates, and time within the horizon.
+1. the predicted whole-horizon share of each of the \(C\) importance classes;
+2. the predicted total number of requests divided by the fleet size.
 
-`ReservationFCNN` is a one-hidden-layer `tanh` network trained jointly with fractional cross-entropy targets. `scripts/generate_reservation_training_data.py` selects the minimum realized-loss candidate from offline perfect-information evaluations, and `scripts/train_reservation_fcnn.py` trains and persists the model without introducing test-scenario future information.
+At runtime, the paper's moving-average prediction is replaced by our size-aware Gamma-Poisson estimate. For importance \(c\), the predicted whole-horizon count is the number already observed plus the posterior mean arrival rate multiplied by the remaining horizon.
+
+The network also keeps the paper's single hidden layer with \(C\) `tanh` neurons by default. Our heterogeneous extension changes the output from \(C\) values to one joint \(K \times C\) matrix. A separate softmax is applied to every robot type, so each type's fractions are non-negative and sum exactly to one. The hidden size remains configurable for ablation experiments.
+
+`ReservationFCNN` is trained jointly with fractional cross-entropy targets. Following the paper, every training scenario is treated with perfect information **offline**: the real simulator is run with every configured fixed \(\alpha\) candidate, and the candidate having minimum final loss becomes that scenario's label. Test scenarios must never appear in this target-generation manifest.
+
+`scripts/generate_reservation_training_data.py` evaluates scenario/candidate pairs with a process pool controlled by `--processes`. `scripts/train_reservation_fcnn.py` trains multiple independent initializations concurrently, also controlled by `--processes`, selects the seed with the smallest held-out validation loss, and refits that initialization on all training instances before saving it.
 
 ## 2. Spatial demand regions: HDBSCAN with full graph coverage
 
@@ -493,3 +500,78 @@ python scripts/run_nyc_heuristic_policy.py --reservation-model models/reservatio
 ```
 
 The predictive future-order objective, experiment-scale shortlist tuning/full ablation study, and latency-aware simulator remain later research experiments rather than missing components of the current greedy policy.
+
+## Training and simulation on the faculty server
+
+The expensive step is perfect-information target generation, because it runs one complete simulation for every `(training scenario, alpha candidate)` pair. It is process-parallel. The FCNN itself is intentionally small, so its parallelism is implemented as independent random restarts followed by validation-model selection.
+
+### 1. Environment
+
+```bash
+cd /data/workspace/robot_delivery/dynamic-delivery-robot-fleet
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install numpy scipy networkx scikit-learn pytest
+export PYTHONPATH="$PWD/src"
+```
+
+### 2. Prepare the training manifest
+
+Copy `configs/reservation_training_manifest.example.json`, list **training-only** scenarios, and add the fixed heterogeneous alpha candidates to evaluate. Fraction rows follow ascending importance order `[1, 2, 5]` and must sum to one for every robot type.
+
+The paper used 100 training instances and enumerated candidate alpha settings. For this heterogeneous extension, avoid the full Cartesian product across four robot types unless it is deliberately bounded: it grows exponentially. Use a designed candidate set or a reproducible sampled set that includes no-reservation, balanced, and stronger-reservation configurations.
+
+### 3. Generate perfect-information targets in parallel
+
+```bash
+python scripts/generate_reservation_training_data.py \
+  configs/reservation_training_manifest.json \
+  data/training/reservation_targets.npz \
+  --processes 128 \
+  --work-dir data/training/reservation_target_jobs
+```
+
+`--processes` is the maximum number of simultaneous simulator evaluations. Completed job JSON files are cached in the work directory, so rerunning the same command resumes instead of repeating completed simulations.
+
+Although the server has roughly 700 logical cores, each process loads a graph and routing index. With 300 GB RAM, begin with 128 processes, inspect memory consumption, and increase to 256 or higher only if there is comfortable headroom. The script forces numerical libraries to one thread per simulator process to avoid oversubscription.
+
+### 4. Train parallel FCNN restarts
+
+```bash
+python scripts/train_reservation_fcnn.py \
+  data/training/reservation_targets.npz \
+  models/reservation_fcnn.npz \
+  --processes 64 \
+  --restarts 256 \
+  --epochs 2000 \
+  --learning-rate 0.01 \
+  --validation-fraction 0.2 \
+  --threads-per-process 1
+```
+
+`--processes` controls simultaneous training processes; `--restarts` controls the total independent initializations. The best validation seed is retrained on the complete training set and saved. A companion `models/reservation_fcnn.training.json` records the selected seed and losses. The paper-default hidden width is used when `--hidden-dim` is omitted or set to `0`.
+
+### 5. Run the proposed simulation
+
+```bash
+python scripts/run_nyc_heuristic_policy.py \
+  --graph data/graphs/new_york_city.graphml \
+  --scenario data/scenarios/nyc_reference_12h_seed42.json \
+  --reservation-model models/reservation_fcnn.npz \
+  --shortlist-k 10 \
+  --importance-prior-rates-per-hour '{"1": 120.0, "2": 22.5, "5": 7.5}' \
+  --prior-concentration 4.0 \
+  --output results/proposed_policy.json
+```
+
+For the no-reservation ablation, omit `--reservation-model`. For an offline fixed-alpha evaluation, use `--fixed-reservation-fractions path/to/fixed_alpha.json`; this option is intended for target generation, not the final online policy.
+
+### 6. Verify before large runs
+
+```bash
+pytest -q
+python scripts/run_nyc_heuristic_policy.py --help
+python scripts/generate_reservation_training_data.py --help
+python scripts/train_reservation_fcnn.py --help
+```
