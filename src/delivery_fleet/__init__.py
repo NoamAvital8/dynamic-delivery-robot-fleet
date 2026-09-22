@@ -65,6 +65,22 @@ from .robot import (
     RobotSpec,
     RobotState,
 )
+from .anticipatory_policy import (
+    OnlineAnticipatoryReservation,
+    ReservationRobotSnapshot,
+)
+from .reservation import (
+    ReservationAssignment,
+    apportion_reservation_counts,
+    assign_reservation_thresholds,
+    reservation_eligibility,
+)
+from .reservation_nn import (
+    ReservationFCNN,
+    ReservationFeatureSchema,
+    build_reservation_features,
+    select_perfect_information_target,
+)
 from .routing import ChargerDistanceIndex, DistanceOracle, NearestTarget
 from .scenario_creator import (
     ImportanceDistribution,
@@ -135,6 +151,7 @@ __all__ = [
     "NoFeasibleBatteryRoute",
     "NodeDemandProfile",
     "Oomph",
+    "OnlineAnticipatoryReservation",
     "Order",
     "PENDING_ORDER_DISCIPLINE",
     "PICKUP_SERVICE_TIME_MIN",
@@ -143,6 +160,10 @@ __all__ = [
     "RobotSpec",
     "RobotState",
     "RobotType",
+    "ReservationAssignment",
+    "ReservationFCNN",
+    "ReservationFeatureSchema",
+    "ReservationRobotSnapshot",
     "RouteQuoteSegment",
     "RouteSegment",
     "Scenario",
@@ -150,6 +171,8 @@ __all__ = [
     "SpatialClusterSummary",
     "SpeedyMcQueen",
     "add_charging_stations",
+    "apportion_reservation_counts",
+    "assign_reservation_thresholds",
     "annotate_hdbscan_clusters",
     "annotate_nearest_charging_stations",
     "constant_demand_profile",
@@ -164,7 +187,10 @@ __all__ = [
     "max_distance_to_nearest_station",
     "nearest_station_data",
     "robot_count_for_graph",
+    "reservation_eligibility",
     "select_charging_station_nodes",
     "summarize_existing_clusters",
     "weighted_reservation_score",
+    "build_reservation_features",
+    "select_perfect_information_target",
 ]

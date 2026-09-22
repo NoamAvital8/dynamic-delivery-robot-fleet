@@ -470,10 +470,10 @@ class GammaPoissonDemandModel:
         cluster_attr: str = CLUSTER_NODE_ATTR,
         start_time_min: float = 0.0,
     ) -> None:
-        if prior_concentration <= 0:
-            raise ValueError("prior_concentration must be positive")
-        if start_time_min < 0:
-            raise ValueError("start_time_min cannot be negative")
+        if prior_concentration <= 0 or not math.isfinite(prior_concentration):
+            raise ValueError("prior_concentration must be finite and positive")
+        if start_time_min < 0 or not math.isfinite(start_time_min):
+            raise ValueError("start_time_min must be finite and non-negative")
         if not importance_rates_per_hour:
             raise ValueError("importance_rates_per_hour cannot be empty")
 
@@ -533,6 +533,8 @@ class GammaPoissonDemandModel:
         time_min: float,
     ) -> None:
         time_min = float(time_min)
+        if not math.isfinite(time_min):
+            raise ValueError("observation time must be finite")
         if time_min + _EPS < self.current_time_min:
             raise ValueError("observations must arrive in nondecreasing time")
         importance = self._importance(importance)
@@ -563,8 +565,15 @@ class GammaPoissonDemandModel:
         cluster_id = int(cluster_id)
         prior = self.prior(cluster_id, importance)
         now = self.current_time_min if at_time_min is None else float(at_time_min)
+        if not math.isfinite(now):
+            raise ValueError("posterior time must be finite")
         if now + _EPS < self.start_time_min:
             raise ValueError("posterior time cannot precede model start")
+        if now + _EPS < self.current_time_min:
+            raise ValueError(
+                "posterior time cannot precede the latest observation; "
+                "historical counts are not retained"
+            )
         elapsed = max(0.0, now - self.start_time_min)
         return GammaPosterior(
             shape=prior.shape + self._counts[(cluster_id, importance)],

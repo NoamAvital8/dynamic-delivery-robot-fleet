@@ -41,6 +41,11 @@ def _patch_heuristic(source: str) -> str:
         source,
         "from delivery_fleet.scenario_creator import Order, Scenario\n",
         "from delivery_fleet.scenario_creator import Order, Scenario\n"
+        "from delivery_fleet.anticipatory_policy import (\n"
+        "    OnlineAnticipatoryReservation, ReservationRobotSnapshot,\n"
+        ")\n"
+        "from delivery_fleet.reservation import reservation_eligibility\n"
+        "from delivery_fleet.reservation_nn import ReservationFCNN\n"
         "from delivery_fleet.spatial_demand import haversine_node_distance_m\n",
         "Haversine import",
     )
@@ -52,7 +57,10 @@ def _patch_heuristic(source: str) -> str:
         '    "haversine_robots_scored": 0.0,\n'
         '    "haversine_insertion_candidates": 0.0,\n'
         '    "haversine_capacity_pruned": 0.0,\n'
-        '    "shortlist_robots_selected": 0.0,\n',
+        '    "shortlist_robots_selected": 0.0,\n'
+        '    "shortlist_fallback_robots": 0.0,\n'
+        '    "reservation_updates": 0.0,\n'
+        '    "reservation_filtered_robots": 0.0,\n',
         "heuristic counters",
     )
 
@@ -75,10 +83,52 @@ def _patch_heuristic(source: str) -> str:
         "        default=10,\n"
         "        help=\"Number of Haversine-ranked robots sent to exact search.\",\n"
         "    )\n"
+        "    parser.add_argument(\n"
+        "        \"--reservation-model\", type=Path, default=None,\n"
+        "        help=\"Trained ReservationFCNN .npz file; omit to disable reservation.\",\n"
+        "    )\n"
+        "    parser.add_argument(\n"
+        "        \"--importance-prior-rates-per-hour\",\n"
+        "        default='{\"1\": 120.0, \"2\": 22.5, \"5\": 7.5}',\n"
+        "        help=\"Configured JSON mapping of importance to city-wide hourly rate.\",\n"
+        "    )\n"
+        "    parser.add_argument(\n"
+        "        \"--prior-concentration\", type=float, default=4.0,\n"
+        "    )\n"
         "    args = parser.parse_args()\n"
         "    if args.shortlist_k <= 0:\n"
         "        parser.error(\"--shortlist-k must be positive\")\n",
         "shortlist CLI",
+    )
+
+    source = _replace_once(
+        source,
+        '    print(f"robots={len(robots):,} types={fleet_type_summary(robots)}", flush=True)\n\n'
+        '    oracle = DistanceOracle(graph, edge_weight=EDGE_WEIGHT)\n',
+        '    print(f"robots={len(robots):,} types={fleet_type_summary(robots)}", flush=True)\n\n'
+        '    reservation_policy = None\n'
+        '    reservation_assignment = None\n'
+        '    if args.reservation_model is not None:\n'
+        '        try:\n'
+        '            prior_rates = {\n'
+        '                float(key): float(value)\n'
+        '                for key, value in json.loads(\n'
+        '                    args.importance_prior_rates_per_hour\n'
+        '                ).items()\n'
+        '            }\n'
+        '        except (TypeError, ValueError, json.JSONDecodeError) as exc:\n'
+        '            parser.error(f"invalid importance prior rates JSON: {exc}")\n'
+        '        reservation_model = ReservationFCNN.load(args.reservation_model)\n'
+        '        reservation_policy = OnlineAnticipatoryReservation(\n'
+        '            graph, robots, reservation_model, prior_rates,\n'
+        '            prior_concentration=args.prior_concentration,\n'
+        '            start_time_min=0.0,\n'
+        '            horizon_min=scenario.duration_minutes,\n'
+        '            charger_power_w=DEFAULT_CHARGING_POWER_W,\n'
+        '        )\n'
+        '        print(f"reservation model={args.reservation_model}", flush=True)\n\n'
+        '    oracle = DistanceOracle(graph, edge_weight=EDGE_WEIGHT)\n',
+        "reservation initialization",
     )
 
     marker = '''    def sequence_completion_lower_bound(
@@ -156,6 +206,69 @@ def _patch_heuristic(source: str) -> str:
         "Haversine sequence loss helper",
     )
 
+    reservation_helper_marker = '''    def choose_insertion(order: Order, now: float) -> InsertionChoice | None:
+'''
+    reservation_helper = '''    def refresh_reservations(now: float) -> None:
+        nonlocal reservation_assignment
+        if reservation_policy is None:
+            reservation_assignment = None
+            return
+        snapshots = {}
+        for robot in robots:
+            snapshot = decision_snapshot(robot, now)
+            if snapshot is None:
+                snapshots[robot.spec.id] = ReservationRobotSnapshot(
+                    node_id=int(robot.node_id),
+                    available_in_min=0.0,
+                    battery_wh=float(robot.battery_wh),
+                    busy=True,
+                )
+            else:
+                snapshots[robot.spec.id] = ReservationRobotSnapshot(
+                    node_id=int(snapshot.node_id),
+                    available_in_min=max(0.0, float(snapshot.time_min) - float(now)),
+                    battery_wh=max(0.0, float(snapshot.battery_wh)),
+                    busy=bool(schedules[robot.spec.id].orders),
+                )
+        backlog = Counter(float(item.importance) for item in pending)
+        occupied = sum(
+            len(state.active) + len(state.queue) for state in station_state.values()
+        )
+        charger_capacity = max(1, len(station_state) * DEFAULT_NUMBER_OF_PORTS)
+        reservation_assignment = reservation_policy.update(
+            now,
+            snapshots,
+            backlog_by_importance=backlog,
+            charger_congestion=min(1.0, occupied / charger_capacity),
+        )
+        B5_STATS["reservation_updates"] += 1.0
+
+'''
+    source = _replace_once(
+        source,
+        reservation_helper_marker,
+        reservation_helper + reservation_helper_marker,
+        "online reservation refresh helper",
+    )
+
+    source = _replace_once(
+        source,
+        '''        for robot in robots:
+            if not robot.can_hold(order.item):
+                continue
+''',
+        '''        for robot in robots:
+            if not reservation_eligibility(
+                reservation_assignment, robot.spec.id, order.importance
+            ):
+                B5_STATS["reservation_filtered_robots"] += 1.0
+                continue
+            if not robot.can_hold(order.item):
+                continue
+''',
+        "reservation hard-feasibility filter",
+    )
+
     old_selection_start = '''        robot_rows.sort(key=lambda row: (row[0], row[1]))
         best: InsertionChoice | None = None
         best_delta_loss = math.inf
@@ -218,17 +331,20 @@ def _patch_heuristic(source: str) -> str:
                 heuristic_rows.append((best_estimated_delta, robot_id))
 
         heuristic_rows.sort(key=lambda row: (row[0], row[1]))
-        shortlist_ids = {
-            robot_id for _, robot_id in heuristic_rows[: args.shortlist_k]
+        heuristic_rank = {
+            robot_id: rank for rank, (_, robot_id) in enumerate(heuristic_rows)
         }
-        B5_STATS["shortlist_robots_selected"] += float(len(shortlist_ids))
+        B5_STATS["shortlist_robots_selected"] += float(
+            min(args.shortlist_k, len(heuristic_rows))
+        )
         robot_rows = [
-            row for row in robot_rows if int(row[1]) in shortlist_ids
+            row for row in robot_rows if int(row[1]) in heuristic_rank
         ]
-        robot_rows.sort(key=lambda row: (row[0], row[1]))
+        robot_rows.sort(key=lambda row: (heuristic_rank[int(row[1])], row[1]))
 
         # Stage 2: exact graph/battery search and exact incremental-loss choice
-        # over only the shortlisted robots.
+        # over the shortlist.  If every initial top-K robot is battery-infeasible,
+        # expand one ranked robot at a time until a feasible candidate is found.
         best: InsertionChoice | None = None
         best_delta_loss = math.inf
         best_completion = math.inf
@@ -240,12 +356,35 @@ def _patch_heuristic(source: str) -> str:
         )
 
         for robot_index, (universal_lb, robot_id, snapshot) in enumerate(robot_rows):
+            if robot_index >= args.shortlist_k and best is not None:
+                break
+            if robot_index >= args.shortlist_k:
+                B5_STATS["shortlist_fallback_robots"] += 1.0
 '''
     source = _replace_once(
         source,
         old_selection_start,
         new_selection_start,
         "Haversine shortlist insertion",
+    )
+
+    source = _replace_once(
+        source,
+        '''        if kind == "order_arrival":
+            pending.append(payload)
+            dispatch_pending(now)
+''',
+        '''        if kind == "order_arrival":
+            order = payload
+            pending.append(order)
+            if reservation_policy is not None:
+                reservation_policy.observe(
+                    order.pickup_node, order.importance, now
+                )
+                refresh_reservations(now)
+            dispatch_pending(now)
+''',
+        "online posterior update",
     )
 
     source = _replace_once(
@@ -261,7 +400,14 @@ def _patch_heuristic(source: str) -> str:
         '        "shortlist_k": int(args.shortlist_k),\n'
         '        "shortlist_distance": "haversine_great_circle_meters",\n'
         '        "shortlist_objective": "minimum_estimated_incremental_total_loss",\n'
-        '        "final_objective": "minimum_exact_incremental_total_loss_within_shortlist",\n',
+        '        "final_objective": "minimum_exact_incremental_total_loss_with_safe_shortlist_expansion",\n'
+        '        "reservation_enabled": reservation_policy is not None,\n'
+        '        "reservation_model": (\n'
+        '            str(args.reservation_model) if args.reservation_model is not None else None\n'
+        '        ),\n'
+        '        "reservation_updates": int(B5_STATS["reservation_updates"]),\n'
+        '        "reservation_filtered_robots": int(B5_STATS["reservation_filtered_robots"]),\n'
+        '        "shortlist_fallback_robots": int(B5_STATS["shortlist_fallback_robots"]),\n',
         "heuristic metadata",
     )
     return source

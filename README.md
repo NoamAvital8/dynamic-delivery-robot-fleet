@@ -66,11 +66,11 @@ $$
 
 denotes the fraction of robots of type \(k\) assigned to the reservation stratum that may serve class \(c\) and higher-priority classes.
 
-The intended model will predict all robot-type reservation vectors jointly, so that the outputs remain mutually consistent.
+The implemented model predicts all robot-type reservation vectors jointly. A separate softmax is applied to every robot type, so each type's fractions are non-negative and sum exactly to one.
 
 Likely additional input features for our setting include robot-type workload, availability, battery statistics, spatial demand estimates, and time within the horizon.
 
-**Implementation and training of the FCNN are intentionally deferred to a later phase.**
+`ReservationFCNN` is a one-hidden-layer `tanh` network trained jointly with fractional cross-entropy targets. `scripts/generate_reservation_training_data.py` selects the minimum realized-loss candidate from offline perfect-information evaluations, and `scripts/train_reservation_fcnn.py` trains and persists the model without introducing test-scenario future information.
 
 ## 2. Spatial demand regions: HDBSCAN with full graph coverage
 
@@ -480,10 +480,16 @@ Current implementation work on this branch includes:
 
 1. offline HDBSCAN spatial regions with complete graph coverage and persisted `in_cluster` node labels;
 2. the size-aware Gamma-Poisson model for every \((cluster, importance)\) pair;
-3. demand-weighted reservation scoring infrastructure.
+3. online posterior updates and demand-weighted concrete-robot reservation;
 4. reusable Haversine distance and cluster-response-time estimates for the cheap heuristic stage;
-5. an unexecuted `run_nyc_heuristic_policy.py` simulation runner that ranks robots by Haversine-estimated all-order incremental loss, keeps the best \(K\), and applies exact incremental-loss selection within that shortlist.
+5. a joint FCNN with constrained per-type reservation fractions, offline target-selection tooling, model training, and model persistence;
+6. deterministic largest-remainder conversion from fractions to robot counts, high-to-low physical-robot assignment, and the large-capacity general-service safeguard;
+7. an unexecuted `run_nyc_heuristic_policy.py` simulation runner that updates the Gamma-Poisson posterior on each arrival, recomputes reservations, ranks eligible robots by Haversine-estimated all-order incremental loss, and applies exact incremental-loss selection inside the best \(K\). If every initial top-\(K\) robot is exactly battery-infeasible, the runner safely expands the ranking until it finds a feasible robot.
 
-The remaining coding step is the final FCNN-driven reservation-policy wiring.
+The runner leaves reservation disabled when no model is supplied, which provides the no-reservation ablation without a separate simulator. Enable it with:
 
-The FCNN training procedure, predictive future-order objective, full ablation study, and latency-aware simulator are intentionally deferred to later phases.
+```powershell
+python scripts/run_nyc_heuristic_policy.py --reservation-model models/reservation_fcnn.npz
+```
+
+The predictive future-order objective, experiment-scale shortlist tuning/full ablation study, and latency-aware simulator remain later research experiments rather than missing components of the current greedy policy.

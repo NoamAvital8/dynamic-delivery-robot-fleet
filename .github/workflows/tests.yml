@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'src/**'
+      - 'scripts/**'
       - 'tests/**'
       - '.github/workflows/tests.yml'
   pull_request:

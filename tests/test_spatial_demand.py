@@ -4,6 +4,7 @@ import math
 
 import networkx as nx
 import numpy as np
+import pytest
 
 import delivery_fleet.spatial_demand as spatial
 from delivery_fleet.spatial_demand import (
@@ -69,6 +70,14 @@ def test_observation_updates_only_matching_cluster_importance_count() -> None:
     assert math.isclose(after_target.rate, before_target.rate)
     assert math.isclose(after_other.shape, before_other.shape)
     assert math.isclose(after_other.rate, before_other.rate)
+
+
+def test_posterior_rejects_time_before_latest_observation() -> None:
+    graph = _clustered_graph()
+    model = GammaPoissonDemandModel(graph, {1.0: 60.0}, prior_concentration=4.0)
+    model.observe(0, 1.0, 10.0)
+    with pytest.raises(ValueError, match="latest observation"):
+        model.posterior(0, 1.0, at_time_min=5.0)
 
 
 def test_weighted_reservation_score_prefers_robot_close_to_busy_cluster() -> None:
