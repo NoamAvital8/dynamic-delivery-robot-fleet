@@ -8,6 +8,7 @@ We study online planning and assignment for a heterogeneous fleet of autonomous 
 
 - Pickup-to-delivery requests arrive online.
 - Each request has a pickup, destination, package size/weight, importance level, request time, and deadline.
+- A larger numerical importance value means a more important request.
 - Robots are heterogeneous and may differ in speed, payload/volume capacity, battery capacity, and energy consumption.
 - Robots may already have assigned packages, so a new request may be inserted into an existing route.
 - The planner may wait for a better robot instead of assigning immediately.
@@ -21,7 +22,7 @@ $$
 L(T,D,w)=w\min(D,T)+(w+1)^2\max(0,T-D).
 $$
 
-The first term rewards shorter delivery time before the deadline, while lateness receives a much larger importance-dependent penalty.
+The first term charges regular importance-weighted loss before the deadline, while lateness receives a much larger importance-dependent penalty. Policies minimize this loss; they do not minimize delivery time by itself.
 
 ## Planned benchmark policies
 
@@ -216,7 +217,7 @@ For robot \(r\):
 - \(u_r\): graph node of that state;
 - \(m_z\): representative/medoid of cluster \(z\);
 - \(v_r\): robot speed;
-- \(\tilde d(u_r,m_z)\): cheap/precomputed distance estimate;
+- \(\tilde d(u_r,m_z)\): Haversine distance between the graph-node coordinates;
 - \(\tilde C(r,z)\): estimated charging delay needed to respond from that state to cluster \(z\).
 
 The reservation score is
@@ -238,6 +239,8 @@ $$
 **Lower is better.**
 
 Within each robot type, the robots with the smallest score are selected for the more restrictive high-priority reservation strata.
+
+Concretely, the FCNN fractions are converted into integer robot counts for every type and priority threshold. Thresholds are processed from the largest importance value to the smallest. At threshold \(c\), the required number of currently unassigned type-\(k\) robots with the lowest \(H_{\mathrm{reserve}}(r,c)\) are assigned to that stratum. A robot assigned threshold \(c\) may serve only requests with importance \(p\ge c\). Remaining robots are assigned to the general-service stratum.
 
 This score directly combines predicted spatial demand, current workload/availability, location, robot speed, and battery/charging state.
 
@@ -273,10 +276,25 @@ For any pair of nodes \(x,y\),
 $$
 \tilde{\tau}_r(x,y)
 =
-\frac{\tilde d(x,y)}{v_r},
+\frac{d_{\mathrm{hav}}(x,y)}{v_r},
 $$
 
-where \(\tilde d\) is an \(O(1)\) or precomputed approximation to graph distance. One candidate implementation is geographic distance multiplied by a calibrated graph-stretch factor, potentially estimated separately for pairs of spatial regions.
+where \(d_{\mathrm{hav}}\) is the Haversine great-circle distance computed from the latitude and longitude stored on the two graph nodes:
+
+$$
+d_{\mathrm{hav}}(x,y)
+=
+2R\arcsin\!\left(
+\sqrt{
+\sin^2\!\left(\frac{\Delta\phi}{2}\right)
++
+\cos(\phi_x)\cos(\phi_y)
+\sin^2\!\left(\frac{\Delta\lambda}{2}\right)
+}
+\right).
+$$
+
+Haversine is used only in the cheap heuristic stage. It avoids a shortest-path query for every robot and insertion candidate. The final search over shortlisted robots still uses exact graph distances and exact battery-feasible routing.
 
 For robot \(r\), let \(S_r\) be its current ordered stop sequence. For each precedence-feasible insertion of pickup \(p_j\) and delivery \(d_j\), construct an approximate sequence
 
@@ -320,6 +338,8 @@ Here:
 Therefore the heuristic explicitly estimates the **incremental loss caused by the assignment over all affected orders**, including delays to packages already being carried or scheduled.
 
 This is essential because a robot can carry several orders at once. A robot may deliver the new order quickly but delay an existing high-importance order enough to create a much larger total penalty. Such a robot should receive a worse score even if the new order alone looks attractive.
+
+Haversine distance is therefore only an input used to estimate completion times. The heuristic ranking criterion is \(H_{\mathrm{assign}}\), the estimated change in total loss, not distance and not the new request's delivery time.
 
 **Lower is better.**
 
@@ -461,7 +481,9 @@ Current implementation work on this branch includes:
 1. offline HDBSCAN spatial regions with complete graph coverage and persisted `in_cluster` node labels;
 2. the size-aware Gamma-Poisson model for every \((cluster, importance)\) pair;
 3. demand-weighted reservation scoring infrastructure.
+4. reusable Haversine distance and cluster-response-time estimates for the cheap heuristic stage;
+5. an unexecuted `run_nyc_heuristic_policy.py` simulation runner that ranks robots by Haversine-estimated all-order incremental loss, keeps the best \(K\), and applies exact incremental-loss selection within that shortlist.
 
-The next coding steps are the cheap all-order incremental-loss candidate heuristic, top-\(K\) pruning integration, and the final reservation-policy wiring.
+The remaining coding step is the final FCNN-driven reservation-policy wiring.
 
 The FCNN training procedure, predictive future-order objective, full ablation study, and latency-aware simulator are intentionally deferred to later phases.

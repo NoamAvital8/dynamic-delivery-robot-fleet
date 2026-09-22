@@ -18,6 +18,108 @@ EARTH_RADIUS_M = 6_371_008.8
 _EPS = 1e-12
 
 
+def haversine_distance_m(
+    latitude_a: float,
+    longitude_a: float,
+    latitude_b: float,
+    longitude_b: float,
+) -> float:
+    """Return the great-circle distance between two WGS84 coordinates.
+
+    The result is a cheap geographic approximation in meters.  It is intended
+    for heuristic ranking only; exact route evaluation must still use graph
+    distance and the battery-feasible router.
+    """
+
+    values = (latitude_a, longitude_a, latitude_b, longitude_b)
+    if not all(math.isfinite(float(value)) for value in values):
+        raise ValueError("coordinates must be finite")
+    if not -90.0 <= float(latitude_a) <= 90.0:
+        raise ValueError("latitude_a must be between -90 and 90 degrees")
+    if not -90.0 <= float(latitude_b) <= 90.0:
+        raise ValueError("latitude_b must be between -90 and 90 degrees")
+
+    phi_a = math.radians(float(latitude_a))
+    phi_b = math.radians(float(latitude_b))
+    delta_phi = phi_b - phi_a
+    delta_lambda = math.radians(float(longitude_b) - float(longitude_a))
+    haversine = (
+        math.sin(delta_phi / 2.0) ** 2
+        + math.cos(phi_a)
+        * math.cos(phi_b)
+        * math.sin(delta_lambda / 2.0) ** 2
+    )
+    # Floating-point roundoff can put a theoretically valid value just outside
+    # [0, 1], especially for antipodal or identical points.
+    haversine = min(1.0, max(0.0, haversine))
+    return float(2.0 * EARTH_RADIUS_M * math.asin(math.sqrt(haversine)))
+
+
+def haversine_node_distance_m(
+    graph: nx.Graph,
+    source: NodeId,
+    target: NodeId,
+) -> float:
+    """Return cheap straight-line distance between two OSM-style graph nodes."""
+
+    try:
+        source_data = graph.nodes[source]
+        target_data = graph.nodes[target]
+        return haversine_distance_m(
+            float(source_data["y"]),
+            float(source_data["x"]),
+            float(target_data["y"]),
+            float(target_data["x"]),
+        )
+    except KeyError as exc:
+        raise ValueError(
+            "source and target nodes must exist and contain OSM-style x/y coordinates"
+        ) from exc
+
+
+def haversine_response_times_by_cluster(
+    graph: nx.Graph,
+    source_node: NodeId,
+    speed_mps: float,
+    representatives: Mapping[int, NodeId],
+    *,
+    available_in_min: float = 0.0,
+    charging_delay_min_by_cluster: Mapping[int, float] | None = None,
+) -> dict[int, float]:
+    """Estimate response time from one robot to every cluster representative.
+
+    Haversine supplies the cheap travel-distance term used by the reservation
+    heuristic.  Robot availability and optional estimated charging delay are
+    added in minutes.  No graph shortest-path query is performed here.
+    """
+
+    speed_mps = float(speed_mps)
+    available_in_min = float(available_in_min)
+    if speed_mps <= 0 or not math.isfinite(speed_mps):
+        raise ValueError("speed_mps must be finite and positive")
+    if available_in_min < 0 or not math.isfinite(available_in_min):
+        raise ValueError("available_in_min must be finite and non-negative")
+
+    charging_delays = charging_delay_min_by_cluster or {}
+    unknown_delays = set(charging_delays) - {int(cid) for cid in representatives}
+    if unknown_delays:
+        raise ValueError(
+            f"charging delays supplied for unknown clusters {sorted(unknown_delays)}"
+        )
+
+    response_times: dict[int, float] = {}
+    for raw_cluster_id, representative in representatives.items():
+        cluster_id = int(raw_cluster_id)
+        charging_delay = float(charging_delays.get(cluster_id, 0.0))
+        if charging_delay < 0 or not math.isfinite(charging_delay):
+            raise ValueError("charging delays must be finite and non-negative")
+        distance_m = haversine_node_distance_m(graph, source_node, representative)
+        response_times[cluster_id] = (
+            available_in_min + distance_m / speed_mps / 60.0 + charging_delay
+        )
+    return response_times
+
+
 @dataclass(frozen=True, slots=True)
 class SpatialClusterSummary:
     """Summary of a complete persisted graph partition."""

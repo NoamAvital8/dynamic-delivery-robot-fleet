@@ -9,6 +9,8 @@ import delivery_fleet.spatial_demand as spatial
 from delivery_fleet.spatial_demand import (
     GammaPoissonDemandModel,
     annotate_hdbscan_clusters,
+    haversine_distance_m,
+    haversine_response_times_by_cluster,
     weighted_reservation_score,
 )
 
@@ -95,6 +97,26 @@ def test_weighted_reservation_score_prefers_robot_close_to_busy_cluster() -> Non
     assert score_near_busy < score_near_quiet
     assert math.isclose(score_near_busy, 4.0)
     assert math.isclose(score_near_quiet, 5.5)
+
+
+def test_haversine_distance_and_cluster_response_times() -> None:
+    graph = _clustered_graph()
+
+    eastward = haversine_distance_m(32.0, 0.0, 32.0, 0.001)
+    reverse = haversine_distance_m(32.0, 0.001, 32.0, 0.0)
+    assert math.isclose(eastward, reverse)
+    assert 94.0 < eastward < 95.0
+
+    response = haversine_response_times_by_cluster(
+        graph,
+        source_node=0,
+        speed_mps=2.0,
+        representatives={0: 0, 1: 3},
+        available_in_min=4.0,
+        charging_delay_min_by_cluster={1: 2.0},
+    )
+    assert math.isclose(response[0], 4.0)
+    assert math.isclose(response[1], 6.0 + 3.0 * eastward / 2.0 / 60.0)
 
 
 def test_hdbscan_noise_nodes_receive_graph_nearest_cluster(monkeypatch) -> None:
