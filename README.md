@@ -491,7 +491,8 @@ Current implementation work on this branch includes:
 4. reusable Haversine distance and cluster-response-time estimates for the cheap heuristic stage;
 5. a joint FCNN with constrained per-type reservation fractions, offline target-selection tooling, model training, and model persistence;
 6. deterministic largest-remainder conversion from fractions to robot counts, high-to-low physical-robot assignment, and the large-capacity general-service safeguard;
-7. an unexecuted `run_nyc_heuristic_policy.py` simulation runner that updates the Gamma-Poisson posterior on each arrival, recomputes reservations, ranks eligible robots by Haversine-estimated all-order incremental loss, and applies exact incremental-loss selection inside the best \(K\). If every initial top-\(K\) robot is exactly battery-infeasible, the runner safely expands the ranking until it finds a feasible robot.
+7. a tested `run_nyc_heuristic_policy.py` simulation runner that updates the Gamma-Poisson posterior on each arrival, recomputes reservations, ranks eligible robots by Haversine-estimated all-order incremental loss, and applies exact incremental-loss selection inside the best \(K\). If every initial top-\(K\) robot is exactly battery-infeasible, the runner safely expands the ranking until it finds a feasible robot;
+8. an optional predictive idle runner that coordinates staying, demand-aware repositioning, and full background charging.
 
 The runner leaves reservation disabled when no model is supplied, which provides the no-reservation ablation without a separate simulator. Enable it with:
 
@@ -499,7 +500,32 @@ The runner leaves reservation disabled when no model is supplied, which provides
 python scripts/run_nyc_heuristic_policy.py --reservation-model models/reservation_fcnn.npz
 ```
 
-The predictive future-order objective, experiment-scale shortlist tuning/full ablation study, and latency-aware simulator remain later research experiments rather than missing components of the current greedy policy.
+### Predictive idle control on top of the greedy dispatcher
+
+`scripts/run_nyc_anticipatory_idle_policy.py` uses the same greedy order assignment and replaces the fixed nearest-charger idle rule. At each idle decision epoch it scores `STAY`, moves to a bounded set of HDBSCAN representatives, and full charging at a bounded set of reachable stations. It uses only the Gamma-Poisson posterior at the current simulation time; no held-out future orders enter the decision.
+
+For cluster \(z\), importance \(c\), and a short horizon \(H\), the predicted demand value is \(W_{z,c}=H\hat\lambda_{z,c}(c+1)^2\). For robot \(r\) under action \(a\), its approximate response coverage is
+
+\[
+g_{r,z,c}(a)=\kappa_r\,b_{r,z}(a)\,
+e^{-d_{hav}(y_r(a),z)/(60v_r\tau_c)}
+\frac1H\int_0^H e^{-(t^{ready}_r(a)-u)_+/\tau_c}\,du,
+\qquad \tau_c=18/\sqrt c,
+\]
+
+where \(u\) is a future order's arrival time, \(\kappa_r\) reflects carrying capability, and \(b_{r,z}\in[0,1]\) reflects battery remaining after reaching the region. A move's initial unavailability is averaged over the horizon, so orders arriving after the move benefit from the robot's new location. `18` is the configurable response-time scale in minutes. The fleet utility is
+
+\[
+U(a_1,\ldots,a_R)=\sum_{z,c}W_{z,c}\left(1-e^{-\sum_r g_{r,z,c}(a_r)}\right).
+\]
+
+The concave term gives diminishing returns: an additional robot moves to an already-covered region only when its *marginal* gain exceeds the gain elsewhere and the minimum-movement threshold. Idle actions are selected sequentially and the projected fleet coverage is updated after each choice. `STAY` is the baseline, so travel is selected only for positive marginal utility.
+
+Charging candidates include exact travel energy, current port occupancy, FIFO requests, in-transit charging plans, and the earliest non-overlapping interval on a physical port. The projected ready time includes travel, waiting, and charging. Every selected background charge targets **100% battery**; the idle planner never interrupts an active charge for another idle action. A real delivery assignment may still interrupt it. Charging plans are rebuilt after changed events, and assignment cancels a robot's pending background travel intent.
+
+The score is a bounded one-step surrogate for expected reduction in future delivery loss. It is **not** the proposed full Monte Carlo Bellman rollout. That remains a later experiment after this controller is measured against the fixed idle baseline. The runner reports idle action counts and planning wall time alongside total delivery loss.
+
+Online work is bounded by the top 32 demand clusters, at most 5 relocation and 3 charging candidates per idle robot, and at most 32 selected movements per planning epoch. Replanning defaults to every 15 simulated minutes. Candidate response vectors use a reusable process pool when a batch contains at least 64 vectors; `--idle-processes` controls its size. The graph and routing index stay in the simulation process and are not copied to workers.
 
 ## Training and simulation on the faculty server
 
@@ -528,13 +554,13 @@ The paper used 100 training instances and enumerated candidate alpha settings. F
 python scripts/generate_reservation_training_data.py \
   configs/reservation_training_manifest.json \
   data/training/reservation_targets.npz \
-  --processes 128 \
+  --processes 24 \
   --work-dir data/training/reservation_target_jobs
 ```
 
 `--processes` is the maximum number of simultaneous simulator evaluations. Completed job JSON files are cached in the work directory, so rerunning the same command resumes instead of repeating completed simulations.
 
-Although the server has roughly 700 logical cores, each process loads a graph and routing index. With 300 GB RAM, begin with 128 processes, inspect memory consumption, and increase to 256 or higher only if there is comfortable headroom. The script forces numerical libraries to one thread per simulator process to avoid oversubscription.
+The faculty VM reports **72 logical CPUs (36 physical cores) and 373 GiB RAM**. Each target-generation process loads a graph and routing index, so start with 24 concurrent simulations and inspect memory and throughput before increasing the count. The script forces numerical libraries to one thread per simulator process to avoid oversubscription.
 
 ### 4. Train parallel FCNN restarts
 
@@ -542,7 +568,7 @@ Although the server has roughly 700 logical cores, each process loads a graph an
 python scripts/train_reservation_fcnn.py \
   data/training/reservation_targets.npz \
   models/reservation_fcnn.npz \
-  --processes 64 \
+  --processes 16 \
   --restarts 256 \
   --epochs 2000 \
   --learning-rate 0.01 \
@@ -567,11 +593,27 @@ python scripts/run_nyc_heuristic_policy.py \
 
 For the no-reservation ablation, omit `--reservation-model`. For an offline fixed-alpha evaluation, use `--fixed-reservation-fractions path/to/fixed_alpha.json`; this option is intended for target generation, not the final online policy.
 
+Run the predictive idle controller with the same graph, scenario, and optional reservation model:
+
+```bash
+python scripts/run_nyc_anticipatory_idle_policy.py \
+  --graph data/graphs/new_york_city.graphml \
+  --scenario data/scenarios/nyc_reference_12h_seed42.json \
+  --shortlist-k 10 \
+  --idle-processes 8 \
+  --idle-horizon-min 45 \
+  --idle-replan-interval-min 15 \
+  --output results/anticipatory_idle.json
+```
+
+Add `--reservation-model models/reservation_fcnn.npz` when that trained model is available. Compare its `loss_objective` with the fixed-idle `run_nyc_heuristic_policy.py` result using the same scenario and assignment parameters.
+
 ### 6. Verify before large runs
 
 ```bash
 pytest -q
 python scripts/run_nyc_heuristic_policy.py --help
+python scripts/run_nyc_anticipatory_idle_policy.py --help
 python scripts/generate_reservation_training_data.py --help
 python scripts/train_reservation_fcnn.py --help
 ```
