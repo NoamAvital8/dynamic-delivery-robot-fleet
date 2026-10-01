@@ -124,9 +124,10 @@ def _write_summary(results_dir: Path, jobs: list[dict[str, Any]]) -> None:
     rows = []
     for job in jobs:
         status_path = job["status_path"]
-        if status_path.is_file():
+        try:
             row = json.loads(status_path.read_text(encoding="utf-8"))
-        else:
+        except (FileNotFoundError, json.JSONDecodeError):
+            # A worker may be replacing this status atomically right now.
             row = {
                 "city": job["city"], "scenario_id": job["scenario_id"],
                 "seed": job["seed"], "policy": job["policy"], "status": "pending",
@@ -141,6 +142,43 @@ def _write_summary(results_dir: Path, jobs: list[dict[str, Any]]) -> None:
         writer.writeheader()
         writer.writerows(rows)
     temporary.replace(destination)
+
+    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        key = (str(row["city"]), str(row["policy"]))
+        bucket = grouped.setdefault(key, {
+            "city": key[0], "policy": key[1], "planned_scenarios": 0,
+            "completed_scenarios": 0, "total_loss": 0.0,
+            "total_wall_clock_seconds": 0.0, "on_time": 0, "late": 0,
+            "delivered": 0, "orders": 0,
+        })
+        bucket["planned_scenarios"] += 1
+        if row["status"] == "complete":
+            bucket["completed_scenarios"] += 1
+            bucket["total_loss"] += float(row["loss_objective"])
+            bucket["total_wall_clock_seconds"] += float(row["wall_clock_seconds"])
+            for field in ("on_time", "late", "delivered", "orders"):
+                bucket[field] += int(row[field])
+    aggregate_fields = (
+        "city", "policy", "completed_scenarios", "planned_scenarios",
+        "total_loss", "mean_loss", "total_wall_clock_seconds",
+        "mean_wall_clock_seconds", "on_time", "late", "delivered", "orders",
+    )
+    aggregate_rows = []
+    for bucket in grouped.values():
+        completed = bucket["completed_scenarios"]
+        bucket["mean_loss"] = bucket["total_loss"] / completed if completed else ""
+        bucket["mean_wall_clock_seconds"] = (
+            bucket["total_wall_clock_seconds"] / completed if completed else ""
+        )
+        aggregate_rows.append(bucket)
+    aggregate_path = results_dir / "city_policy_summary.csv"
+    aggregate_tmp = aggregate_path.with_suffix(".csv.tmp")
+    with aggregate_tmp.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=aggregate_fields)
+        writer.writeheader()
+        writer.writerows(aggregate_rows)
+    aggregate_tmp.replace(aggregate_path)
 
 
 def _execute(job: dict[str, Any], timeout_seconds: int) -> dict[str, Any]:

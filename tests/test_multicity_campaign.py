@@ -107,6 +107,10 @@ def test_all_six_policies_write_durable_city_results(tmp_path) -> None:
     assert all(row["status"] == "complete" for row in rows)
     assert all(int(row["delivered"]) == 1 for row in rows)
     assert all(int(row["on_time"]) + int(row["late"]) == 1 for row in rows)
+    with (results_dir / "city_policy_summary.csv").open(encoding="utf-8", newline="") as stream:
+        aggregate = list(csv.DictReader(stream))
+    assert len(aggregate) == 6
+    assert all(int(row["completed_scenarios"]) == 1 for row in aggregate)
     for policy in POLICIES:
         job_dir = results_dir / "haifa" / "haifa_test_000" / policy
         assert (job_dir / "result.json").is_file()

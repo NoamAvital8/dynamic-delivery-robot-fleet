@@ -654,7 +654,9 @@ echo $!
 gets its own `result.json`, `result.progress.json`, `runner.log`, and
 `status.json` under `runs/icaps_multicity_v1/benchmarks/<city>/<scenario>/<policy>/`.
 The rolling `benchmarks/summary.csv` has one row per city, test seed, and
-policy. A failed simulation retains its last progress snapshot and log;
+policy; `benchmarks/city_policy_summary.csv` sums loss, runtime, on-time and
+late deliveries across completed seeds for each city and algorithm. A failed
+simulation retains its last progress snapshot and log;
 completed training evaluations and benchmark rows are cached with input
 fingerprints. Re-run the identical campaign command to resume after a failure.
 
