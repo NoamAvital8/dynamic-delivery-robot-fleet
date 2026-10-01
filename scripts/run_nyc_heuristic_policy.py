@@ -101,6 +101,11 @@ def _patch_heuristic(source: str) -> str:
         "    parser.add_argument(\n"
         "        \"--prior-concentration\", type=float, default=4.0,\n"
         "    )\n"
+        "    parser.add_argument(\n"
+        "        \"--reservation-style\", choices=(\"spatial_posterior\", \"paper_moving_average\"),\n"
+        "        default=\"spatial_posterior\",\n"
+        "    )\n"
+        "    parser.add_argument(\"--reservation-lookback-min\", type=float, default=100.0)\n"
         "    args = parser.parse_args()\n"
         "    if args.shortlist_k <= 0:\n"
         "        parser.error(\"--shortlist-k must be positive\")\n"
@@ -143,6 +148,8 @@ def _patch_heuristic(source: str) -> str:
         '            start_time_min=0.0,\n'
         '            horizon_min=scenario.duration_minutes,\n'
         '            charger_power_w=DEFAULT_CHARGING_POWER_W,\n'
+        '            reservation_style=args.reservation_style,\n'
+        '            lookback_min=args.reservation_lookback_min,\n'
         '        )\n'
         '        print(\n'
         '            f"reservation source="\n'
@@ -425,6 +432,8 @@ def _patch_heuristic(source: str) -> str:
         '            if args.fixed_reservation_fractions is not None else None\n'
         '        ),\n'
         '        "reservation_updates": int(B5_STATS["reservation_updates"]),\n'
+        '        "reservation_style": (args.reservation_style if reservation_policy is not None else None),\n'
+        '        "reservation_lookback_min": float(args.reservation_lookback_min),\n'
         '        "reservation_filtered_robots": int(B5_STATS["reservation_filtered_robots"]),\n'
         '        "shortlist_fallback_robots": int(B5_STATS["shortlist_fallback_robots"]),\n',
         "heuristic metadata",

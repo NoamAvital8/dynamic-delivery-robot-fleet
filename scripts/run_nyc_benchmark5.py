@@ -1346,6 +1346,27 @@ def main() -> None:
     delivered = 0
     now = 0.0
     last_progress = time.perf_counter()
+    progress_path = args.output.with_suffix(".progress.json")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+
+    def save_progress(status: str) -> None:
+        payload = {
+            "status": status,
+            "scenario": scenario.graph_name,
+            "scenario_seed": scenario.seed,
+            "orders": len(scenario.orders),
+            "delivered_so_far": delivered,
+            "on_time_so_far": metrics.on_time,
+            "late_so_far": delivered - metrics.on_time,
+            "loss_so_far": metrics.weighted_wait_objective,
+            "simulation_time_min": now,
+            "wall_clock_seconds_so_far": time.perf_counter() - wall_start,
+        }
+        temporary = progress_path.with_suffix(".progress.tmp")
+        temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        temporary.replace(progress_path)
+
+    save_progress("running")
 
     while events:
         now, _, _, kind, payload = heapq.heappop(events)
@@ -1485,6 +1506,7 @@ def main() -> None:
             break
 
         if time.perf_counter() - last_progress >= 30.0:
+            save_progress("running")
             busy = sum(1 for schedule in schedules.values() if schedule.orders)
             scheduled = sum(len(schedule.orders) for schedule in schedules.values())
             print(
@@ -1501,6 +1523,7 @@ def main() -> None:
         or service_lock
         or delivered != len(scenario.orders)
     ):
+        save_progress("incomplete")
         raise RuntimeError(
             "simulation ended incomplete: "
             f"delivered={delivered}, pending={len(pending)}, "
@@ -1610,6 +1633,7 @@ def main() -> None:
     }
 
     args.output.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    save_progress("complete")
     print("BENCHMARK5_RESULTS_JSON")
     print(json.dumps(results, indent=2), flush=True)
 

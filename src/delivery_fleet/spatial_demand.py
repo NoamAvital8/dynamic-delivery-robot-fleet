@@ -321,6 +321,7 @@ def annotate_hdbscan_clusters(
     min_cluster_size: int | None = None,
     min_samples: int | None = None,
     cluster_selection_epsilon_m: float = 0.0,
+    cluster_selection_method: str = "leaf",
     edge_weight: str = "length",
     cluster_attr: str = CLUSTER_NODE_ATTR,
 ) -> SpatialClusterSummary:
@@ -336,6 +337,8 @@ def annotate_hdbscan_clusters(
 
     if cluster_selection_epsilon_m < 0:
         raise ValueError("cluster_selection_epsilon_m cannot be negative")
+    if cluster_selection_method not in {"leaf", "eom"}:
+        raise ValueError("cluster_selection_method must be 'leaf' or 'eom'")
 
     nodes, xy = _project_nodes(graph)
     n = len(nodes)
@@ -355,6 +358,7 @@ def annotate_hdbscan_clusters(
         min_samples=int(min_samples),
         metric="euclidean",
         cluster_selection_epsilon=float(cluster_selection_epsilon_m),
+        cluster_selection_method=cluster_selection_method,
     )
     labels = np.asarray(model.fit_predict(xy), dtype=np.int64)
     raw_ids = sorted(int(x) for x in np.unique(labels) if x >= 0)
@@ -427,6 +431,7 @@ def annotate_hdbscan_clusters(
     graph.graph["demand_cluster_selection_epsilon_m"] = float(
         cluster_selection_epsilon_m
     )
+    graph.graph["demand_cluster_selection_method"] = cluster_selection_method
     graph.graph["hdbscan_noise_nodes"] = noise_count
 
     return SpatialClusterSummary(

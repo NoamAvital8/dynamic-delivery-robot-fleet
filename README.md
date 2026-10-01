@@ -617,3 +617,49 @@ python scripts/run_nyc_anticipatory_idle_policy.py --help
 python scripts/generate_reservation_training_data.py --help
 python scripts/train_reservation_fcnn.py --help
 ```
+
+## Resumable five-city ICAPS comparison
+
+`scripts/run_multicity_campaign.py` prepares HDBSCAN **leaf** partitions, generates
+20 training and 5 disjoint test scenarios per city (100/25 total), trains one
+joint reservation NN across all five cities, trains a separate moving-average
+NN for the paper-adapted comparator, and evaluates six policies on the same
+held-out scenarios. The paper-adapted comparator shares our battery-aware,
+heterogeneous simulator; it uses the paper's recent-demand moving-average
+features and recent-pickup vehicle-reservation ranking, so it is an *adaptation*,
+not a reproduction of the original homogeneous-fleet experiments.
+
+The six rows are: full posterior-NN + predictive idle; battery-feasible earliest
+completion (Myopic A+B); exhaustive reactive incremental-loss insertion;
+paper-adapted moving-average reservation; full minus NN reservation; and full
+minus predictive idle control. Main outcomes are total delivery loss, on-time
+and late deliveries, and both wall-clock runtime and simulated finish time.
+
+On the VM, launch a detached campaign so it survives closing the SSH session
+or turning off the local PC (assuming the VM itself remains running):
+
+```bash
+cd /data/workspace/robot_delivery/dynamic-delivery-robot-fleet
+mkdir -p runs/icaps_multicity_v1
+nohup .venv/bin/python -u scripts/run_multicity_campaign.py \
+  runs/icaps_multicity_v1 \
+  --target-processes 12 --nn-processes 16 --restarts 256 \
+  --benchmark-processes 4 --idle-processes 4 \
+  > runs/icaps_multicity_v1/campaign.log 2>&1 < /dev/null &
+echo $!
+```
+
+`runs/icaps_multicity_v1/campaign_status.json` names the current/failed stage;
+`runs/icaps_multicity_v1/stages/*.log` contain stage logs. Every simulator run
+gets its own `result.json`, `result.progress.json`, `runner.log`, and
+`status.json` under `runs/icaps_multicity_v1/benchmarks/<city>/<scenario>/<policy>/`.
+The rolling `benchmarks/summary.csv` has one row per city, test seed, and
+policy. A failed simulation retains its last progress snapshot and log;
+completed training evaluations and benchmark rows are cached with input
+fingerprints. Re-run the identical campaign command to resume after a failure.
+
+Cluster quality is a preflight gate: the campaign refuses to train if the
+largest HDBSCAN region covers more than half a city's graph nodes. Training
+and test scenarios never overlap, and city-specific prior rates come only
+from each city's training scenarios. The two NNs are each shared across all
+cities, not trained separately per city.

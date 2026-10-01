@@ -20,6 +20,7 @@ def initialize_graph(
     min_cluster_size: int | None = None,
     min_samples: int | None = None,
     cluster_selection_epsilon_m: float = 0.0,
+    cluster_selection_method: str = "leaf",
 ) -> dict:
     """Annotate one GraphML file with complete offline demand clusters."""
 
@@ -30,6 +31,7 @@ def initialize_graph(
         min_cluster_size=min_cluster_size,
         min_samples=min_samples,
         cluster_selection_epsilon_m=cluster_selection_epsilon_m,
+        cluster_selection_method=cluster_selection_method,
     )
 
     if output_path is None:
@@ -55,6 +57,10 @@ def initialize_graph(
         "cluster_selection_epsilon_m": graph.graph.get(
             "demand_cluster_selection_epsilon_m"
         ),
+        "cluster_selection_method": graph.graph.get(
+            "demand_cluster_selection_method"
+        ),
+        "largest_cluster_fraction": max(summary.cluster_sizes.values()) / graph.number_of_nodes(),
     }
 
     metadata_path = output_path.with_name(output_path.stem + "_clusters.json")
@@ -68,6 +74,9 @@ def main() -> None:
     parser.add_argument("--min-cluster-size", type=int, default=None)
     parser.add_argument("--min-samples", type=int, default=None)
     parser.add_argument("--cluster-selection-epsilon-m", type=float, default=0.0)
+    parser.add_argument(
+        "--cluster-selection-method", choices=("leaf", "eom"), default="leaf"
+    )
     args = parser.parse_args()
 
     for graph_path in args.graphs:
@@ -76,6 +85,7 @@ def main() -> None:
             min_cluster_size=args.min_cluster_size,
             min_samples=args.min_samples,
             cluster_selection_epsilon_m=args.cluster_selection_epsilon_m,
+            cluster_selection_method=args.cluster_selection_method,
         )
         print(json.dumps(payload, indent=2))
 

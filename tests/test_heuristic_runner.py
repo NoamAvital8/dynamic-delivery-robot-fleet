@@ -16,6 +16,7 @@ import networkx as nx
 from delivery_fleet.charging import annotate_nearest_charging_stations
 from delivery_fleet.scenario_creator import Item, Order, Scenario
 import run_nyc_heuristic_policy as heuristic
+from delivery_fleet.fleet import RobotType
 
 
 def test_generated_heuristic_runner_contains_reservation_and_safe_fallback() -> None:
@@ -125,3 +126,29 @@ def test_full_k_matches_exhaustive_exact_policy_on_small_scenario(tmp_path) -> N
         rel_tol=0.0,
         abs_tol=1e-9,
     )
+    progress = json.loads(heuristic_output.with_suffix(".progress.json").read_text())
+    assert progress["status"] == "complete"
+    assert progress["delivered_so_far"] == 1
+
+
+def test_paper_style_runner_completes_with_moving_average(tmp_path) -> None:
+    graph = tmp_path / "graph.graphml"
+    scenario = tmp_path / "scenario.json"
+    output = tmp_path / "paper.json"
+    fixed = tmp_path / "paper_fractions.json"
+    _write_small_benchmark(graph, scenario)
+    fixed.write_text(json.dumps({
+        "robot_types": [robot_type.value for robot_type in RobotType],
+        "importance_levels": [1.0, 2.0, 5.0],
+        "fractions_by_type": {
+            robot_type.value: [1.0, 0.0, 0.0] for robot_type in RobotType
+        },
+    }), encoding="utf-8")
+    result = _run_policy(
+        "run_nyc_heuristic_policy.py", graph, scenario, output,
+        "--fixed-reservation-fractions", str(fixed),
+        "--reservation-style", "paper_moving_average",
+        "--reservation-lookback-min", "10",
+    )
+    assert result["delivered"] == 1
+    assert result["reservation_style"] == "paper_moving_average"

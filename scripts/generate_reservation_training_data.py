@@ -11,6 +11,7 @@ offline perfect-information procedure. Only training scenarios may be listed.
 import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import hashlib
 import json
 import multiprocessing
 import os
@@ -45,9 +46,29 @@ def _resolve(base: Path, value: str) -> Path:
     return path if path.is_absolute() else (base / path).resolve()
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_fingerprint() -> str:
+    digest = hashlib.sha256()
+    for directory in (ROOT / "scripts", ROOT / "src" / "delivery_fleet"):
+        for path in sorted(directory.glob("*.py")):
+            digest.update(str(path.relative_to(ROOT)).encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
 def _evaluate_job(job: dict[str, Any]) -> tuple[str, str, float, int, str]:
     output = Path(job["output"])
-    if output.exists():
+    stamp_path = output.with_suffix(".stamp.json")
+    if output.exists() and stamp_path.exists() and json.loads(
+        stamp_path.read_text(encoding="utf-8")
+    ).get("signature") == job["signature"]:
         result = json.loads(output.read_text(encoding="utf-8"))
         return (
             job["instance_id"],
@@ -83,22 +104,32 @@ def _evaluate_job(job: dict[str, Any]) -> tuple[str, str, float, int, str]:
         job["prior_rates_json"],
         "--prior-concentration",
         str(job["prior_concentration"]),
+        "--reservation-style",
+        job["reservation_style"],
+        "--reservation-lookback-min",
+        str(job["reservation_lookback_min"]),
     ]
-    completed = subprocess.run(
-        command,
-        cwd=ROOT,
-        env=environment,
-        capture_output=True,
-        text=True,
-        timeout=job["timeout_seconds"],
-    )
+    log_path = output.with_suffix(".log")
+    with log_path.open("w", encoding="utf-8") as log:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=environment,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=job["timeout_seconds"],
+        )
     if completed.returncode != 0:
         raise RuntimeError(
             f"simulation failed for {job['instance_id']}/{job['candidate_id']}\n"
-            f"stdout:\n{completed.stdout[-4000:]}\n"
-            f"stderr:\n{completed.stderr[-4000:]}"
+            f"log: {log_path}\n"
+            f"tail:\n{log_path.read_text(encoding='utf-8')[-4000:]}"
         )
     result = json.loads(output.read_text(encoding="utf-8"))
+    temporary = stamp_path.with_suffix(".stamp.tmp")
+    temporary.write_text(json.dumps({"signature": job["signature"]}), encoding="utf-8")
+    temporary.replace(stamp_path)
     return (
         job["instance_id"],
         job["candidate_id"],
@@ -164,7 +195,15 @@ def main() -> None:
 
     instance_by_id: dict[str, dict[str, Any]] = {}
     jobs: list[dict[str, Any]] = []
-    prior_rates_json = json.dumps(payload["importance_prior_rates_per_hour"])
+    default_prior_rates = payload["importance_prior_rates_per_hour"]
+    reservation_style = str(payload.get("reservation_style", "spatial_posterior"))
+    if reservation_style not in {"spatial_posterior", "paper_moving_average"}:
+        raise ValueError("unknown reservation_style")
+    reservation_lookback_min = float(payload.get("reservation_lookback_min", 100.0))
+    if reservation_lookback_min <= 0:
+        raise ValueError("reservation_lookback_min must be positive")
+    source_fingerprint = _source_fingerprint()
+    graph_hashes: dict[Path, str] = {}
     for raw in instances:
         instance_id = _safe_id(raw["id"])
         if instance_id in instance_by_id:
@@ -172,11 +211,30 @@ def main() -> None:
         instance_by_id[instance_id] = raw
         graph = _resolve(manifest_dir, raw["graph"])
         scenario = _resolve(manifest_dir, raw["scenario"])
+        prior_rates_json = json.dumps(
+            raw.get("importance_prior_rates_per_hour", default_prior_rates),
+            sort_keys=True,
+        )
         if not graph.is_file() or not scenario.is_file():
             raise FileNotFoundError(
                 f"missing graph or scenario for training instance {instance_id!r}"
             )
+        if graph not in graph_hashes:
+            graph_hashes[graph] = _sha256(graph)
+        graph_hash = graph_hashes[graph]
+        scenario_hash = _sha256(scenario)
         for candidate_id in candidate_by_id:
+            signature = hashlib.sha256(json.dumps({
+                "graph": graph_hash,
+                "scenario": scenario_hash,
+                "fixed_config": _sha256(config_by_id[candidate_id]),
+                "shortlist_k": int(payload.get("shortlist_k", 10)),
+                "prior_rates_json": prior_rates_json,
+                "prior_concentration": float(payload.get("prior_concentration", 4.0)),
+                "reservation_style": reservation_style,
+                "reservation_lookback_min": reservation_lookback_min,
+                "source": source_fingerprint,
+            }, sort_keys=True).encode()).hexdigest()
             jobs.append(
                 {
                     "instance_id": instance_id,
@@ -188,6 +246,9 @@ def main() -> None:
                     "shortlist_k": int(payload.get("shortlist_k", 10)),
                     "prior_rates_json": prior_rates_json,
                     "prior_concentration": float(payload.get("prior_concentration", 4.0)),
+                    "reservation_style": reservation_style,
+                    "reservation_lookback_min": reservation_lookback_min,
+                    "signature": signature,
                     "python": str(args.python),
                     "timeout_seconds": args.timeout_seconds,
                 }
