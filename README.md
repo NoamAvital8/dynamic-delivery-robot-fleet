@@ -700,9 +700,12 @@ and reactive insertion, saving routes and loss gaps:
   runs/tiny_oracle_v1 --scenarios 3 --processes 6
 ```
 
-Once the two trained NN files exist, add `--policies full myopic_ab
-reactive_insertion paper_sa_adapted full_no_nn full_no_idle` and pass
+Once the two trained NN files exist, use a **new run directory** (for example
+`runs/tiny_oracle_six_v1`) and add `--policies full myopic_ab
+reactive_insertion paper_sa_adapted full_no_nn full_no_idle` with
 `--spatial-model <path>` and `--paper-model <path>` to compare all six.
+The new directory matters because benchmark cache signatures include the
+model inputs; do not reuse the two-policy directory with different inputs.
 The oracle results are in `runs/tiny_oracle_v1/oracle/`; the paired policy
 results and `oracle_comparison.csv` are in the same run directory. Every
 oracle result and policy result is independently resumable. The five test
