@@ -165,6 +165,7 @@ B5_STATS: dict[str, float] = {
     "exact_sequence_evaluations": 0.0,
     "exact_sequence_seconds": 0.0,
     "no_feasible_sequence": 0.0,
+    "baseline_infeasible_robots": 0.0,
     "assignments_to_busy_robots": 0.0,
     "non_append_insertions": 0.0,
     "interrupted_delivery_routes": 0.0,
@@ -1617,6 +1618,7 @@ def main() -> None:
             / max(1.0, B5_STATS["exact_sequence_evaluations"])
         ),
         "no_feasible_sequence": int(B5_STATS["no_feasible_sequence"]),
+        "baseline_infeasible_robots": int(B5_STATS["baseline_infeasible_robots"]),
         "assignments_to_busy_robots": int(B5_STATS["assignments_to_busy_robots"]),
         "non_append_insertions": int(B5_STATS["non_append_insertions"]),
         "interrupted_delivery_routes": int(B5_STATS["interrupted_delivery_routes"]),

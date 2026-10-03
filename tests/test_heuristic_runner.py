@@ -36,6 +36,7 @@ def test_generated_heuristic_runner_namespace_loads() -> None:
     namespace = heuristic._load_namespace()
     assert callable(namespace["main"])
     assert namespace["__name__"] == "nyc_heuristic_policy_target"
+    assert namespace["B5_STATS"]["baseline_infeasible_robots"] == 0.0
 
 
 def _write_small_benchmark(graph_path: Path, scenario_path: Path) -> None:
@@ -115,6 +116,8 @@ def test_full_k_matches_exhaustive_exact_policy_on_small_scenario(tmp_path) -> N
     )
 
     assert exhaustive["delivered"] == full_k["delivered"] == 1
+    assert exhaustive["baseline_infeasible_robots"] == 0
+    assert full_k["baseline_infeasible_robots"] == 0
     assert math.isclose(
         exhaustive["loss_objective"],
         full_k["loss_objective"],
