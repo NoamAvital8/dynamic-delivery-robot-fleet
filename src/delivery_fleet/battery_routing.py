@@ -25,7 +25,7 @@ from .charging import (
     DEFAULT_CHARGING_POWER_W,
     DISTANCE_TO_NEAREST_CHARGING_STATION_M_ATTR,
 )
-from .robot import BATTERY_EPS_WH, RobotState
+from .robot import BATTERY_EPS_WH, PLANNING_BATTERY_EPS_WH, RobotState
 from .routing import ChargerDistanceIndex, DistanceOracle
 
 NodeId = Hashable
@@ -448,10 +448,10 @@ class BatteryFeasibleRouter:
                 segment.distance_m * spec.energy_per_meter_wh
                 + required_after_segment
             )
-            if required_departure > spec.battery_capacity_wh + 1e-9:
+            if required_departure > spec.battery_capacity_wh + PLANNING_BATTERY_EPS_WH:
                 raise RuntimeError("meta route contains an infeasible battery segment")
 
-            if battery < required_departure:
+            if battery + PLANNING_BATTERY_EPS_WH < required_departure:
                 start_node = segment.waypoints[0]
                 if start_node not in self.station_set:
                     raise RuntimeError("route requires charging at a non-station node")
@@ -476,7 +476,7 @@ class BatteryFeasibleRouter:
                 raise RuntimeError("battery became negative on a feasible route")
             battery = max(0.0, battery)
 
-        if battery + BATTERY_EPS_WH < reserve_wh:
+        if battery + PLANNING_BATTERY_EPS_WH < reserve_wh:
             raise RuntimeError("route violates required dropoff charger reserve")
 
         total_distance = sum(segment.distance_m for segment in segments)

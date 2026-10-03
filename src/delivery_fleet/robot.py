@@ -28,6 +28,9 @@ from .scenario_creator import Item
 NodeId = Hashable
 _EPS = 1e-9
 BATTERY_EPS_WH = 1e-3
+# Smaller tolerance for float64 route arithmetic. Unlike the runtime safety
+# tolerance above, this must not let the planner spend meaningful battery.
+PLANNING_BATTERY_EPS_WH = 1e-8
 
 
 class RobotActivity(str, Enum):

@@ -109,6 +109,25 @@ def test_routers_charge_even_for_sub_tolerance_battery_shortfall() -> None:
         assert math.isclose(quote.arrival_battery_wh, 200.0, abs_tol=1e-10)
 
 
+def test_routers_allow_only_float64_roundoff_at_nonstation_start() -> None:
+    graph = line_graph()
+    robot = RobotState(
+        spec=robot_spec(1),
+        node_id=2,
+        battery_wh=399.9999999995,
+    )
+    router = BatteryFeasibleRouter(graph)
+
+    for quote in (
+        router.evaluate(robot, pickup_node=3, dropoff_node=5),
+        evaluate_pair_from_committed_state(
+            router, robot, pickup_node=3, dropoff_node=5
+        ),
+    ):
+        assert quote.charging_events == ()
+        assert math.isclose(quote.arrival_battery_wh, 100.0, abs_tol=1e-8)
+
+
 def test_policy_chooses_nearest_available_capable_robot() -> None:
     graph = line_graph()
     policy = NearestAvailableRobotPolicy(graph)

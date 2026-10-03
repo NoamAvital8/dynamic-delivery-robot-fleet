@@ -56,7 +56,10 @@ from delivery_fleet.charging import DEFAULT_CHARGING_POWER_W, DEFAULT_NUMBER_OF_
 from delivery_fleet.deadlines import delivery_deadline_min, delivery_loss
 from delivery_fleet.fleet import create_default_fleet, fleet_type_summary
 from delivery_fleet.insertion_routing import evaluate_pair_from_committed_state
-from delivery_fleet.robot import BATTERY_EPS_WH, RobotActivity, RobotNodeArrivalEvent, RobotState
+from delivery_fleet.robot import (
+    BATTERY_EPS_WH, PLANNING_BATTERY_EPS_WH, RobotActivity,
+    RobotNodeArrivalEvent, RobotState,
+)
 from delivery_fleet.routing import ChargerDistanceIndex, DistanceOracle
 from delivery_fleet.scenario_creator import Order, Scenario
 
@@ -724,7 +727,7 @@ def main() -> None:
             final = index == len(raw_segments) - 1
             required_after = reserve_wh if final else 0.0
             required_departure = distance * spec.energy_per_meter_wh + required_after
-            if battery < required_departure:
+            if battery + PLANNING_BATTERY_EPS_WH < required_departure:
                 node = int(waypoints[0])
                 if node not in router.station_set:
                     raise RuntimeError("single-target route needs charge at non-station")
