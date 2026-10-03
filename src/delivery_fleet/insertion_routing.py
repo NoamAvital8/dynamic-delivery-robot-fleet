@@ -32,7 +32,7 @@ from .charging import DEFAULT_CHARGING_POWER_W, DISTANCE_TO_NEAREST_CHARGING_STA
 from .robot import BATTERY_EPS_WH, RobotState
 
 NodeId = Hashable
-_DISTANCE_EPS_M = 1e-3
+_DISTANCE_EPS_M = 1e-8
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,10 +238,10 @@ def evaluate_pair_from_committed_state(
         required_departure = (
             segment.distance_m * spec.energy_per_meter_wh + required_after_segment
         )
-        if required_departure > spec.battery_capacity_wh + BATTERY_EPS_WH:
+        if required_departure > spec.battery_capacity_wh + 1e-9:
             raise RuntimeError("meta route contains an infeasible battery segment")
 
-        if battery + BATTERY_EPS_WH < required_departure:
+        if battery < required_departure:
             start_node = segment.waypoints[0]
             if start_node not in router.station_set:
                 raise RuntimeError("route requires charging at a non-station node")

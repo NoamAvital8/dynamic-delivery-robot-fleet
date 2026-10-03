@@ -29,7 +29,7 @@ from .robot import BATTERY_EPS_WH, RobotState
 from .routing import ChargerDistanceIndex, DistanceOracle
 
 NodeId = Hashable
-_DISTANCE_EPS_M = 1e-3  # dense charger index stores city-scale distances as float32
+_DISTANCE_EPS_M = 1e-8  # float64 routing tolerance, not a spendable battery reserve
 
 
 class NoFeasibleBatteryRoute(RuntimeError):
@@ -448,10 +448,10 @@ class BatteryFeasibleRouter:
                 segment.distance_m * spec.energy_per_meter_wh
                 + required_after_segment
             )
-            if required_departure > spec.battery_capacity_wh + BATTERY_EPS_WH:
+            if required_departure > spec.battery_capacity_wh + 1e-9:
                 raise RuntimeError("meta route contains an infeasible battery segment")
 
-            if battery + BATTERY_EPS_WH < required_departure:
+            if battery < required_departure:
                 start_node = segment.waypoints[0]
                 if start_node not in self.station_set:
                     raise RuntimeError("route requires charging at a non-station node")

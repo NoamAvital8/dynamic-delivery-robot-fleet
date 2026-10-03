@@ -5,6 +5,7 @@ import pytest
 
 from delivery_fleet.battery_routing import BatteryFeasibleRouter
 from delivery_fleet.charging import annotate_nearest_charging_stations
+from delivery_fleet.insertion_routing import evaluate_pair_from_committed_state
 from delivery_fleet.policies import NearestAvailableRobotPolicy
 from delivery_fleet.robot import RobotSpec, RobotState
 from delivery_fleet.scenario_creator import Item, Order
@@ -84,6 +85,28 @@ def test_router_avoids_charging_when_current_battery_is_enough() -> None:
     assert route.node_path == (2, 3, 4, 5)
     assert route.charging_events == ()
     assert math.isclose(route.arrival_battery_wh, 100.0)
+
+
+def test_routers_charge_even_for_sub_tolerance_battery_shortfall() -> None:
+    graph = line_graph()
+    robot = RobotState(
+        spec=robot_spec(1),
+        node_id=4,
+        battery_wh=399.9995,
+    )
+    router = BatteryFeasibleRouter(graph)
+
+    for quote in (
+        router.evaluate(robot, pickup_node=5, dropoff_node=6),
+        evaluate_pair_from_committed_state(
+            router, robot, pickup_node=5, dropoff_node=6
+        ),
+    ):
+        assert len(quote.charging_events) == 1
+        assert math.isclose(
+            quote.charging_events[0].energy_added_wh, 0.0005, abs_tol=1e-10
+        )
+        assert math.isclose(quote.arrival_battery_wh, 200.0, abs_tol=1e-10)
 
 
 def test_policy_chooses_nearest_available_capable_robot() -> None:

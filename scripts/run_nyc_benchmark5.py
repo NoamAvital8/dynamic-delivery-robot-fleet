@@ -64,7 +64,7 @@ PICKUP_HANDLING_MIN = 1.0
 DROPOFF_HANDLING_MIN = 1.0
 EDGE_WEIGHT = "length"
 EPS = 1e-9
-DISTANCE_EPS_M = 1e-3
+DISTANCE_EPS_M = 1e-8
 
 
 @dataclass(frozen=True, slots=True)
@@ -724,7 +724,7 @@ def main() -> None:
             final = index == len(raw_segments) - 1
             required_after = reserve_wh if final else 0.0
             required_departure = distance * spec.energy_per_meter_wh + required_after
-            if battery + BATTERY_EPS_WH < required_departure:
+            if battery < required_departure:
                 node = int(waypoints[0])
                 if node not in router.station_set:
                     raise RuntimeError("single-target route needs charge at non-station")

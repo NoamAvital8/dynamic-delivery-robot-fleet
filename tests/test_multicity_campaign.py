@@ -132,5 +132,6 @@ def test_all_six_policies_write_durable_city_results(tmp_path) -> None:
         assert (job_dir / "result.progress.json").is_file()
         assert (job_dir / "runner.log").is_file()
         assert (job_dir / "stamp.json").is_file()
-    subprocess.run(command, cwd=ROOT, env=environment, check=True,
-                   capture_output=True, text=True, timeout=30)
+    rerun = subprocess.run(command, cwd=ROOT, env=environment,
+                           capture_output=True, text=True, timeout=30)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr

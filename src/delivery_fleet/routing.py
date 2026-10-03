@@ -237,8 +237,9 @@ class ChargerDistanceIndex:
 
     The dense backend computes one all-destinations shortest-path row per fixed
     charging station in compiled SciPy code.  Distance rows are stored as
-    float32 to keep the NYC index modest in memory; predecessor rows are int32.
-    For a 262 x 272,526 NYC index the two matrices together are roughly 545 MiB.
+    float64 preserves battery-feasibility decisions at millimetre-scale range
+    boundaries; predecessor rows are int32.
+    For a 262 x 272,526 NYC index the two matrices together are roughly 817 MiB.
 
     If SciPy is unavailable, methods transparently fall back to the shared
     :class:`DistanceOracle`; this preserves correctness, only not the speedup.
@@ -328,9 +329,10 @@ class ChargerDistanceIndex:
             indices=station_indices,
             return_predecessors=True,
         )
-        # float32 precision is far below a meter at city-scale distances and
-        # halves memory.  Predecessors returned by SciPy are already int32.
-        self._distances = np.asarray(distances, dtype=np.float32)
+        # Feasibility checks compare range to route length. Rounding these rows
+        # to float32 can change a marginally feasible route into an infeasible
+        # one after a robot traverses an edge, so retain SciPy's float64 values.
+        self._distances = np.asarray(distances, dtype=np.float64)
         self._predecessors = np.asarray(predecessors, dtype=np.int32)
 
         # The CSR can be released after preprocessing.  Also seed the oracle's
@@ -374,7 +376,7 @@ class ChargerDistanceIndex:
             col = self._distances[:, self._node_index[node]]
             mask = np.isfinite(col)
             if cutoff_m is not None:
-                mask &= col <= float(cutoff_m) + 1e-3
+                mask &= col <= float(cutoff_m) + 1e-8
             indices = np.flatnonzero(mask)
             result = {
                 self.station_nodes[int(i)]: float(col[int(i)])

@@ -63,3 +63,14 @@ def test_dense_index_uses_minimum_parallel_edge_weight() -> None:
 
     assert math.isclose(index.distance(0, 2), 5.0, abs_tol=1e-5)
     assert index.path_from_station(0, 2) == (0, 1, 2)
+
+
+def test_dense_charger_distances_keep_submillimetre_precision() -> None:
+    graph = nx.Graph()
+    exact_length = 698.6494471179697
+    graph.add_edge(0, 1, length=exact_length)
+
+    index = ChargerDistanceIndex(graph, station_nodes=[0], build_dense=True)
+
+    assert index.distance(0, 1) == exact_length
+    assert index.distances_to_stations(1, cutoff_m=exact_length - 0.001) == {}
