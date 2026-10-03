@@ -29,6 +29,7 @@ def test_generated_heuristic_runner_contains_reservation_and_safe_fallback() -> 
     assert "reservation_eligibility" in generated
     assert "shortlist_fallback_robots" in generated
     assert "minimum_exact_incremental_total_loss_with_safe_shortlist_expansion" in generated
+    assert "baseline_infeasible_robots" in generated
 
 
 def test_generated_heuristic_runner_namespace_loads() -> None:

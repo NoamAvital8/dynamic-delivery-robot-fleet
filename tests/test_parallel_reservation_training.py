@@ -16,12 +16,31 @@ from delivery_fleet.scenario_creator import Item, Order, Scenario
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from generate_reservation_training_data import _evaluate_job
 
 
 def _environment() -> dict[str, str]:
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(ROOT / "src")
     return environment
+
+
+def test_completed_legacy_evaluation_can_be_migrated_without_rerun(tmp_path) -> None:
+    output = tmp_path / "result.json"
+    output.write_text(json.dumps({"loss_objective": 12.5, "robots": 2}), encoding="utf-8")
+    stamp = output.with_suffix(".stamp.json")
+    stamp.write_text(json.dumps({"signature": "old"}), encoding="utf-8")
+    result = _evaluate_job({
+        "output": str(output), "signature": "new",
+        "compatible_signatures": ["old"],
+        "instance_id": "tiny", "candidate_id": "moderate",
+    })
+    assert result == ("tiny", "moderate", 12.5, 2, "cached-compatible")
+    migrated = json.loads(stamp.read_text(encoding="utf-8"))
+    assert migrated["signature"] == "new"
+    assert migrated["migrated_from_signature"] == "old"
 
 
 def test_parallel_perfect_information_target_generation(tmp_path) -> None:
@@ -116,8 +135,7 @@ def test_parallel_training_restarts_select_and_save_model(tmp_path) -> None:
         metadata=np.asarray(metadata),
     )
     model_path = tmp_path / "model.npz"
-    subprocess.run(
-        [
+    command = [
             sys.executable,
             str(ROOT / "scripts" / "train_reservation_fcnn.py"),
             str(dataset),
@@ -128,7 +146,9 @@ def test_parallel_training_restarts_select_and_save_model(tmp_path) -> None:
             "3",
             "--epochs",
             "100",
-        ],
+        ]
+    subprocess.run(
+        command,
         cwd=ROOT,
         env=_environment(),
         check=True,
@@ -140,3 +160,9 @@ def test_parallel_training_restarts_select_and_save_model(tmp_path) -> None:
     assert model.input_dim == 4
     assert model.hidden_dim == 3
     assert model_path.with_suffix(".training.json").exists()
+    assert len(list((tmp_path / "model_restarts").glob("seed_*.json"))) == 3
+    resumed = subprocess.run(
+        command, cwd=ROOT, env=_environment(), check=True,
+        capture_output=True, text=True, timeout=60,
+    )
+    assert "cached_restarts=3 remaining_restarts=0" in resumed.stdout

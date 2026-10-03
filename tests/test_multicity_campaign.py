@@ -15,10 +15,25 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from create_multicity_suite import make_demand
 from run_multicity_experiments import POLICIES, policy_command, summarize
+from run_multicity_campaign import _effective_workers
 from delivery_fleet.charging import annotate_nearest_charging_stations
 from delivery_fleet.fleet import RobotType
 from delivery_fleet.reservation_nn import ReservationFCNN
 from delivery_fleet.scenario_creator import Item, Order, Scenario
+
+
+def test_sixty_logical_cpu_ceiling_respects_memory_and_nested_workers() -> None:
+    available = 320 * 1024 ** 3
+    assert _effective_workers(
+        requested=60, max_processes=60, logical_cpus=72,
+        available_memory_bytes=available, memory_per_simulator_gib=8.0,
+        memory_fraction=0.75,
+    ) == 30
+    assert _effective_workers(
+        requested=60, max_processes=60, logical_cpus=72,
+        available_memory_bytes=available, memory_per_simulator_gib=8.0,
+        memory_fraction=0.75, nested_processes=4,
+    ) == 12
 
 
 def test_suite_demand_is_node_level_and_normalized() -> None:

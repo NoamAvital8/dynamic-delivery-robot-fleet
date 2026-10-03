@@ -643,11 +643,20 @@ cd /data/workspace/robot_delivery/dynamic-delivery-robot-fleet
 mkdir -p runs/icaps_multicity_v1
 nohup .venv/bin/python -u scripts/run_multicity_campaign.py \
   runs/icaps_multicity_v1 \
-  --target-processes 12 --nn-processes 16 --restarts 256 \
-  --benchmark-processes 4 --idle-processes 4 \
+  --max-processes 60 --target-processes 60 --nn-processes 60 \
+  --restarts 256 --benchmark-processes 12 --idle-processes 4 \
   > runs/icaps_multicity_v1/campaign.log 2>&1 < /dev/null &
 echo $!
 ```
+
+The VM reports 72 logical CPUs. `--max-processes 60` is a ceiling, not a
+promise to launch 60 large simulator jobs: label generation and benchmarks
+also respect a default 8 GiB/job estimate and 75% of currently available RAM.
+Benchmark concurrency reserves room for each job's idle-planning workers.
+The effective counts are printed as `RESOURCE_BUDGET` in `campaign.log`.
+Changing only concurrency settings when resuming an existing campaign is
+allowed; the run records the resource history and keeps scientific settings
+fixed. Numerical-library threads are capped at one per worker.
 
 `runs/icaps_multicity_v1/campaign_status.json` names the current/failed stage;
 `runs/icaps_multicity_v1/stages/*.log` contain stage logs. Every simulator run
@@ -658,10 +667,44 @@ policy; `benchmarks/city_policy_summary.csv` sums loss, runtime, on-time and
 late deliveries across completed seeds for each city and algorithm. A failed
 simulation retains its last progress snapshot and log;
 completed training evaluations and benchmark rows are cached with input
-fingerprints. Re-run the identical campaign command to resume after a failure.
+fingerprints. Re-run the campaign with the same run directory and scientific
+settings to resume after a failure; resource counts may change.
+Training-label and benchmark logs print completed/total, elapsed time, and a
+throughput-based ETA. Individual simulator progress snapshots update about
+every 30 seconds. Each NN initialization is checkpointed separately, so a
+crash during its 256 restarts does not discard completed restarts. The final
+all-data model fit is short and may be repeated after a crash. A one-time
+`--compatible-source-fingerprint <sha256>` migration is available for
+completed simulator outputs from a verified earlier code version; use it only
+when the code change did not alter successful jobs' results.
 
 Cluster quality is a preflight gate: the campaign refuses to train if the
 largest HDBSCAN region covers more than half a city's graph nodes. Training
 and test scenarios never overlap, and city-specific prior rates come only
 from each city's training scenarios. The two NNs are each shared across all
 cities, not trained separately per city.
+
+### Tiny proven-optimum comparison
+
+The full city-scale dynamic problem has no practical globally exact solver.
+For a diagnostic lower bound, `scripts/run_small_optimal_comparison.py` creates
+two-robot, four-order cases and exhaustively enumerates every robot assignment
+and precedence-valid pickup/drop-off route. A conservative certificate proves
+that battery and payload cannot bind on these tiny cases, so no charging
+detour can improve the loss. The offline oracle knows future arrivals; it is
+not a deployable online policy. The default run compares it with Myopic A+B
+and reactive insertion, saving routes and loss gaps:
+
+```bash
+.venv/bin/python scripts/run_small_optimal_comparison.py \
+  runs/tiny_oracle_v1 --scenarios 3 --processes 6
+```
+
+Once the two trained NN files exist, add `--policies full myopic_ab
+reactive_insertion paper_sa_adapted full_no_nn full_no_idle` and pass
+`--spatial-model <path>` and `--paper-model <path>` to compare all six.
+The oracle results are in `runs/tiny_oracle_v1/oracle/`; the paired policy
+results and `oracle_comparison.csv` are in the same run directory. Every
+oracle result and policy result is independently resumable. The five test
+seeds per city in the current campaign are a pilot; a publication-strength
+claim should use more paired test scenarios and explicit demand regimes.

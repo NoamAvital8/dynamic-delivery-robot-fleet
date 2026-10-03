@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import hashlib
 import json
 import multiprocessing
 import os
 from pathlib import Path
 import sys
+import time
 from typing import Any
 
 import numpy as np
@@ -18,6 +20,21 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from delivery_fleet.fleet import RobotType
 from delivery_fleet.reservation_nn import ReservationFCNN
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _save_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    temporary.replace(path)
 
 
 def _fit_restart(payload: dict[str, Any]) -> dict[str, Any]:
@@ -133,23 +150,56 @@ def main() -> None:
         f"validation={validation_count} restarts={restarts} processes={worker_count}",
         flush=True,
     )
+    cache_dir = args.output.parent / f"{args.output.stem}_restarts"
+    signature = hashlib.sha256(json.dumps({
+        "dataset_sha256": _sha256(args.dataset),
+        "hidden_dim": hidden_dim,
+        "epochs": args.epochs,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "validation_fraction": args.validation_fraction,
+        "seed": args.seed,
+        "restarts": restarts,
+    }, sort_keys=True).encode()).hexdigest()
     results: list[dict[str, Any]] = []
+    missing: list[dict[str, Any]] = []
+    for index in range(restarts):
+        payload = dict(base_payload)
+        payload["seed"] = args.seed + index
+        cache_path = cache_dir / f"seed_{payload['seed']}.json"
+        try:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            result = cached["result"]
+            if (cached["signature"] == signature
+                    and result["seed"] == payload["seed"]
+                    and np.isfinite(result["validation_loss"])
+                    and np.isfinite(result["training_loss"])):
+                results.append(result)
+                continue
+        except (FileNotFoundError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            pass
+        missing.append(payload)
+    print(f"cached_restarts={len(results)} remaining_restarts={len(missing)}", flush=True)
+    started = time.monotonic()
     with ProcessPoolExecutor(
         max_workers=worker_count,
         mp_context=multiprocessing.get_context("spawn"),
     ) as executor:
-        futures = []
-        for index in range(restarts):
-            payload = dict(base_payload)
-            payload["seed"] = args.seed + index
-            futures.append(executor.submit(_fit_restart, payload))
-        for completed_count, future in enumerate(as_completed(futures), start=1):
+        futures = [executor.submit(_fit_restart, payload) for payload in missing]
+        for newly_completed, future in enumerate(as_completed(futures), start=1):
             result = future.result()
+            _save_json(cache_dir / f"seed_{result['seed']}.json", {
+                "signature": signature, "result": result,
+            })
             results.append(result)
+            completed_count = len(results)
+            elapsed = time.monotonic() - started
+            eta = elapsed / newly_completed * (len(missing) - newly_completed)
             print(
                 f"[{completed_count}/{restarts}] seed={result['seed']} "
                 f"train={result['training_loss']:.6f} "
-                f"validation={result['validation_loss']:.6f}",
+                f"validation={result['validation_loss']:.6f} "
+                f"elapsed={elapsed:.0f}s eta={eta:.0f}s",
                 flush=True,
             )
 

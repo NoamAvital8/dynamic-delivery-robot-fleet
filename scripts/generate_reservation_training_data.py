@@ -19,6 +19,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 from typing import Any
 
 import numpy as np
@@ -66,16 +67,29 @@ def _source_fingerprint() -> str:
 def _evaluate_job(job: dict[str, Any]) -> tuple[str, str, float, int, str]:
     output = Path(job["output"])
     stamp_path = output.with_suffix(".stamp.json")
-    if output.exists() and stamp_path.exists() and json.loads(
-        stamp_path.read_text(encoding="utf-8")
-    ).get("signature") == job["signature"]:
+    stamp = json.loads(stamp_path.read_text(encoding="utf-8")) if stamp_path.exists() else {}
+    prior_signature = stamp.get("signature")
+    compatible = prior_signature in job.get("compatible_signatures", ())
+    if output.exists() and (prior_signature == job["signature"] or compatible):
         result = json.loads(output.read_text(encoding="utf-8"))
+        loss = float(result["loss_objective"])
+        fleet_count = int(result["robots"])
+        if not np.isfinite(loss) or fleet_count <= 0:
+            raise ValueError(f"invalid cached simulator result: {output}")
+        if compatible:
+            temporary = stamp_path.with_suffix(".stamp.tmp")
+            temporary.write_text(json.dumps({
+                "signature": job["signature"],
+                "migrated_from_signature": prior_signature,
+                "migration_reason": "completed before infeasible-baseline recovery fix",
+            }), encoding="utf-8")
+            temporary.replace(stamp_path)
         return (
             job["instance_id"],
             job["candidate_id"],
-            float(result["loss_objective"]),
-            int(result["robots"]),
-            "cached",
+            loss,
+            fleet_count,
+            "cached-compatible" if compatible else "cached",
         )
 
     environment = os.environ.copy()
@@ -147,6 +161,11 @@ def main() -> None:
     parser.add_argument("--work-dir", type=Path, default=None)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--timeout-seconds", type=int, default=86_400)
+    parser.add_argument(
+        "--compatible-source-fingerprint", action="append", default=[],
+        help="Explicitly trust completed jobs made with this older source hash; "
+             "the existing result is validated and its stamp records the migration.",
+    )
     args = parser.parse_args()
     if args.processes <= 0:
         parser.error("--processes must be positive")
@@ -203,6 +222,9 @@ def main() -> None:
     if reservation_lookback_min <= 0:
         raise ValueError("reservation_lookback_min must be positive")
     source_fingerprint = _source_fingerprint()
+    for fingerprint in args.compatible_source_fingerprint:
+        if not re.fullmatch(r"[0-9a-f]{64}", fingerprint):
+            parser.error("--compatible-source-fingerprint must be a SHA-256 hex digest")
     graph_hashes: dict[Path, str] = {}
     for raw in instances:
         instance_id = _safe_id(raw["id"])
@@ -224,7 +246,7 @@ def main() -> None:
         graph_hash = graph_hashes[graph]
         scenario_hash = _sha256(scenario)
         for candidate_id in candidate_by_id:
-            signature = hashlib.sha256(json.dumps({
+            signature_payload = {
                 "graph": graph_hash,
                 "scenario": scenario_hash,
                 "fixed_config": _sha256(config_by_id[candidate_id]),
@@ -234,7 +256,14 @@ def main() -> None:
                 "reservation_style": reservation_style,
                 "reservation_lookback_min": reservation_lookback_min,
                 "source": source_fingerprint,
-            }, sort_keys=True).encode()).hexdigest()
+            }
+            signature = hashlib.sha256(json.dumps(signature_payload, sort_keys=True).encode()).hexdigest()
+            compatible_signatures = []
+            for old_source in args.compatible_source_fingerprint:
+                signature_payload["source"] = old_source
+                compatible_signatures.append(hashlib.sha256(
+                    json.dumps(signature_payload, sort_keys=True).encode()
+                ).hexdigest())
             jobs.append(
                 {
                     "instance_id": instance_id,
@@ -249,6 +278,7 @@ def main() -> None:
                     "reservation_style": reservation_style,
                     "reservation_lookback_min": reservation_lookback_min,
                     "signature": signature,
+                    "compatible_signatures": compatible_signatures,
                     "python": str(args.python),
                     "timeout_seconds": args.timeout_seconds,
                 }
@@ -257,21 +287,45 @@ def main() -> None:
     losses: dict[str, dict[str, float]] = defaultdict(dict)
     fleet_counts: dict[str, int] = {}
     worker_count = min(args.processes, len(jobs))
-    print(f"evaluations={len(jobs)} processes={worker_count} work_dir={work_dir}", flush=True)
+    for job in jobs:
+        output = Path(job["output"])
+        try:
+            signature = json.loads(output.with_suffix(".stamp.json").read_text(
+                encoding="utf-8"
+            )).get("signature")
+            job["already_complete"] = output.is_file() and (
+                signature == job["signature"]
+                or signature in job["compatible_signatures"]
+            )
+        except (FileNotFoundError, json.JSONDecodeError):
+            job["already_complete"] = False
+    pending_count = sum(not job["already_complete"] for job in jobs)
+    print(f"evaluations={len(jobs)} cached={len(jobs)-pending_count} "
+          f"pending={pending_count} processes={worker_count} work_dir={work_dir}", flush=True)
+    started = time.monotonic()
+    newly_completed = 0
     with ProcessPoolExecutor(
         max_workers=worker_count,
         mp_context=multiprocessing.get_context("spawn"),
     ) as executor:
-        futures = [executor.submit(_evaluate_job, job) for job in jobs]
+        futures = {executor.submit(_evaluate_job, job): job for job in jobs}
         for completed_count, future in enumerate(as_completed(futures), start=1):
             instance_id, candidate_id, loss, fleet_count, source = future.result()
+            if not futures[future]["already_complete"]:
+                newly_completed += 1
             losses[instance_id][candidate_id] = loss
             previous_count = fleet_counts.setdefault(instance_id, fleet_count)
             if previous_count != fleet_count:
                 raise RuntimeError("fleet count changed between candidate evaluations")
+            elapsed = time.monotonic() - started
+            eta_text = (
+                f"{elapsed/newly_completed*(pending_count-newly_completed):.0f}s"
+                if newly_completed else "unknown"
+            )
             print(
                 f"[{completed_count}/{len(jobs)}] {instance_id}/{candidate_id} "
-                f"loss={loss:.6f} ({source})",
+                f"loss={loss:.6f} ({source}) elapsed={elapsed:.0f}s "
+                f"eta={eta_text}",
                 flush=True,
             )
 

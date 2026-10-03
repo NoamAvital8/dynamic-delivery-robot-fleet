@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 from typing import Any
 
 
@@ -124,10 +125,16 @@ def _write_summary(results_dir: Path, jobs: list[dict[str, Any]]) -> None:
     rows = []
     for job in jobs:
         status_path = job["status_path"]
-        try:
-            row = json.loads(status_path.read_text(encoding="utf-8"))
-        except (FileNotFoundError, json.JSONDecodeError):
-            # A worker may be replacing this status atomically right now.
+        row = None
+        for attempt in range(5):
+            try:
+                row = json.loads(status_path.read_text(encoding="utf-8"))
+                break
+            except (FileNotFoundError, json.JSONDecodeError, PermissionError):
+                # A worker may be atomically replacing this file on Windows.
+                if attempt < 4:
+                    time.sleep(0.05)
+        if row is None:
             row = {
                 "city": job["city"], "scenario_id": job["scenario_id"],
                 "seed": job["seed"], "policy": job["policy"], "status": "pending",
@@ -303,7 +310,19 @@ def main() -> None:
                     "stamp_path": job_dir / "stamp.json",
                     "command": command, "signature": signature,
                 })
-    print(f"jobs={len(jobs)} cities={len(suite['cities'])} processes={args.processes}", flush=True)
+    for job in jobs:
+        stamp_path = job["stamp_path"]
+        try:
+            job["already_complete"] = (
+                job["output"].is_file()
+                and json.loads(stamp_path.read_text(encoding="utf-8")).get("signature")
+                == job["signature"]
+            )
+        except (FileNotFoundError, json.JSONDecodeError):
+            job["already_complete"] = False
+    pending_count = sum(not job["already_complete"] for job in jobs)
+    print(f"jobs={len(jobs)} cached={len(jobs)-pending_count} pending={pending_count} "
+          f"cities={len(suite['cities'])} processes={args.processes}", flush=True)
     if args.dry_run:
         for job in jobs:
             print(job["city"], job["scenario_id"], job["policy"], flush=True)
@@ -319,13 +338,23 @@ def main() -> None:
     })
     _write_summary(results_dir, jobs)
     failed = False
+    started = time.monotonic()
+    newly_completed = 0
     with ThreadPoolExecutor(max_workers=args.processes) as executor:
         futures = {executor.submit(_execute, job, args.timeout_seconds): job for job in jobs}
         for index, future in enumerate(as_completed(futures), start=1):
             row = future.result()
             _write_summary(results_dir, jobs)
+            elapsed = time.monotonic() - started
+            if not futures[future]["already_complete"]:
+                newly_completed += 1
+            eta_text = (
+                f"{elapsed / newly_completed * (pending_count-newly_completed):.0f}s"
+                if newly_completed else "unknown"
+            )
             print(f"[{index}/{len(jobs)}] {row['city']} {row['scenario_id']} "
-                  f"{row['policy']} {row['status']} loss={row.get('loss_objective', '')}", flush=True)
+                  f"{row['policy']} {row['status']} loss={row.get('loss_objective', '')} "
+                  f"elapsed={elapsed:.0f}s eta={eta_text}", flush=True)
             if row["status"] == "failed":
                 failed = True
                 for other in futures:
