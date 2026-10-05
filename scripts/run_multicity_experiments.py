@@ -188,17 +188,24 @@ def _write_summary(results_dir: Path, jobs: list[dict[str, Any]]) -> None:
     aggregate_tmp.replace(aggregate_path)
 
 
-def _execute(job: dict[str, Any], timeout_seconds: int) -> dict[str, Any]:
+def _execute(job: dict[str, Any], timeout_seconds: int | None,
+             adopt_existing_results: bool = False) -> dict[str, Any]:
     output: Path = job["output"]
     status_path: Path = job["status_path"]
     stamp_path: Path = job["stamp_path"]
     if output.is_file() and stamp_path.is_file():
         stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
-        if stamp.get("signature") == job["signature"]:
+        if stamp.get("signature") in job["accepted_signatures"]:
             row = summarize(json.loads(output.read_text(encoding="utf-8")), job)
             _atomic_json(status_path, row)
             return row
         raise RuntimeError(f"existing result has a different input signature: {output}")
+
+    if output.is_file() and adopt_existing_results:
+        row = summarize(json.loads(output.read_text(encoding="utf-8")), job)
+        _atomic_json(stamp_path, {"signature": job["signature"]})
+        _atomic_json(status_path, row)
+        return row
 
     output.parent.mkdir(parents=True, exist_ok=True)
     _atomic_json(status_path, {
@@ -253,12 +260,21 @@ def main() -> None:
     parser.add_argument("--idle-processes", type=int, default=4)
     parser.add_argument("--shortlist-k", type=int, default=10)
     parser.add_argument("--prior-concentration", type=float, default=4.0)
-    parser.add_argument("--timeout-seconds", type=int, default=86400)
+    parser.add_argument(
+        "--timeout-seconds", type=int, default=0,
+        help="Per-simulation wall-clock limit; zero disables the timeout (default).",
+    )
+    parser.add_argument("--compatible-source-fingerprint", action="append", default=[])
+    parser.add_argument("--scenario-ids", nargs="+", default=None)
+    parser.add_argument("--adopt-existing-results", action="store_true")
     parser.add_argument("--policies", nargs="+", choices=POLICIES, default=list(POLICIES))
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-    if min(args.processes, args.idle_processes, args.shortlist_k, args.timeout_seconds) <= 0:
-        parser.error("process counts, shortlist K and timeout must be positive")
+    if min(args.processes, args.idle_processes, args.shortlist_k) <= 0:
+        parser.error("process counts and shortlist K must be positive")
+    if args.timeout_seconds < 0:
+        parser.error("timeout must be non-negative")
+    timeout_seconds = args.timeout_seconds or None
 
     suite_path = args.suite.resolve()
     suite = json.loads(suite_path.read_text(encoding="utf-8"))
@@ -283,6 +299,8 @@ def main() -> None:
         if graph not in graph_hashes:
             graph_hashes[graph] = _sha256(graph)
         for record in city_data["test"]:
+            if args.scenario_ids is not None and record["id"] not in args.scenario_ids:
+                continue
             scenario = _resolve(base, record["scenario"])
             if not scenario.is_file():
                 raise FileNotFoundError(scenario)
@@ -297,11 +315,18 @@ def main() -> None:
                     prior_rates=city_data["prior_rates_per_hour"],
                     prior_concentration=args.prior_concentration,
                 )
-                signature = hashlib.sha256(json.dumps({
-                    "source": source_hash, "graph": graph_hashes[graph],
-                    "scenario": scenario_hash, "models": model_hashes,
-                    "command": command,
-                }, sort_keys=True).encode()).hexdigest()
+                def signature_for(source: str) -> str:
+                    return hashlib.sha256(json.dumps({
+                        "source": source, "graph": graph_hashes[graph],
+                        "scenario": scenario_hash, "models": model_hashes,
+                        "command": command,
+                    }, sort_keys=True).encode()).hexdigest()
+
+                signature = signature_for(source_hash)
+                accepted_signatures = {
+                    signature,
+                    *(signature_for(value) for value in args.compatible_source_fingerprint),
+                }
                 jobs.append({
                     "city": city, "scenario_id": record["id"], "seed": record["seed"],
                     "orders": record["orders"], "policy": policy,
@@ -309,6 +334,7 @@ def main() -> None:
                     "status_path": job_dir / "status.json",
                     "stamp_path": job_dir / "stamp.json",
                     "command": command, "signature": signature,
+                    "accepted_signatures": accepted_signatures,
                 })
     for job in jobs:
         stamp_path = job["stamp_path"]
@@ -316,7 +342,7 @@ def main() -> None:
             job["already_complete"] = (
                 job["output"].is_file()
                 and json.loads(stamp_path.read_text(encoding="utf-8")).get("signature")
-                == job["signature"]
+                in job["accepted_signatures"]
             )
         except (FileNotFoundError, json.JSONDecodeError):
             job["already_complete"] = False
@@ -335,13 +361,20 @@ def main() -> None:
         "graph_sha256": {str(path): digest for path, digest in graph_hashes.items()},
         "processes": args.processes, "idle_processes": args.idle_processes,
         "shortlist_k": args.shortlist_k,
+        "timeout_seconds": args.timeout_seconds,
+        "compatible_source_fingerprints": args.compatible_source_fingerprint,
     })
     _write_summary(results_dir, jobs)
     failed = False
     started = time.monotonic()
     newly_completed = 0
     with ThreadPoolExecutor(max_workers=args.processes) as executor:
-        futures = {executor.submit(_execute, job, args.timeout_seconds): job for job in jobs}
+        futures = {
+            executor.submit(
+                _execute, job, timeout_seconds, args.adopt_existing_results
+            ): job
+            for job in jobs
+        }
         for index, future in enumerate(as_completed(futures), start=1):
             row = future.result()
             _write_summary(results_dir, jobs)

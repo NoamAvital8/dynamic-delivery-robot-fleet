@@ -251,6 +251,9 @@ def main() -> None:
             "--paper-model", str(models["paper"]),
             "--processes", str(benchmark_workers),
             "--idle-processes", str(args.idle_processes),
+            "--timeout-seconds", "0",
+            *[value for fingerprint in args.compatible_source_fingerprint
+              for value in ("--compatible-source-fingerprint", fingerprint)],
         ], run_dir, state)
         state["status"] = "complete"
         state["current_stage"] = None

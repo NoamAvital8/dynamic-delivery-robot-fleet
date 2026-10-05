@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from create_multicity_suite import make_demand
-from run_multicity_experiments import POLICIES, policy_command, summarize
+from run_multicity_experiments import POLICIES, _execute, policy_command, summarize
 from run_multicity_campaign import _effective_workers
 from delivery_fleet.charging import annotate_nearest_charging_stations
 from delivery_fleet.fleet import RobotType
@@ -135,3 +135,33 @@ def test_all_six_policies_write_durable_city_results(tmp_path) -> None:
     rerun = subprocess.run(command, cwd=ROOT, env=environment,
                            capture_output=True, text=True, timeout=30)
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
+def test_zero_timeout_waits_without_a_deadline(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "result.json"
+    log = tmp_path / "runner.log"
+    status = tmp_path / "status.json"
+    stamp = tmp_path / "stamp.json"
+    waits = []
+
+    class Process:
+        def wait(self, timeout=None):
+            waits.append(timeout)
+            output.write_text(json.dumps({
+                "orders": 1, "delivered": 1, "on_time": 1,
+                "loss_objective": 1.0, "wall_clock_seconds": 1.0,
+                "simulation_finish_min": 1.0,
+            }), encoding="utf-8")
+            return 0
+
+    monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: Process())
+    job = {
+        "city": "test", "scenario_id": "test_000", "seed": 1,
+        "policy": "reactive_insertion", "orders": 1, "output": output,
+        "log": log, "status_path": status, "stamp_path": stamp,
+        "command": ["simulator"], "signature": "new",
+        "accepted_signatures": {"new"},
+    }
+    row = _execute(job, None)
+    assert row["status"] == "complete"
+    assert waits == [None]
