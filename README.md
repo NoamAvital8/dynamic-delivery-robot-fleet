@@ -542,6 +542,15 @@ battery or a fixed delay. Results identify this estimator as
 `haversine_route_handling_charge_queue_v1`. Existing reservation NNs are reused;
 rerun affected idle-policy evaluations in a new results directory.
 
+### Versioned queue-aware assignment
+
+The opt-in `full_queue_aware` and `full_queue_aware_no_nn` policies add a
+known-traffic FIFO charging forecast, queue-inclusive all-affected-order loss,
+bounded alternative-charger search, and exact mission-only waiting logs.
+The original six default policies and old runners are unchanged. Compare in a
+fresh results directory using the same scenarios and existing reservation NN.
+See [queue-aware v1 design, limitations and VM commands](docs/queue_aware_v1.md).
+
 ### Conservative relocation under uncertain demand
 
 Add `--idle-relocation-uncertainty-penalty 1.0` to the anticipatory idle runner to require stronger evidence before a robot leaves its current location. The original posterior-mean planner remains available with the default value `0.0`.

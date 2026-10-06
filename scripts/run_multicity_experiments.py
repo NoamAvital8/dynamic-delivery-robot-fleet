@@ -25,7 +25,19 @@ DEFAULT_POLICIES = (
     "full_no_nn",
     "full_no_idle",
 )
-POLICIES = (*DEFAULT_POLICIES, "full_uncertainty_idle", "full_uncertainty_idle_no_nn")
+POLICIES = (*DEFAULT_POLICIES, "full_uncertainty_idle", "full_uncertainty_idle_no_nn",
+            "full_queue_aware", "full_queue_aware_no_nn")
+QUEUE_FIELDS = (
+    "policy_version", "assignment_queue_forecast", "queue_wait_records_file",
+    "delivery_queue_wait_total_min", "delivery_queue_visit_count",
+    "delivery_queue_waited_count", "delivery_queue_wait_mean_min",
+    "delivery_queue_wait_mean_if_waited_min", "delivery_queue_wait_p95_min",
+    "delivery_queue_wait_max_min", "delivery_queue_cancelled_count",
+    "delivery_queue_cancelled_wait_total_min", "background_queue_wait_total_min",
+    "delivery_queue_prediction_samples", "delivery_queue_prediction_mae_min",
+    "delivery_queue_prediction_bias_min", "queue_forecast_missing_cached_plans",
+    "queue_forecast_infeasible_cached_plans", "queue_alternative_prefix_selected",
+)
 FIELDS = (
     "city", "scenario_id", "seed", "policy", "status", "orders",
     "delivered", "on_time", "late", "loss_objective",
@@ -35,6 +47,7 @@ FIELDS = (
     "idle_readiness_estimator", "idle_readiness_projections",
     "idle_readiness_missing_plan", "idle_readiness_infeasible_plan",
     "idle_readiness_queue_min",
+    *QUEUE_FIELDS,
 )
 
 
@@ -93,6 +106,8 @@ def policy_command(
         "full_no_idle": "run_nyc_heuristic_policy.py",
         "full_uncertainty_idle": "run_nyc_anticipatory_idle_policy.py",
         "full_uncertainty_idle_no_nn": "run_nyc_anticipatory_idle_policy.py",
+        "full_queue_aware": "run_nyc_queue_aware_policy.py",
+        "full_queue_aware_no_nn": "run_nyc_queue_aware_policy.py",
     }[policy]
     command = [python, str(ROOT / "scripts" / script), "--graph", str(graph),
                "--scenario", str(scenario), "--output", str(output)]
@@ -102,9 +117,10 @@ def policy_command(
             "--importance-prior-rates-per-hour", json.dumps(prior_rates, sort_keys=True),
             "--prior-concentration", str(prior_concentration),
         ]
-    if policy in {"full", "full_no_nn", "full_uncertainty_idle", "full_uncertainty_idle_no_nn"}:
+    if policy in {"full", "full_no_nn", "full_uncertainty_idle", "full_uncertainty_idle_no_nn",
+                  "full_queue_aware", "full_queue_aware_no_nn"}:
         command += ["--idle-processes", str(idle_processes)]
-    if policy in {"full", "full_no_idle", "full_uncertainty_idle"}:
+    if policy in {"full", "full_no_idle", "full_uncertainty_idle", "full_queue_aware"}:
         command += ["--reservation-model", str(spatial_model)]
     if policy in {"full_uncertainty_idle", "full_uncertainty_idle_no_nn"}:
         if not math.isfinite(relocation_uncertainty_penalty) or relocation_uncertainty_penalty <= 0:
@@ -132,7 +148,8 @@ def summarize(result: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
         "wall_clock_seconds": float(result["wall_clock_seconds"]),
         "simulation_finish_min": float(result["simulation_finish_min"]),
         "result_file": str(job["output"]), "log_file": str(job["log"]), "error": "",
-        **{name: result.get(name, "") for name in FIELDS if name.startswith("idle_")},
+        **{name: result.get(name, "") for name in FIELDS
+           if name.startswith("idle_") or name in QUEUE_FIELDS},
     }
 
 
@@ -173,6 +190,8 @@ def _write_summary(results_dir: Path, jobs: list[dict[str, Any]]) -> None:
             "completed_scenarios": 0, "total_loss": 0.0,
             "total_wall_clock_seconds": 0.0, "on_time": 0, "late": 0,
             "delivered": 0, "orders": 0,
+            "mission_queue_measured_scenarios": 0, "delivery_queue_wait_total_min": 0.0,
+            "delivery_queue_visit_count": 0, "delivery_queue_waited_count": 0,
         })
         bucket["planned_scenarios"] += 1
         if row["status"] == "complete":
@@ -181,10 +200,18 @@ def _write_summary(results_dir: Path, jobs: list[dict[str, Any]]) -> None:
             bucket["total_wall_clock_seconds"] += float(row["wall_clock_seconds"])
             for field in ("on_time", "late", "delivered", "orders"):
                 bucket[field] += int(row[field])
+            if row.get("delivery_queue_visit_count", "") != "":
+                bucket["mission_queue_measured_scenarios"] += 1
+                bucket["delivery_queue_wait_total_min"] += float(row["delivery_queue_wait_total_min"])
+                for field in ("delivery_queue_visit_count", "delivery_queue_waited_count"):
+                    bucket[field] += int(row[field])
     aggregate_fields = (
         "city", "policy", "completed_scenarios", "planned_scenarios",
         "total_loss", "mean_loss", "total_wall_clock_seconds",
         "mean_wall_clock_seconds", "on_time", "late", "delivered", "orders",
+        "mission_queue_measured_scenarios", "delivery_queue_wait_total_min",
+        "delivery_queue_visit_count", "delivery_queue_waited_count",
+        "delivery_queue_wait_mean_min", "delivery_queue_wait_mean_if_waited_min",
     )
     aggregate_rows = []
     for bucket in grouped.values():
@@ -193,6 +220,15 @@ def _write_summary(results_dir: Path, jobs: list[dict[str, Any]]) -> None:
         bucket["mean_wall_clock_seconds"] = (
             bucket["total_wall_clock_seconds"] / completed if completed else ""
         )
+        measured = bucket["mission_queue_measured_scenarios"]
+        visits = bucket["delivery_queue_visit_count"]
+        waited = bucket["delivery_queue_waited_count"]
+        total_wait = bucket["delivery_queue_wait_total_min"]
+        bucket["delivery_queue_wait_mean_min"] = total_wait / visits if visits else (0.0 if measured else "")
+        bucket["delivery_queue_wait_mean_if_waited_min"] = total_wait / waited if waited else (0.0 if measured else "")
+        if not measured:
+            for field in ("delivery_queue_wait_total_min", "delivery_queue_visit_count", "delivery_queue_waited_count"):
+                bucket[field] = ""
         aggregate_rows.append(bucket)
     aggregate_path = results_dir / "city_policy_summary.csv"
     aggregate_tmp = aggregate_path.with_suffix(".csv.tmp")
@@ -302,8 +338,8 @@ def main() -> None:
     results_dir = args.results_dir.resolve()
     spatial_model = args.spatial_model.resolve()
     paper_model = args.paper_model.resolve()
-    required_models = set(args.policies) & {"full", "full_no_idle", "full_uncertainty_idle", "paper_sa_adapted"}
-    if required_models & {"full", "full_no_idle", "full_uncertainty_idle"} and not spatial_model.is_file():
+    required_models = set(args.policies) & {"full", "full_no_idle", "full_uncertainty_idle", "paper_sa_adapted", "full_queue_aware"}
+    if required_models & {"full", "full_no_idle", "full_uncertainty_idle", "full_queue_aware"} and not spatial_model.is_file():
         raise FileNotFoundError(spatial_model)
     if "paper_sa_adapted" in required_models and not paper_model.is_file():
         raise FileNotFoundError(paper_model)

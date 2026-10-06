@@ -76,6 +76,10 @@ def test_policy_commands_preserve_baselines_and_enable_uncertainty_variants(tmp_
         assert "--idle-processes" in command
     assert "--reservation-model" in commands["full_uncertainty_idle"]
     assert "--reservation-model" not in commands["full_uncertainty_idle_no_nn"]
+    assert "run_nyc_queue_aware_policy.py" in commands["full_queue_aware"][1]
+    assert "--reservation-model" in commands["full_queue_aware"]
+    assert "--reservation-model" not in commands["full_queue_aware_no_nn"]
+    assert "--idle-processes" in commands["full_queue_aware"]
     job = {"city": "haifa", "scenario_id": "test_000", "seed": 1,
            "policy": "full", "output": tmp_path / "result.json", "log": tmp_path / "run.log"}
     row = summarize({"orders": 3, "delivered": 3, "on_time": 2,
