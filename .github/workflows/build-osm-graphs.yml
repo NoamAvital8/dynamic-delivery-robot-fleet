@@ -20,6 +20,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Restore OSM response cache
+        uses: actions/cache/restore@v4
+        with:
+          path: cache/
+          key: osm-responses-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            osm-responses-v1-${{ runner.os }}-
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -27,7 +35,7 @@ jobs:
 
       - name: Download and build graphs
         run: |
-          python scripts/download_osm_graph.py all
+          python scripts/download_osm_graph.py all --resume --attempts 4
 
       - name: Initialize demand clusters offline
         env:
@@ -41,8 +49,16 @@ jobs:
           du -h data/graphs/*
 
       - name: Upload graphs artifact
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: osm-graphs
           path: data/graphs/
           retention-days: 30
+
+      - name: Save successful OSM responses even after a partial failure
+        if: ${{ always() }}
+        uses: actions/cache/save@v4
+        with:
+          path: cache/
+          key: osm-responses-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}

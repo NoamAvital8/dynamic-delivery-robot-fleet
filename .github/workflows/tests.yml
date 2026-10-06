@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install test dependencies
-        run: pip install numpy scipy networkx scikit-learn pytest
+        run: pip install numpy scipy networkx scikit-learn pytest requests
       - name: Run tests
         env:
           PYTHONPATH: src
