@@ -32,6 +32,9 @@ FIELDS = (
     "wall_clock_seconds", "simulation_finish_min", "result_file", "log_file", "error",
     "idle_reposition_actions", "idle_charge_actions", "idle_stay_decisions",
     "idle_planning_seconds", "idle_relocation_uncertainty_penalty",
+    "idle_readiness_estimator", "idle_readiness_projections",
+    "idle_readiness_missing_plan", "idle_readiness_infeasible_plan",
+    "idle_readiness_queue_min",
 )
 
 

@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 import math
 import multiprocessing
 import os
-from typing import Hashable, Iterable, Literal, Mapping, Sequence
+from typing import Callable, Hashable, Iterable, Literal, Mapping, Sequence
 
 import networkx as nx
 import numpy as np
@@ -60,6 +60,90 @@ class IdleRobotSnapshot:
     max_volume_l: float
     available_in_min: float = 0.0
     min_importance: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class ReadinessStep:
+    """One remaining route phase or service operation, without live state."""
+
+    kind: Literal["travel", "charge", "pickup", "dropoff"]
+    target_node: Hashable
+    energy_wh: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class ReadinessProjection:
+    node_id: Hashable
+    finish_min: float
+    battery_wh: float
+    travel_min: float
+    handling_min: float
+    charging_min: float
+    queue_min: float
+
+
+def project_remaining_readiness(
+    robot: IdleRobotSnapshot,
+    now_min: float,
+    steps: Sequence[ReadinessStep],
+    calendar: "ChargingCalendar",
+    *,
+    distance_m: Callable[[Hashable, Hashable], float],
+    charger_power_w: float,
+    pickup_handling_min: float,
+    dropoff_handling_min: float,
+) -> ReadinessProjection:
+    """Estimate readiness using Haversine legs and planned charging visits.
+
+    The snapshot starts after the committed edge, current charge/queue or
+    unfinished handling operation. Those delays are already in available_in_min.
+    Each future charging request uses the current port calendar, without booking
+    hypothetical visits or changing the live simulation. Future unknown arrivals
+    and interruptions are not predicted.
+    """
+    if charger_power_w <= 0 or min(pickup_handling_min, dropoff_handling_min) < 0:
+        raise ValueError("charging power must be positive and handling non-negative")
+    node = robot.node_id
+    battery = robot.battery_wh
+    time_min = now_min + max(0.0, robot.available_in_min)
+    travel = handling = charging = queue = 0.0
+    for step in steps:
+        if step.kind == "travel":
+            distance = float(distance_m(node, step.target_node))
+            duration = distance / robot.speed_mps / 60.0
+            battery -= distance * robot.energy_per_meter_wh
+            if battery < -1e-6:
+                # An incomplete/stale plan must not create fictitious charged
+                # coverage. Report unavailable rather than free energy.
+                return ReadinessProjection(
+                    steps[-1].target_node, math.inf, 0.0,
+                    travel + duration, handling, charging, queue,
+                )
+            battery = max(0.0, battery)
+            travel += duration
+            time_min += duration
+            node = step.target_node
+        elif step.kind == "charge":
+            if node != step.target_node:
+                raise ValueError("charging step must be at the current station")
+            energy = min(max(0.0, step.energy_wh), robot.battery_capacity_wh - battery)
+            if energy <= 1e-8:
+                continue
+            duration = energy / charger_power_w * 60.0
+            slot = calendar.earliest(robot.robot_id, node, time_min, duration)
+            queue += max(0.0, slot.start_min - time_min)
+            charging += duration
+            time_min = slot.finish_min
+            battery += energy
+        elif step.kind in {"pickup", "dropoff"}:
+            if node != step.target_node:
+                raise ValueError("handling step must be at its service node")
+            duration = pickup_handling_min if step.kind == "pickup" else dropoff_handling_min
+            handling += duration
+            time_min += duration
+        else:
+            raise ValueError(f"unknown readiness step {step.kind!r}")
+    return ReadinessProjection(node, time_min, battery, travel, handling, charging, queue)
 
 
 @dataclass(frozen=True, slots=True)

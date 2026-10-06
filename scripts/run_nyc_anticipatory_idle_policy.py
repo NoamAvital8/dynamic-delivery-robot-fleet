@@ -30,12 +30,14 @@ def _patch_idle(source: str) -> str:
     source = _replace_once(
         source,
         "from delivery_fleet.spatial_demand import haversine_node_distance_m\n",
+        "from functools import lru_cache\n"
         "from delivery_fleet.spatial_demand import (\n"
         "    GammaPoissonDemandModel, haversine_node_distance_m,\n"
         ")\n"
         "from delivery_fleet.idle_planning import (\n"
         "    ChargingCalendar, IdleFleetPlanner, IdlePlanningConfig,\n"
         "    IdleRobotSnapshot,\n"
+        "    ReadinessStep, project_remaining_readiness,\n"
         ")\n",
         "idle planning imports",
     )
@@ -107,6 +109,28 @@ def _patch_idle(source: str) -> str:
         "    idle_intents = {}  # robot id -> chosen background travel intent\n"
         "    idle_stats = Counter()\n",
         "idle runtime state",
+    )
+
+    source = _replace_once(
+        source,
+        "    service_token = {robot.spec.id: 0 for robot in robots}\n",
+        "    service_token = {robot.spec.id: 0 for robot in robots}\n"
+        "    idle_service_finish_min = {}\n",
+        "track unfinished handling",
+    )
+    source = _replace_once(
+        source,
+        '        push_event(now + duration, 0, "service_complete", (robot_id, token))\n',
+        '        idle_service_finish_min[robot_id] = now + duration\n'
+        '        push_event(now + duration, 0, "service_complete", (robot_id, token))\n',
+        "record handling completion time",
+    )
+    source = _replace_once(
+        source,
+        "            _, stop = service_lock.pop(robot_id)\n",
+        "            _, stop = service_lock.pop(robot_id)\n"
+        "            idle_service_finish_min.pop(robot_id, None)\n",
+        "remove completed handling time",
     )
 
     helper_marker = "    def begin_background_return(robot: RobotState, now: float) -> None:\n"
@@ -186,6 +210,41 @@ def _patch_idle(source: str) -> str:
         push_event(event.time_min, 1, "background_node_arrival", event)
         idle_stats[f"{action.kind}_actions"] += 1
 
+    @lru_cache(maxsize=65536)
+    def idle_haversine_distance(source_node: int, target_node: int) -> float:
+        return haversine_node_distance_m(graph, source_node, target_node)
+
+    def busy_readiness_steps(robot: RobotState):
+        """Read cached remaining phases; do not rerun battery route search."""
+        robot_id = robot.spec.id
+        schedule = schedules[robot_id]
+        prepared = {step.stop: step for step in schedule.prepared_steps}
+        steps = []
+        for index, stop in enumerate(schedule.stops):
+            if index == 0 and robot_id in service_lock:
+                # Its exact remaining service time is in the initial snapshot.
+                continue
+            if index == 0 and phase_version[robot_id] == schedule.version:
+                if robot.is_moving:
+                    target = (robot.remaining_route[-1]
+                              if robot.remaining_route else robot.decision_node)
+                    steps.append(ReadinessStep("travel", int(target)))
+                phases = tuple(active_phases[robot_id])
+            else:
+                cached = prepared.get(stop)
+                if cached is None:
+                    # No fabricated duration or charging: mark unavailable if
+                    # the cached battery-feasible itinerary is incomplete.
+                    return None
+                phases = cached.phases
+            for phase in phases:
+                steps.append(ReadinessStep(
+                    phase.kind, int(phase.target_node), float(phase.energy_wh),
+                ))
+            steps.append(ReadinessStep("travel", int(stop.node_id)))
+            steps.append(ReadinessStep(stop.kind, int(stop.node_id)))
+        return steps
+
     def plan_idle_fleet(now: float, only_ids: set[int] | None = None) -> None:
         started = time.perf_counter()
         calendar = build_charging_calendar(now)
@@ -242,9 +301,36 @@ def _patch_idle(source: str) -> str:
                 battery = float(decision.battery_wh) if decision else float(robot.battery_wh)
                 ready = max(0.0, decision.time_min - now) if decision else 0.0
             if schedules[robot_id].orders:
-                ready += 8.0 * len(schedules[robot_id].stops)
+                if robot_id in service_lock:
+                    ready = max(0.0, idle_service_finish_min[robot_id] - now)
+                estimate_start = IdleRobotSnapshot(
+                    robot_id, node, robot.spec.speed_mps,
+                    robot.spec.energy_per_meter_wh, battery,
+                    robot.spec.battery_capacity_wh, robot.spec.max_payload_kg,
+                    robot.spec.max_volume_l, available_in_min=ready,
+                )
+                steps = busy_readiness_steps(robot)
+                if steps is None:
+                    node = int(schedules[robot_id].stops[-1].node_id)
+                    battery, ready = 0.0, math.inf
+                    idle_stats["readiness_missing_plan"] += 1
+                else:
+                    projection = project_remaining_readiness(
+                        estimate_start, now, steps, calendar,
+                        distance_m=idle_haversine_distance,
+                        charger_power_w=DEFAULT_CHARGING_POWER_W,
+                        pickup_handling_min=PICKUP_HANDLING_MIN,
+                        dropoff_handling_min=DROPOFF_HANDLING_MIN,
+                    )
+                    node = int(projection.node_id)
+                    battery = projection.battery_wh
+                    ready = max(0.0, projection.finish_min - now)
+                    idle_stats["readiness_projections"] += 1
+                    idle_stats["readiness_queue_min"] += projection.queue_min
+                    if not math.isfinite(ready):
+                        idle_stats["readiness_infeasible_plan"] += 1
             elif robot_id in service_lock:
-                ready += 2.0
+                ready = max(0.0, idle_service_finish_min[robot_id] - now)
             elif (intent is None and robot.activity is RobotActivity.IDLE
                   and not robot.remaining_route and not pending
                   and (only_ids is None or robot_id in only_ids)):
@@ -453,6 +539,11 @@ def _patch_idle(source: str) -> str:
         '        "idle_stay_decisions": int(idle_stats["stay_decisions"]),\n'
         '        "idle_planning_epochs": int(idle_stats["planning_epochs"]),\n'
         '        "idle_planning_seconds": float(idle_stats["planning_seconds"]),\n'
+        '        "idle_readiness_estimator": "haversine_route_handling_charge_queue_v1",\n'
+        '        "idle_readiness_projections": int(idle_stats["readiness_projections"]),\n'
+        '        "idle_readiness_missing_plan": int(idle_stats["readiness_missing_plan"]),\n'
+        '        "idle_readiness_infeasible_plan": int(idle_stats["readiness_infeasible_plan"]),\n'
+        '        "idle_readiness_queue_min": float(idle_stats["readiness_queue_min"]),\n'
         '        "wall_clock_seconds": time.perf_counter() - wall_start,\n',
         "idle result metadata",
     )

@@ -527,6 +527,21 @@ The score is a bounded one-step surrogate for expected reduction in future deliv
 
 Online work is bounded by the top 32 demand clusters, at most 5 relocation and 3 charging candidates per idle robot, and at most 32 selected movements per planning epoch. Replanning defaults to every 15 simulated minutes. Candidate response vectors use a reusable process pool when a batch contains at least 64 vectors; `--idle-processes` controls its size. The graph and routing index stay in the simulation process and are not copied to workers.
 
+Busy-robot coverage uses the estimated completion of its current itinerary, not
+a fixed number of minutes per service stop. It sums remaining Haversine legs
+divided by robot speed, unfinished pickup/dropoff handling, planned charging
+energy divided by charger power, and expected waits from the current charging
+port calendar. Cached route plans supply charger waypoints; no new exact route
+search is needed for this estimate. The committed edge and any current charge,
+queue, or handling operation are counted only for their remaining duration.
+Coverage is evaluated at the final service location and estimated remaining
+battery. Future unobserved queue arrivals and route interruptions are not known,
+so this remains an approximation. An incomplete or energy-inconsistent itinerary
+is marked unavailable and counted in result diagnostics instead of inventing
+battery or a fixed delay. Results identify this estimator as
+`haversine_route_handling_charge_queue_v1`. Existing reservation NNs are reused;
+rerun affected idle-policy evaluations in a new results directory.
+
 ### Conservative relocation under uncertain demand
 
 Add `--idle-relocation-uncertainty-penalty 1.0` to the anticipatory idle runner to require stronger evidence before a robot leaves its current location. The original posterior-mean planner remains available with the default value `0.0`.

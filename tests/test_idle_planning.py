@@ -19,6 +19,8 @@ from delivery_fleet.idle_planning import (
     IdleFleetPlanner,
     IdlePlanningConfig,
     IdleRobotSnapshot,
+    ReadinessStep,
+    project_remaining_readiness,
 )
 from delivery_fleet.scenario_creator import Item, Order, Scenario
 from delivery_fleet.spatial_demand import GammaPoissonDemandModel
@@ -36,6 +38,110 @@ class _SmallIndex:
 
     def distances_to_stations(self, node: int) -> dict[int, float]:
         return {station: self.distance(node, station) for station in self.stations}
+
+
+def test_remaining_readiness_includes_each_charge_queue_and_final_state() -> None:
+    robot = IdleRobotSnapshot(1, 0, 10.0, 0.1, 100.0, 100.0, 12.0, 30.0,
+                             available_in_min=2.0)
+    calendar = ChargingCalendar({1: 1, 2: 1})
+    calendar.reserve(9, 1, 0.0, 20.0)
+    calendar.reserve(8, 2, 0.0, 30.0)
+    distances = {(0, 1): 600.0, (1, 2): 600.0, (2, 3): 300.0}
+    steps = [
+        ReadinessStep("travel", 1), ReadinessStep("charge", 1, 60.0),
+        ReadinessStep("pickup", 1), ReadinessStep("travel", 2),
+        ReadinessStep("charge", 2, 60.0), ReadinessStep("travel", 3),
+        ReadinessStep("dropoff", 3),
+    ]
+    before = {station: calendar.slots(station) for station in (1, 2)}
+    projection = project_remaining_readiness(
+        robot, 10.0, steps, calendar, distance_m=lambda a, b: distances[a, b],
+        charger_power_w=600.0, pickup_handling_min=1.0, dropoff_handling_min=2.0,
+    )
+    # Start at 12; travel to station 1 at 13; wait to 20; charge to 26;
+    # pickup to 27; station 2 at 28; wait to 30; charge to 36;
+    # final travel to 36.5 and dropoff to 38.5.
+    assert projection.finish_min == pytest.approx(38.5)
+    assert projection.travel_min == pytest.approx(2.5)
+    assert projection.handling_min == 3.0
+    assert projection.charging_min == 12.0
+    assert projection.queue_min == 9.0
+    assert projection.node_id == 3
+    assert projection.battery_wh == pytest.approx(70.0)
+    assert {station: calendar.slots(station) for station in (1, 2)} == before
+    assert project_remaining_readiness(
+        robot, 10.0, steps, calendar, distance_m=lambda a, b: distances[a, b],
+        charger_power_w=600.0, pickup_handling_min=1.0, dropoff_handling_min=2.0,
+    ) == projection
+
+
+def test_readiness_counts_only_unfinished_delay_and_energy() -> None:
+    # This snapshot is already at the committed next node, with energy spent
+    # on that edge removed. Four minutes of current charge/service remain.
+    robot = IdleRobotSnapshot(1, 1, 5.0, 0.01, 80.0, 100.0, 12.0, 30.0,
+                             available_in_min=4.0)
+    result = project_remaining_readiness(
+        robot, 20.0, [ReadinessStep("travel", 2), ReadinessStep("dropoff", 2)],
+        ChargingCalendar({1: 1}), distance_m=lambda a, b: 600.0,
+        charger_power_w=2000.0, pickup_handling_min=1.0, dropoff_handling_min=1.0,
+    )
+    assert result.finish_min == pytest.approx(27.0)
+    assert result.battery_wh == pytest.approx(74.0)
+    assert result.charging_min == result.queue_min == 0.0
+
+
+def test_readiness_rejects_uncovered_energy_instead_of_inventing_a_charge() -> None:
+    robot = _hotspot_robot(battery_wh=1.0)
+    result = project_remaining_readiness(
+        robot, 0.0, [ReadinessStep("travel", 20), ReadinessStep("dropoff", 20)],
+        ChargingCalendar({0: 1}), distance_m=lambda a, b: 2000.0,
+        charger_power_w=2000.0, pickup_handling_min=1.0, dropoff_handling_min=1.0,
+    )
+    assert result.finish_min == float("inf")
+    assert result.battery_wh == 0.0
+
+
+def test_runner_projects_busy_routes_with_charging_and_handling(tmp_path, monkeypatch) -> None:
+    graph = nx.path_graph(21)
+    for node in graph:
+        graph.nodes[node].update(
+            x=34.0 + node * 0.01, y=32.0,
+            in_cluster=0, is_cluster_representative=(node == 10),
+            is_charging_station=(node in {0, 10, 20}),
+        )
+    nx.set_edge_attributes(graph, 1000.0, "length")
+    annotate_nearest_charging_stations(graph, [0, 10, 20])
+    graph_path = tmp_path / "graph.graphml"
+    nx.write_graphml(graph, graph_path)
+    scenario_path = tmp_path / "scenario.json"
+    Scenario("busy_readiness", 180.0, 42, tuple(
+        Order(i, 0, 20, float(i), Item(1.0, 1.0), 2.0) for i in range(3)
+    )).save_json(scenario_path)
+    output = tmp_path / "result.json"
+    namespace = idle_runner._load_namespace()
+    projections = []
+
+    def capture(*args, **kwargs):
+        result = project_remaining_readiness(*args, **kwargs)
+        projections.append(result)
+        return result
+
+    namespace["project_remaining_readiness"] = capture
+    monkeypatch.setattr(sys, "argv", [
+        "idle_runner", "--graph", str(graph_path), "--scenario", str(scenario_path),
+        "--output", str(output), "--idle-processes", "1",
+        "--idle-replan-interval-min", "0.5",
+    ])
+    namespace["main"]()
+    result = json.loads(output.read_text())
+    assert result["delivered"] == 3
+    assert result["assignments_to_busy_robots"] >= 1
+    assert projections
+    assert all(p.node_id == 20 for p in projections)
+    assert any(p.charging_min > 0 for p in projections)
+    assert any(p.handling_min >= 2 for p in projections)
+    assert result["idle_readiness_missing_plan"] == 0
+    assert result["idle_readiness_infeasible_plan"] == 0
 
 
 def _hotspot_planner(concentration: float, penalty: float) -> IdleFleetPlanner:
@@ -278,5 +384,9 @@ def test_anticipatory_runner_loads_and_executes_small_scenario(tmp_path: Path, p
     )
     assert result["idle_relocation_uncertainty_penalty"] == penalty
     assert result["idle_planning_epochs"] >= 1
+    assert result["idle_readiness_estimator"] == "haversine_route_handling_charge_queue_v1"
+    assert result["idle_readiness_projections"] > 0
+    assert result["idle_readiness_missing_plan"] == 0
+    assert result["idle_readiness_infeasible_plan"] == 0
     if penalty == 0:
         assert result["idle_reposition_actions"] >= 1
