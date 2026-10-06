@@ -527,6 +527,38 @@ The score is a bounded one-step surrogate for expected reduction in future deliv
 
 Online work is bounded by the top 32 demand clusters, at most 5 relocation and 3 charging candidates per idle robot, and at most 32 selected movements per planning epoch. Replanning defaults to every 15 simulated minutes. Candidate response vectors use a reusable process pool when a batch contains at least 64 vectors; `--idle-processes` controls its size. The graph and routing index stay in the simulation process and are not copied to workers.
 
+### Conservative relocation under uncertain demand
+
+Add `--idle-relocation-uncertainty-penalty 1.0` to the anticipatory idle runner to require stronger evidence before a robot leaves its current location. The original posterior-mean planner remains available with the default value `0.0`.
+
+For each relocation, let \(d_{z,c}=e^{-G_{z,c}}(1-e^{-\Delta g_{z,c}})\), where \(G\) is current fleet coverage and \(\Delta g\) is the proposed action's coverage change relative to staying. Under the independent Gamma posteriors \(\lambda_{z,c}\sim\mathrm{Gamma}(\alpha_{z,c},\beta_{z,c})\), the existing expected marginal gain and its posterior standard deviation are
+
+\[
+\mu=\sum_{z,c}H(c+1)^2d_{z,c}\frac{\alpha_{z,c}}{\beta_{z,c}},
+\qquad
+\sigma=\sqrt{\sum_{z,c}\left[H(c+1)^2d_{z,c}\right]^2
+\frac{\alpha_{z,c}}{\beta_{z,c}^2}}.
+\]
+
+The relocation score is \(\mu-\rho\sigma\), where \(\rho\) is the configured penalty. A move must exceed the same minimum-gain threshold as before. Negative coverage changes contribute to uncertainty too, so the policy accounts for uncertain demand near the robot's current location as well as uncertain demand at its destination. Scores are recomputed after each selected fleet action. Charging retains its original mean-based score, feasibility checks, port scheduling, and full-battery target.
+
+This penalty measures uncertainty in the demand **rate**; it does not include the additional randomness of future Poisson arrivals. It is a conservative surrogate score, not a calibrated confidence bound or a direct prediction of actual delivery loss. No city-specific threshold is assumed, and improvement must be established on held-out scenarios.
+
+The multicity runner adds two opt-in policies: `full_uncertainty_idle` and `full_uncertainty_idle_no_nn`. Its default six policies remain the original comparison. Once the spatial reservation model is trained, run the paired comparison in a new results directory:
+
+```bash
+python scripts/run_multicity_experiments.py \
+  runs/icaps_multicity_v1/suite/suite.json \
+  runs/idle_uncertainty_v1 \
+  --spatial-model runs/icaps_multicity_v1/training/spatial/reservation_fcnn.npz \
+  --paper-model runs/icaps_multicity_v1/training/paper/reservation_fcnn.npz \
+  --processes 4 --idle-processes 1 \
+  --idle-relocation-uncertainty-penalty 1.0 \
+  --policies full full_uncertainty_idle full_no_idle full_no_nn full_uncertainty_idle_no_nn
+```
+
+Compare paired delivery loss, on-time/late deliveries, and runtime. `summary.csv` also reports relocation counts, charging counts, stay decisions, idle-planning time, and the uncertainty penalty. These settings are recorded in results and benchmark fingerprints; changing the penalty invalidates the corresponding cached variant results.
+
 ## Training and simulation on the faculty server
 
 The expensive step is perfect-information target generation, because it runs one complete simulation for every `(training scenario, alpha candidate)` pair. It is process-parallel. The FCNN itself is intentionally small, so its parallelism is implemented as independent random restarts followed by validation-model selection.

@@ -155,6 +155,12 @@ class GammaPosterior:
         return self.shape / self.rate
 
     @property
+    def std_per_minute(self) -> float:
+        """Posterior uncertainty in the arrival rate, not future count noise."""
+
+        return math.sqrt(self.shape) / self.rate
+
+    @property
     def mean_per_hour(self) -> float:
         return 60.0 * self.mean_per_minute
 

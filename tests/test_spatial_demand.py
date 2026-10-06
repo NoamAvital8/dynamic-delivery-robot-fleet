@@ -9,6 +9,7 @@ import pytest
 import delivery_fleet.spatial_demand as spatial
 from delivery_fleet.spatial_demand import (
     GammaPoissonDemandModel,
+    GammaPosterior,
     annotate_hdbscan_clusters,
     haversine_distance_m,
     haversine_response_times_by_cluster,
@@ -46,6 +47,14 @@ def test_gamma_prior_mean_scales_with_cluster_size() -> None:
     assert math.isclose(large, 30.0)
     assert math.isclose(small, 10.0)
     assert math.isclose(large / small, 3.0)
+
+
+def test_posterior_rate_uncertainty_decreases_with_more_evidence_at_same_mean() -> None:
+    weak = GammaPosterior(shape=4.0, rate=8.0)
+    strong = GammaPosterior(shape=16.0, rate=32.0)
+    assert weak.mean_per_minute == strong.mean_per_minute == 0.5
+    assert weak.std_per_minute == 0.25
+    assert strong.std_per_minute == 0.125
 
 
 def test_observation_updates_only_matching_cluster_importance_count() -> None:

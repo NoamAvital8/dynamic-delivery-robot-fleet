@@ -51,6 +51,8 @@ def _patch_idle(source: str) -> str:
         "    parser.add_argument('--idle-max-demand-clusters', type=int, default=32)\n"
         "    parser.add_argument('--idle-max-actions-per-epoch', type=int, default=32)\n"
         "    parser.add_argument('--idle-minimum-gain-fraction', type=float, default=0.001)\n"
+        "    parser.add_argument('--idle-relocation-uncertainty-penalty', type=float, default=0.0,\n"
+        "                        help='Subtract this many posterior gain standard deviations from relocation; 0 uses the original mean score.')\n"
         "    args = parser.parse_args()\n"
         "    if args.idle_replan_interval_min <= 0:\n"
         "        parser.error('--idle-replan-interval-min must be positive')\n",
@@ -91,6 +93,7 @@ def _patch_idle(source: str) -> str:
         "            candidate_chargers=args.idle_candidate_chargers,\n"
         "            max_actions_per_epoch=args.idle_max_actions_per_epoch,\n"
         "            minimum_gain_fraction=args.idle_minimum_gain_fraction,\n"
+        "            relocation_uncertainty_penalty=args.idle_relocation_uncertainty_penalty,\n"
         "            processes=args.idle_processes,\n"
         "        ),\n"
         "    )\n"
@@ -437,10 +440,13 @@ def _patch_idle(source: str) -> str:
     source = _replace_once(
         source,
         '        "wall_clock_seconds": time.perf_counter() - wall_start,\n',
-        '        "idle_policy": "posterior_marginal_utility",\n'
+        '        "idle_policy": ("posterior_uncertainty_gated"\n'
+        '                        if args.idle_relocation_uncertainty_penalty > 0\n'
+        '                        else "posterior_marginal_utility"),\n'
         '        "idle_processes": int(args.idle_processes),\n'
         '        "idle_max_actions_per_epoch": int(args.idle_max_actions_per_epoch),\n'
         '        "idle_minimum_gain_fraction": float(args.idle_minimum_gain_fraction),\n'
+        '        "idle_relocation_uncertainty_penalty": float(args.idle_relocation_uncertainty_penalty),\n'
         '        "idle_horizon_min": float(args.idle_horizon_min),\n'
         '        "idle_reposition_actions": int(idle_stats["reposition_actions"]),\n'
         '        "idle_charge_actions": int(idle_stats["charge_actions"]),\n'

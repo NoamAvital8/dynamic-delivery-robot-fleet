@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-"""Run six paired policies across held-out city scenarios with durable results."""
+"""Run paired policies across held-out city scenarios with durable results."""
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -16,7 +17,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-POLICIES = (
+DEFAULT_POLICIES = (
     "full",
     "myopic_ab",
     "reactive_insertion",
@@ -24,10 +25,13 @@ POLICIES = (
     "full_no_nn",
     "full_no_idle",
 )
+POLICIES = (*DEFAULT_POLICIES, "full_uncertainty_idle", "full_uncertainty_idle_no_nn")
 FIELDS = (
     "city", "scenario_id", "seed", "policy", "status", "orders",
     "delivered", "on_time", "late", "loss_objective",
     "wall_clock_seconds", "simulation_finish_min", "result_file", "log_file", "error",
+    "idle_reposition_actions", "idle_charge_actions", "idle_stay_decisions",
+    "idle_planning_seconds", "idle_relocation_uncertainty_penalty",
 )
 
 
@@ -73,6 +77,7 @@ def policy_command(
     idle_processes: int,
     prior_rates: dict[str, float],
     prior_concentration: float,
+    relocation_uncertainty_penalty: float = 1.0,
 ) -> list[str]:
     if policy not in POLICIES:
         raise ValueError(f"unknown policy {policy!r}")
@@ -83,6 +88,8 @@ def policy_command(
         "paper_sa_adapted": "run_nyc_heuristic_policy.py",
         "full_no_nn": "run_nyc_anticipatory_idle_policy.py",
         "full_no_idle": "run_nyc_heuristic_policy.py",
+        "full_uncertainty_idle": "run_nyc_anticipatory_idle_policy.py",
+        "full_uncertainty_idle_no_nn": "run_nyc_anticipatory_idle_policy.py",
     }[policy]
     command = [python, str(ROOT / "scripts" / script), "--graph", str(graph),
                "--scenario", str(scenario), "--output", str(output)]
@@ -92,10 +99,14 @@ def policy_command(
             "--importance-prior-rates-per-hour", json.dumps(prior_rates, sort_keys=True),
             "--prior-concentration", str(prior_concentration),
         ]
-    if policy in {"full", "full_no_nn"}:
+    if policy in {"full", "full_no_nn", "full_uncertainty_idle", "full_uncertainty_idle_no_nn"}:
         command += ["--idle-processes", str(idle_processes)]
-    if policy in {"full", "full_no_idle"}:
+    if policy in {"full", "full_no_idle", "full_uncertainty_idle"}:
         command += ["--reservation-model", str(spatial_model)]
+    if policy in {"full_uncertainty_idle", "full_uncertainty_idle_no_nn"}:
+        if not math.isfinite(relocation_uncertainty_penalty) or relocation_uncertainty_penalty <= 0:
+            raise ValueError("relocation uncertainty penalty must be finite and positive")
+        command += ["--idle-relocation-uncertainty-penalty", str(relocation_uncertainty_penalty)]
     if policy == "paper_sa_adapted":
         command += ["--reservation-model", str(paper_model),
                     "--reservation-style", "paper_moving_average",
@@ -118,6 +129,7 @@ def summarize(result: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
         "wall_clock_seconds": float(result["wall_clock_seconds"]),
         "simulation_finish_min": float(result["simulation_finish_min"]),
         "result_file": str(job["output"]), "log_file": str(job["log"]), "error": "",
+        **{name: result.get(name, "") for name in FIELDS if name.startswith("idle_")},
     }
 
 
@@ -260,6 +272,8 @@ def main() -> None:
     parser.add_argument("--idle-processes", type=int, default=4)
     parser.add_argument("--shortlist-k", type=int, default=10)
     parser.add_argument("--prior-concentration", type=float, default=4.0)
+    parser.add_argument("--idle-relocation-uncertainty-penalty", type=float, default=1.0,
+                        help="Posterior gain standard-deviation penalty for uncertainty idle variants.")
     parser.add_argument(
         "--timeout-seconds", type=int, default=0,
         help="Per-simulation wall-clock limit; zero disables the timeout (default).",
@@ -267,13 +281,16 @@ def main() -> None:
     parser.add_argument("--compatible-source-fingerprint", action="append", default=[])
     parser.add_argument("--scenario-ids", nargs="+", default=None)
     parser.add_argument("--adopt-existing-results", action="store_true")
-    parser.add_argument("--policies", nargs="+", choices=POLICIES, default=list(POLICIES))
+    parser.add_argument("--policies", nargs="+", choices=POLICIES, default=list(DEFAULT_POLICIES))
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     if min(args.processes, args.idle_processes, args.shortlist_k) <= 0:
         parser.error("process counts and shortlist K must be positive")
     if args.timeout_seconds < 0:
         parser.error("timeout must be non-negative")
+    if (not math.isfinite(args.idle_relocation_uncertainty_penalty)
+            or args.idle_relocation_uncertainty_penalty <= 0):
+        parser.error("idle relocation uncertainty penalty must be finite and positive")
     timeout_seconds = args.timeout_seconds or None
 
     suite_path = args.suite.resolve()
@@ -282,8 +299,8 @@ def main() -> None:
     results_dir = args.results_dir.resolve()
     spatial_model = args.spatial_model.resolve()
     paper_model = args.paper_model.resolve()
-    required_models = set(args.policies) & {"full", "full_no_idle", "paper_sa_adapted"}
-    if required_models & {"full", "full_no_idle"} and not spatial_model.is_file():
+    required_models = set(args.policies) & {"full", "full_no_idle", "full_uncertainty_idle", "paper_sa_adapted"}
+    if required_models & {"full", "full_no_idle", "full_uncertainty_idle"} and not spatial_model.is_file():
         raise FileNotFoundError(spatial_model)
     if "paper_sa_adapted" in required_models and not paper_model.is_file():
         raise FileNotFoundError(paper_model)
@@ -314,6 +331,7 @@ def main() -> None:
                     shortlist_k=args.shortlist_k, idle_processes=args.idle_processes,
                     prior_rates=city_data["prior_rates_per_hour"],
                     prior_concentration=args.prior_concentration,
+                    relocation_uncertainty_penalty=args.idle_relocation_uncertainty_penalty,
                 )
                 def signature_for(source: str) -> str:
                     return hashlib.sha256(json.dumps({
@@ -361,6 +379,7 @@ def main() -> None:
         "graph_sha256": {str(path): digest for path, digest in graph_hashes.items()},
         "processes": args.processes, "idle_processes": args.idle_processes,
         "shortlist_k": args.shortlist_k,
+        "idle_relocation_uncertainty_penalty": args.idle_relocation_uncertainty_penalty,
         "timeout_seconds": args.timeout_seconds,
         "compatible_source_fingerprints": args.compatible_source_fingerprint,
     })

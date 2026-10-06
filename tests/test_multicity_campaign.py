@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from create_multicity_suite import make_demand
-from run_multicity_experiments import POLICIES, _execute, policy_command, summarize
+from run_multicity_experiments import DEFAULT_POLICIES, POLICIES, _execute, policy_command, summarize
 from run_multicity_campaign import _effective_workers
 from delivery_fleet.charging import annotate_nearest_charging_stations
 from delivery_fleet.fleet import RobotType
@@ -50,8 +50,8 @@ def test_suite_demand_is_node_level_and_normalized() -> None:
     assert np.all(profile.lambda_by_bucket.sum(axis=1) > 0)
 
 
-def test_six_commands_and_summary_fields(tmp_path) -> None:
-    assert len(POLICIES) == 6
+def test_policy_commands_preserve_baselines_and_enable_uncertainty_variants(tmp_path) -> None:
+    assert len(DEFAULT_POLICIES) == 6
     commands = {
         policy: policy_command(
             policy, python="python", graph=tmp_path / "graph.graphml",
@@ -59,6 +59,7 @@ def test_six_commands_and_summary_fields(tmp_path) -> None:
             spatial_model=tmp_path / "spatial.npz", paper_model=tmp_path / "paper.npz",
             shortlist_k=10, idle_processes=2,
             prior_rates={"1": 10.0, "2": 2.0, "5": 1.0}, prior_concentration=4.0,
+            relocation_uncertainty_penalty=1.5,
         )
         for policy in POLICIES
     }
@@ -67,17 +68,29 @@ def test_six_commands_and_summary_fields(tmp_path) -> None:
     assert "--reservation-style" in commands["paper_sa_adapted"]
     assert "--reservation-model" not in commands["full_no_nn"]
     assert "--reservation-model" in commands["full_no_idle"]
+    assert "--idle-relocation-uncertainty-penalty" not in commands["full"]
+    assert "--idle-relocation-uncertainty-penalty" not in commands["full_no_nn"]
+    for policy in ("full_uncertainty_idle", "full_uncertainty_idle_no_nn"):
+        command = commands[policy]
+        assert command[command.index("--idle-relocation-uncertainty-penalty") + 1] == "1.5"
+        assert "--idle-processes" in command
+    assert "--reservation-model" in commands["full_uncertainty_idle"]
+    assert "--reservation-model" not in commands["full_uncertainty_idle_no_nn"]
     job = {"city": "haifa", "scenario_id": "test_000", "seed": 1,
            "policy": "full", "output": tmp_path / "result.json", "log": tmp_path / "run.log"}
     row = summarize({"orders": 3, "delivered": 3, "on_time": 2,
                      "loss_objective": 13.5, "wall_clock_seconds": 42.0,
-                     "simulation_finish_min": 100.0}, job)
+                     "simulation_finish_min": 100.0, "idle_reposition_actions": 4,
+                     "idle_relocation_uncertainty_penalty": 1.5}, job)
     assert row["late"] == 1
     assert row["loss_objective"] == 13.5
     assert row["wall_clock_seconds"] == 42.0
+    assert row["idle_reposition_actions"] == 4
+    assert row["idle_relocation_uncertainty_penalty"] == 1.5
+    assert row["idle_charge_actions"] == ""
 
 
-def test_all_six_policies_write_durable_city_results(tmp_path) -> None:
+def test_all_policies_write_durable_city_results(tmp_path) -> None:
     graph = nx.path_graph(3)
     for node in graph.nodes:
         graph.nodes[node].update(
@@ -110,21 +123,21 @@ def test_all_six_policies_write_durable_city_results(tmp_path) -> None:
     command = [sys.executable, str(ROOT / "scripts/run_multicity_experiments.py"),
                str(suite), str(results_dir), "--spatial-model", str(spatial),
                "--paper-model", str(paper), "--processes", "2",
-               "--idle-processes", "1"]
+               "--idle-processes", "1", "--policies", *POLICIES]
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(ROOT / "src")
     subprocess.run(command, cwd=ROOT, env=environment, check=True,
                    capture_output=True, text=True, timeout=120)
     with (results_dir / "summary.csv").open(encoding="utf-8", newline="") as stream:
         rows = list(csv.DictReader(stream))
-    assert len(rows) == 6
+    assert len(rows) == len(POLICIES)
     assert {row["policy"] for row in rows} == set(POLICIES)
     assert all(row["status"] == "complete" for row in rows)
     assert all(int(row["delivered"]) == 1 for row in rows)
     assert all(int(row["on_time"]) + int(row["late"]) == 1 for row in rows)
     with (results_dir / "city_policy_summary.csv").open(encoding="utf-8", newline="") as stream:
         aggregate = list(csv.DictReader(stream))
-    assert len(aggregate) == 6
+    assert len(aggregate) == len(POLICIES)
     assert all(int(row["completed_scenarios"]) == 1 for row in aggregate)
     for policy in POLICIES:
         job_dir = results_dir / "haifa" / "haifa_test_000" / policy

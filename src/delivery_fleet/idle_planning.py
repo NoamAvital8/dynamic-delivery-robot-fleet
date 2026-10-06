@@ -30,6 +30,7 @@ class IdlePlanningConfig:
     candidate_chargers: int = 3
     response_scale_min: float = 18.0
     minimum_gain_fraction: float = 0.001
+    relocation_uncertainty_penalty: float = 0.0
     max_actions_per_epoch: int = 32
     processes: int = 1
 
@@ -42,6 +43,9 @@ class IdlePlanningConfig:
             raise ValueError("candidate limits and processes must be positive")
         if self.minimum_gain_fraction < 0:
             raise ValueError("minimum gain fraction must be non-negative")
+        if (not math.isfinite(self.relocation_uncertainty_penalty)
+                or self.relocation_uncertainty_penalty < 0):
+            raise ValueError("relocation uncertainty penalty must be finite and non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -254,34 +258,37 @@ class IdleFleetPlanner:
 
     def _demand_cells(self, now_min: float) -> tuple[list[int], dict[int, float],
                                                       np.ndarray, np.ndarray,
-                                                      np.ndarray, np.ndarray]:
-        values: list[tuple[float, int, float]] = []
+                                                      np.ndarray, np.ndarray,
+                                                      np.ndarray]:
+        values: list[tuple[float, int, float, float]] = []
         cluster_value: dict[int, float] = {}
         for cluster in self.representatives:
             total = 0.0
             for importance in self.demand.importance_levels:
-                rate = self.demand.posterior(
+                posterior = self.demand.posterior(
                     cluster, importance, at_time_min=now_min
-                ).mean_per_minute
+                )
                 # The late-loss slope is the relevant urgency scale.
-                value = rate * self.config.horizon_min * (importance + 1.0) ** 2
-                values.append((value, cluster, importance))
+                scale = self.config.horizon_min * (importance + 1.0) ** 2
+                value = posterior.mean_per_minute * scale
+                values.append((value, cluster, importance, posterior.std_per_minute * scale))
                 total += value
             cluster_value[cluster] = total
         ranked_clusters = sorted(
             self.representatives,
             key=lambda cluster: (-cluster_value[cluster], cluster),
         )[:self.config.max_demand_clusters]
-        selected = [(v, z, c) for v, z, c in values if z in ranked_clusters]
+        selected = [(v, z, c, s) for v, z, c, s in values if z in ranked_clusters]
         lat = np.asarray(
-            [self._coordinates[self.representatives[z]][0] for _, z, _ in selected]
+            [self._coordinates[self.representatives[z]][0] for _, z, _, _ in selected]
         )
         lon = np.asarray(
-            [self._coordinates[self.representatives[z]][1] for _, z, _ in selected]
+            [self._coordinates[self.representatives[z]][1] for _, z, _, _ in selected]
         )
-        importance = np.asarray([c for _, _, c in selected])
-        weight = np.asarray([v for v, _, _ in selected])
-        return ranked_clusters, cluster_value, lat, lon, importance, weight
+        importance = np.asarray([c for _, _, c, _ in selected])
+        weight = np.asarray([v for v, _, _, _ in selected])
+        weight_std = np.asarray([s for _, _, _, s in selected])
+        return ranked_clusters, cluster_value, lat, lon, importance, weight, weight_std
 
     def _candidate_actions(
         self,
@@ -370,12 +377,12 @@ class IdleFleetPlanner:
         candidate_ids: Iterable[int],
         calendar: ChargingCalendar,
     ) -> dict[int, IdleAction]:
-        """Greedily choose positive marginal gains, updating fleet coverage."""
+        """Choose gains above the threshold, optionally penalizing uncertain moves."""
 
         if not robots:
             return {}
         candidates = set(candidate_ids)
-        ranked, cluster_value, lat, lon, importance, weight = self._demand_cells(now_min)
+        ranked, cluster_value, lat, lon, importance, weight, weight_std = self._demand_cells(now_min)
         by_id = {robot.robot_id: robot for robot in robots}
         jobs: list[tuple] = []
         options: dict[int, list[IdleAction]] = {}
@@ -423,6 +430,7 @@ class IdleFleetPlanner:
         option_robot_ids = np.asarray(
             [action.robot_id for action in flat_actions], dtype=int
         )
+        relocation_mask = np.asarray([action.kind == "reposition" for action in flat_actions])
         selected: dict[int, IdleAction] = {}
         minimum_gain = self.config.minimum_gain_fraction * float(sum(weight))
         calendar_changed = False
@@ -458,6 +466,15 @@ class IdleFleetPlanner:
                 calendar_changed = False
 
             gains = gain_factors @ (weight * np.exp(-coverage))
+            if self.config.relocation_uncertainty_penalty > 0:
+                # Conditional on fixed response vectors, the marginal utility
+                # is linear in independent Gamma rates. Its variance includes
+                # both uncertain destination benefit and coverage lost by leaving.
+                gain_std = np.sqrt(
+                    (gain_factors[relocation_mask] ** 2)
+                    @ ((weight_std * np.exp(-coverage)) ** 2)
+                )
+                gains[relocation_mask] -= self.config.relocation_uncertainty_penalty * gain_std
             gains[~active] = -math.inf
             best_index = int(np.argmax(gains))
             if gains[best_index] <= minimum_gain + 1e-12:
