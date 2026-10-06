@@ -26,7 +26,8 @@ DEFAULT_POLICIES = (
     "full_no_idle",
 )
 POLICIES = (*DEFAULT_POLICIES, "full_uncertainty_idle", "full_uncertainty_idle_no_nn",
-            "full_queue_aware", "full_queue_aware_no_nn")
+            "full_queue_aware", "full_queue_aware_no_nn",
+            "full_coordinated_idle", "full_coordinated_idle_no_nn")
 QUEUE_FIELDS = (
     "policy_version", "assignment_queue_forecast", "queue_wait_records_file",
     "delivery_queue_wait_total_min", "delivery_queue_visit_count",
@@ -47,6 +48,10 @@ FIELDS = (
     "idle_readiness_estimator", "idle_readiness_projections",
     "idle_readiness_missing_plan", "idle_readiness_infeasible_plan",
     "idle_readiness_queue_min",
+    "idle_coordination", "idle_assignment_refresh_requests", "idle_assignment_refresh_epochs",
+    "idle_retarget_actions", "idle_retarget_preserved_edges", "idle_cooldown_protected",
+    "idle_commit_rejected", "idle_pending_blocked_epochs", "idle_switch_gain_fraction", "idle_retarget_cooldown_min",
+    "idle_decisions_file",
     *QUEUE_FIELDS,
 )
 
@@ -77,7 +82,16 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    temporary.replace(path)
+    for attempt in range(5):
+        try:
+            temporary.replace(path)
+            return
+        except PermissionError:
+            # A summary reader or Windows scanner may briefly hold the old
+            # status file. Keep the complete temporary payload and retry.
+            if attempt == 4:
+                raise
+            time.sleep(0.05)
 
 
 def policy_command(
@@ -94,6 +108,8 @@ def policy_command(
     prior_rates: dict[str, float],
     prior_concentration: float,
     relocation_uncertainty_penalty: float = 1.0,
+    switching_gain_fraction: float = 0.005,
+    retarget_cooldown_min: float = 2.0,
 ) -> list[str]:
     if policy not in POLICIES:
         raise ValueError(f"unknown policy {policy!r}")
@@ -108,6 +124,8 @@ def policy_command(
         "full_uncertainty_idle_no_nn": "run_nyc_anticipatory_idle_policy.py",
         "full_queue_aware": "run_nyc_queue_aware_policy.py",
         "full_queue_aware_no_nn": "run_nyc_queue_aware_policy.py",
+        "full_coordinated_idle": "run_nyc_coordinated_idle_policy.py",
+        "full_coordinated_idle_no_nn": "run_nyc_coordinated_idle_policy.py",
     }[policy]
     command = [python, str(ROOT / "scripts" / script), "--graph", str(graph),
                "--scenario", str(scenario), "--output", str(output)]
@@ -118,10 +136,16 @@ def policy_command(
             "--prior-concentration", str(prior_concentration),
         ]
     if policy in {"full", "full_no_nn", "full_uncertainty_idle", "full_uncertainty_idle_no_nn",
-                  "full_queue_aware", "full_queue_aware_no_nn"}:
+                  "full_queue_aware", "full_queue_aware_no_nn",
+                  "full_coordinated_idle", "full_coordinated_idle_no_nn"}:
         command += ["--idle-processes", str(idle_processes)]
-    if policy in {"full", "full_no_idle", "full_uncertainty_idle", "full_queue_aware"}:
+    if policy in {"full", "full_no_idle", "full_uncertainty_idle", "full_queue_aware", "full_coordinated_idle"}:
         command += ["--reservation-model", str(spatial_model)]
+    if policy in {"full_coordinated_idle", "full_coordinated_idle_no_nn"}:
+        if any(not math.isfinite(v) or v < 0 for v in (switching_gain_fraction, retarget_cooldown_min)):
+            raise ValueError("switch gain fraction and cooldown must be finite and non-negative")
+        command += ["--idle-switch-gain-fraction", str(switching_gain_fraction),
+                    "--idle-retarget-cooldown-min", str(retarget_cooldown_min)]
     if policy in {"full_uncertainty_idle", "full_uncertainty_idle_no_nn"}:
         if not math.isfinite(relocation_uncertainty_penalty) or relocation_uncertainty_penalty <= 0:
             raise ValueError("relocation uncertainty penalty must be finite and positive")
@@ -313,6 +337,8 @@ def main() -> None:
     parser.add_argument("--prior-concentration", type=float, default=4.0)
     parser.add_argument("--idle-relocation-uncertainty-penalty", type=float, default=1.0,
                         help="Posterior gain standard-deviation penalty for uncertainty idle variants.")
+    parser.add_argument("--idle-switch-gain-fraction", type=float, default=0.005)
+    parser.add_argument("--idle-retarget-cooldown-min", type=float, default=2.0)
     parser.add_argument(
         "--timeout-seconds", type=int, default=0,
         help="Per-simulation wall-clock limit; zero disables the timeout (default).",
@@ -327,6 +353,8 @@ def main() -> None:
         parser.error("process counts and shortlist K must be positive")
     if args.timeout_seconds < 0:
         parser.error("timeout must be non-negative")
+    if any(not math.isfinite(v) or v < 0 for v in (args.idle_switch_gain_fraction, args.idle_retarget_cooldown_min)):
+        parser.error("switch gain fraction and cooldown must be finite and non-negative")
     if (not math.isfinite(args.idle_relocation_uncertainty_penalty)
             or args.idle_relocation_uncertainty_penalty <= 0):
         parser.error("idle relocation uncertainty penalty must be finite and positive")
@@ -338,8 +366,8 @@ def main() -> None:
     results_dir = args.results_dir.resolve()
     spatial_model = args.spatial_model.resolve()
     paper_model = args.paper_model.resolve()
-    required_models = set(args.policies) & {"full", "full_no_idle", "full_uncertainty_idle", "paper_sa_adapted", "full_queue_aware"}
-    if required_models & {"full", "full_no_idle", "full_uncertainty_idle", "full_queue_aware"} and not spatial_model.is_file():
+    required_models = set(args.policies) & {"full", "full_no_idle", "full_uncertainty_idle", "paper_sa_adapted", "full_queue_aware", "full_coordinated_idle"}
+    if required_models & {"full", "full_no_idle", "full_uncertainty_idle", "full_queue_aware", "full_coordinated_idle"} and not spatial_model.is_file():
         raise FileNotFoundError(spatial_model)
     if "paper_sa_adapted" in required_models and not paper_model.is_file():
         raise FileNotFoundError(paper_model)
@@ -371,6 +399,8 @@ def main() -> None:
                     prior_rates=city_data["prior_rates_per_hour"],
                     prior_concentration=args.prior_concentration,
                     relocation_uncertainty_penalty=args.idle_relocation_uncertainty_penalty,
+                    switching_gain_fraction=args.idle_switch_gain_fraction,
+                    retarget_cooldown_min=args.idle_retarget_cooldown_min,
                 )
                 def signature_for(source: str) -> str:
                     return hashlib.sha256(json.dumps({
@@ -419,6 +449,8 @@ def main() -> None:
         "processes": args.processes, "idle_processes": args.idle_processes,
         "shortlist_k": args.shortlist_k,
         "idle_relocation_uncertainty_penalty": args.idle_relocation_uncertainty_penalty,
+        "idle_switch_gain_fraction": args.idle_switch_gain_fraction,
+        "idle_retarget_cooldown_min": args.idle_retarget_cooldown_min,
         "timeout_seconds": args.timeout_seconds,
         "compatible_source_fingerprints": args.compatible_source_fingerprint,
     })

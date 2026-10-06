@@ -767,3 +767,15 @@ results and `oracle_comparison.csv` are in the same run directory. Every
 oracle result and policy result is independently resumable. The five test
 seeds per city in the current campaign are a pilot; a publication-strength
 claim should use more paired test scenarios and explicit demand regimes.
+
+### Versioned assignment-triggered idle coordination
+
+`full_coordinated_idle` and `full_coordinated_idle_no_nn` are opt-in policies on
+top of queue-aware assignment. One fleet coordinator refreshes after every
+delivery assignment (coalescing same-time bursts), updates shared spatial
+coverage after each selected move, and can retarget idle routes only after a
+cooldown and a meaningful gain over continuing the current plan. Committed
+street edges and uninterrupted 100% background charging are preserved. Old
+policies and default benchmarks are unchanged. See
+[coordinated idle v1](docs/coordinated_idle_v1.md) for the scoring approximation,
+tunable safeguards, diagnostics and isolated VM comparison commands.

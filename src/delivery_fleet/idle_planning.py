@@ -460,27 +460,50 @@ class IdleFleetPlanner:
         robots: Sequence[IdleRobotSnapshot],
         candidate_ids: Iterable[int],
         calendar: ChargingCalendar,
+        *,
+        baseline_actions: Mapping[int, IdleAction] | None = None,
+        switching_gain_fraction: float = 0.0,
     ) -> dict[int, IdleAction]:
-        """Choose gains above the threshold, optionally penalizing uncertain moves."""
+        """Choose joint marginal gains; optional baselines preserve committed intent.
+
+        Legacy callers compare against staying at each snapshot. Opt-in callers
+        can compare an editable relocation against continuing its current plan,
+        with an additional switching threshold. Coverage is updated after every
+        selection, including cross-cluster spatial overlap and origin losses.
+        """
 
         if not robots:
             return {}
+        if not math.isfinite(switching_gain_fraction) or switching_gain_fraction < 0:
+            raise ValueError("switching gain fraction must be finite and non-negative")
+        baselines = baseline_actions or {}
         candidates = set(candidate_ids)
         ranked, cluster_value, lat, lon, importance, weight, weight_std = self._demand_cells(now_min)
         by_id = {robot.robot_id: robot for robot in robots}
         jobs: list[tuple] = []
         options: dict[int, list[IdleAction]] = {}
         for robot in robots:
-            stay = IdleAction(
+            stay = baselines.get(robot.robot_id) or IdleAction(
                 robot.robot_id, "stay", robot.node_id, 0.0, now_min,
                 max(0.0, robot.available_in_min), robot.battery_wh,
             )
-            target_lat, target_lon = self._coordinates[robot.node_id]
+            # Use a distinct key for continuing the old plan, even if a new
+            # candidate has the same kind/target but a different readiness.
+            stay = replace(stay, kind="stay")
+            target_lat, target_lon = self._coordinates[stay.target_node]
             jobs.append((robot, stay, target_lat, target_lon))
             if robot.robot_id in candidates:
                 options[robot.robot_id] = self._candidate_actions(
                     robot, ranked, cluster_value, now_min, calendar
                 )
+                if robot.robot_id in baselines and stay.target_node != robot.node_id:
+                    # Stopping at the next legal node is an alternative to
+                    # continuing a relocation, not its baseline.
+                    options[robot.robot_id].append(IdleAction(
+                        robot.robot_id, "stay", robot.node_id, 0.0,
+                        now_min + max(0.0, robot.available_in_min),
+                        max(0.0, robot.available_in_min), robot.battery_wh,
+                    ))
                 for action in options[robot.robot_id]:
                     target_lat, target_lon = self._coordinates[action.target_node]
                     jobs.append((robot, action, target_lat, target_lon))
@@ -491,7 +514,9 @@ class IdleFleetPlanner:
             for (_, action, _, _), vector in zip(jobs, vectors, strict=True)
         }
         coverage = sum(
-            (vector_by_action[(robot.robot_id, "stay", robot.node_id)]
+            (vector_by_action[(robot.robot_id, "stay",
+                               baselines[robot.robot_id].target_node
+                               if robot.robot_id in baselines else robot.node_id)]
              for robot in robots),
             np.zeros_like(weight),
         )
@@ -501,7 +526,9 @@ class IdleFleetPlanner:
         if not flat_actions:
             return {}
         baseline_by_robot = {
-            robot.robot_id: vector_by_action[(robot.robot_id, "stay", robot.node_id)]
+            robot.robot_id: vector_by_action[(robot.robot_id, "stay",
+                                            baselines[robot.robot_id].target_node
+                                            if robot.robot_id in baselines else robot.node_id)]
             for robot in robots
         }
         deltas = np.stack([
@@ -517,6 +544,11 @@ class IdleFleetPlanner:
         relocation_mask = np.asarray([action.kind == "reposition" for action in flat_actions])
         selected: dict[int, IdleAction] = {}
         minimum_gain = self.config.minimum_gain_fraction * float(sum(weight))
+        thresholds = np.asarray([
+            max(minimum_gain, switching_gain_fraction * float(sum(weight)))
+            if action.robot_id in baselines else minimum_gain
+            for action in flat_actions
+        ])
         calendar_changed = False
 
         while active.any() and len(selected) < self.config.max_actions_per_epoch:
@@ -560,8 +592,9 @@ class IdleFleetPlanner:
                 )
                 gains[relocation_mask] -= self.config.relocation_uncertainty_penalty * gain_std
             gains[~active] = -math.inf
+            gains[gains <= thresholds + 1e-12] = -math.inf
             best_index = int(np.argmax(gains))
-            if gains[best_index] <= minimum_gain + 1e-12:
+            if not math.isfinite(float(gains[best_index])):
                 break
             best_action = flat_actions[best_index]
             robot_id = best_action.robot_id

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from create_multicity_suite import make_demand
-from run_multicity_experiments import DEFAULT_POLICIES, POLICIES, _execute, policy_command, summarize
+from run_multicity_experiments import DEFAULT_POLICIES, POLICIES, _atomic_json, _execute, policy_command, summarize
 from run_multicity_campaign import _effective_workers
 from delivery_fleet.charging import annotate_nearest_charging_stations
 from delivery_fleet.fleet import RobotType
@@ -80,6 +80,11 @@ def test_policy_commands_preserve_baselines_and_enable_uncertainty_variants(tmp_
     assert "--reservation-model" in commands["full_queue_aware"]
     assert "--reservation-model" not in commands["full_queue_aware_no_nn"]
     assert "--idle-processes" in commands["full_queue_aware"]
+    assert "run_nyc_coordinated_idle_policy.py" in commands["full_coordinated_idle"][1]
+    assert "--reservation-model" in commands["full_coordinated_idle"]
+    assert "--reservation-model" not in commands["full_coordinated_idle_no_nn"]
+    assert "--idle-switch-gain-fraction" in commands["full_coordinated_idle"]
+    assert "--idle-retarget-cooldown-min" in commands["full_coordinated_idle"]
     job = {"city": "haifa", "scenario_id": "test_000", "seed": 1,
            "policy": "full", "output": tmp_path / "result.json", "log": tmp_path / "run.log"}
     row = summarize({"orders": 3, "delivered": 3, "on_time": 2,
@@ -182,3 +187,20 @@ def test_zero_timeout_waits_without_a_deadline(tmp_path, monkeypatch) -> None:
     row = _execute(job, None)
     assert row["status"] == "complete"
     assert waits == [None]
+
+
+def test_parallel_status_write_retries_transient_windows_reader_lock(tmp_path, monkeypatch):
+    original = Path.replace
+    attempts = []
+
+    def briefly_locked(path, target):
+        attempts.append(target)
+        if len(attempts) < 3:
+            raise PermissionError("temporary reader lock")
+        return original(path, target)
+
+    monkeypatch.setattr(Path, "replace", briefly_locked)
+    destination = tmp_path / "status.json"
+    _atomic_json(destination, {"status": "complete"})
+    assert json.loads(destination.read_text()) == {"status": "complete"}
+    assert len(attempts) == 3
