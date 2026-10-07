@@ -1,0 +1,11 @@
+{
+  "key": "paris",
+  "place": "Paris, France",
+  "network_type": "walk",
+  "simplified": true,
+  "undirected": true,
+  "largest_connected_component_only": true,
+  "nodes": 77129,
+  "edges": 110313,
+  "graphml": "paris.graphml"
+}

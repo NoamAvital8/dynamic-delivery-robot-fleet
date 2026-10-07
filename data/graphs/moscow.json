@@ -1,0 +1,14 @@
+{
+  "key": "moscow",
+  "place": "Moscow, Russia",
+  "network_type": "walk",
+  "simplified": true,
+  "undirected": true,
+  "largest_connected_component_only": true,
+  "nodes": 557061,
+  "edges": 803014,
+  "graphml": "moscow.graphml",
+  "source_url": "https://download.geofabrik.de/russia/central-fed-district-latest.osm.pbf",
+  "source_md5": "a92f542bd01b7bf6caa34dd288ee569a",
+  "source": "Geofabrik OpenStreetMap regional extract"
+}

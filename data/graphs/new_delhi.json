@@ -1,0 +1,11 @@
+{
+  "key": "new_delhi",
+  "place": "New Delhi, Delhi, India",
+  "network_type": "walk",
+  "simplified": true,
+  "undirected": true,
+  "largest_connected_component_only": true,
+  "nodes": 8254,
+  "edges": 11525,
+  "graphml": "new_delhi.graphml"
+}

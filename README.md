@@ -576,6 +576,38 @@ Compare paired delivery loss, on-time/late deliveries, and runtime. `summary.csv
 
 ## Training and simulation on the faculty server
 
+### City map files
+
+Generated walking-network maps are stored in `data/graphs/` as GraphML files,
+with `<city>.json` network metadata and `<city>_clusters.json` demand-cluster
+metadata. The six maps `paris`, `new_delhi`, `moscow`, `johannesburg`, `beijing`,
+and `sydney` are versioned with Git LFS, together with their JSON metadata,
+`summary.json`, and `validation.json`. Other generated maps remain ignored by
+Git. Install Git LFS before cloning, or run the following in an existing checkout
+to fetch the map files:
+
+```powershell
+git lfs install
+git lfs pull
+```
+
+The downloader supports all six city keys. Johannesburg uses its metropolitan
+municipal boundary. The networks are simplified, undirected, and restricted
+to their largest connected component; offline demand clustering uses HDBSCAN
+with leaf selection.
+
+Map data is © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright),
+available under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/1-0/).
+Regional extract sources are
+recorded in each map's JSON metadata where applicable.
+
+To build an individual map with the existing API pipeline:
+
+```powershell
+python scripts/download_osm_graph.py paris
+python scripts/initialize_demand_clusters.py data/graphs/paris.graphml
+```
+
 The expensive step is perfect-information target generation, because it runs one complete simulation for every `(training scenario, alpha candidate)` pair. It is process-parallel. The FCNN itself is intentionally small, so its parallelism is implemented as independent random restarts followed by validation-model selection.
 
 ### 1. Environment

@@ -1,0 +1,80 @@
+[
+  {
+    "key": "paris",
+    "place": "Paris, France",
+    "network_type": "walk",
+    "simplified": true,
+    "undirected": true,
+    "largest_connected_component_only": true,
+    "nodes": 77129,
+    "edges": 110313,
+    "graphml": "paris.graphml"
+  },
+  {
+    "key": "new_delhi",
+    "place": "New Delhi, Delhi, India",
+    "network_type": "walk",
+    "simplified": true,
+    "undirected": true,
+    "largest_connected_component_only": true,
+    "nodes": 8254,
+    "edges": 11525,
+    "graphml": "new_delhi.graphml"
+  },
+  {
+    "key": "moscow",
+    "place": "Moscow, Russia",
+    "network_type": "walk",
+    "simplified": true,
+    "undirected": true,
+    "largest_connected_component_only": true,
+    "nodes": 557061,
+    "edges": 803014,
+    "graphml": "moscow.graphml",
+    "source_url": "https://download.geofabrik.de/russia/central-fed-district-latest.osm.pbf",
+    "source_md5": "a92f542bd01b7bf6caa34dd288ee569a",
+    "source": "Geofabrik OpenStreetMap regional extract"
+  },
+  {
+    "key": "johannesburg",
+    "place": "City of Johannesburg Metropolitan Municipality, Gauteng, South Africa",
+    "network_type": "walk",
+    "simplified": true,
+    "undirected": true,
+    "largest_connected_component_only": true,
+    "nodes": 149160,
+    "edges": 202512,
+    "graphml": "johannesburg.graphml",
+    "source_url": "https://download.geofabrik.de/africa/south-africa-latest.osm.pbf",
+    "source_md5": "e5c26bfa0e340f22578b305662cced63",
+    "source": "Geofabrik OpenStreetMap regional extract"
+  },
+  {
+    "key": "beijing",
+    "place": "Beijing, China",
+    "network_type": "walk",
+    "simplified": true,
+    "undirected": true,
+    "largest_connected_component_only": true,
+    "nodes": 354619,
+    "edges": 495374,
+    "graphml": "beijing.graphml",
+    "source_url": "https://download.geofabrik.de/asia/china/hebei-latest.osm.pbf",
+    "source_md5": "c69f3a0eafce3955c757a3532aab77b5",
+    "source": "Geofabrik OpenStreetMap regional extract"
+  },
+  {
+    "key": "sydney",
+    "place": "Sydney, New South Wales, Australia",
+    "network_type": "walk",
+    "simplified": true,
+    "undirected": true,
+    "largest_connected_component_only": true,
+    "nodes": 421271,
+    "edges": 593192,
+    "graphml": "sydney.graphml",
+    "source_url": "https://download.geofabrik.de/australia-oceania/australia/new-south-wales-latest.osm.pbf",
+    "source_md5": "cb553c5d95184a820cbc99f48bed881c",
+    "source": "Geofabrik OpenStreetMap regional extract"
+  }
+]

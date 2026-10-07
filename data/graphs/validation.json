@@ -1,0 +1,56 @@
+[
+  {
+    "city": "paris",
+    "nodes": 77129,
+    "edges": 110313,
+    "clusters": 44,
+    "largest_cluster_fraction": 0.04511921585914507,
+    "graphml_bytes": 63985869,
+    "validation": "passed"
+  },
+  {
+    "city": "new_delhi",
+    "nodes": 8254,
+    "edges": 11525,
+    "clusters": 20,
+    "largest_cluster_fraction": 0.15023019142234068,
+    "graphml_bytes": 6822000,
+    "validation": "passed"
+  },
+  {
+    "city": "moscow",
+    "nodes": 557061,
+    "edges": 803014,
+    "clusters": 112,
+    "largest_cluster_fraction": 0.019723154196757627,
+    "graphml_bytes": 452388126,
+    "validation": "passed"
+  },
+  {
+    "city": "johannesburg",
+    "nodes": 149160,
+    "edges": 202512,
+    "clusters": 73,
+    "largest_cluster_fraction": 0.02897559667471172,
+    "graphml_bytes": 128490618,
+    "validation": "passed"
+  },
+  {
+    "city": "beijing",
+    "nodes": 354619,
+    "edges": 495374,
+    "clusters": 96,
+    "largest_cluster_fraction": 0.021922119232190042,
+    "graphml_bytes": 318517411,
+    "validation": "passed"
+  },
+  {
+    "city": "sydney",
+    "nodes": 421271,
+    "edges": 593192,
+    "clusters": 107,
+    "largest_cluster_fraction": 0.026878185301148192,
+    "graphml_bytes": 372990013,
+    "validation": "passed"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "key": "sydney",
+  "place": "Sydney, New South Wales, Australia",
+  "network_type": "walk",
+  "simplified": true,
+  "undirected": true,
+  "largest_connected_component_only": true,
+  "nodes": 421271,
+  "edges": 593192,
+  "graphml": "sydney.graphml",
+  "source_url": "https://download.geofabrik.de/australia-oceania/australia/new-south-wales-latest.osm.pbf",
+  "source_md5": "cb553c5d95184a820cbc99f48bed881c",
+  "source": "Geofabrik OpenStreetMap regional extract"
+}

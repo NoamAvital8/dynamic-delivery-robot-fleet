@@ -16,6 +16,12 @@ PLACES = {
     "manhattan": "Manhattan, New York City, New York, USA",
     "new_york_city": "New York City, New York, USA",
     "barcelona": "Barcelona, Catalonia, Spain",
+    "paris": "Paris, France",
+    "new_delhi": "New Delhi, Delhi, India",
+    "moscow": "Moscow, Russia",
+    "johannesburg": "City of Johannesburg Metropolitan Municipality, Gauteng, South Africa",
+    "beijing": "Beijing, China",
+    "sydney": "Sydney, New South Wales, Australia",
 }
 
 
@@ -39,6 +45,7 @@ def download_graph(
                 and metadata.get("graphml") == graph_path.name):
             print(f"Reusing completed graph: {city_key}", flush=True)
             return metadata
+    print(f"Downloading {city_key}: {place}", flush=True)
 
     # Delivery robots are modeled on a pedestrian-like street network.
     # OSMnx caches successful subrequests, so retries also retain progress

@@ -1,0 +1,14 @@
+{
+  "key": "johannesburg",
+  "place": "City of Johannesburg Metropolitan Municipality, Gauteng, South Africa",
+  "network_type": "walk",
+  "simplified": true,
+  "undirected": true,
+  "largest_connected_component_only": true,
+  "nodes": 149160,
+  "edges": 202512,
+  "graphml": "johannesburg.graphml",
+  "source_url": "https://download.geofabrik.de/africa/south-africa-latest.osm.pbf",
+  "source_md5": "e5c26bfa0e340f22578b305662cced63",
+  "source": "Geofabrik OpenStreetMap regional extract"
+}

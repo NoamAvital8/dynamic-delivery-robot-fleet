@@ -1,0 +1,14 @@
+{
+  "key": "beijing",
+  "place": "Beijing, China",
+  "network_type": "walk",
+  "simplified": true,
+  "undirected": true,
+  "largest_connected_component_only": true,
+  "nodes": 354619,
+  "edges": 495374,
+  "graphml": "beijing.graphml",
+  "source_url": "https://download.geofabrik.de/asia/china/hebei-latest.osm.pbf",
+  "source_md5": "c69f3a0eafce3955c757a3532aab77b5",
+  "source": "Geofabrik OpenStreetMap regional extract"
+}
