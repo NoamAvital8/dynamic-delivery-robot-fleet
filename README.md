@@ -4,6 +4,21 @@ Course project for **AI and Autonomous Systems**.
 
 We study online planning and assignment for a heterogeneous fleet of autonomous delivery robots operating on a city graph under stochastic demand and travel times.
 
+## Opt-in online MLE reservation experiment
+
+The separate `codex/uncertainty-gated-mle-reservation` version replaces the
+reservation NN with online arrival-rate MLEs, anytime confidence bounds and a
+bounded loss-surrogate search for robot-priority fractions. It starts without
+priority restrictions and activates them only after rate-width, fraction-stability
+and predicted-loss-improvement gates pass. It can fall back again; this is not
+a guarantee of globally optimal assignments or improved simulation loss.
+
+Use `queue_mle_reservation` or `full_mle_reservation` in
+`scripts/run_multicity_experiments.py`. Existing benchmarks, models and saved
+results remain unchanged. No NN retraining is needed. See
+[MLE reservation v1](docs/mle_reservation_v1.md) for the math, assumptions,
+limitations, parallel-worker limits, logs and VM launch command.
+
 ## Core setting
 
 - Pickup-to-delivery requests arrive online.

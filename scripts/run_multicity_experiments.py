@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict
 import csv
 import hashlib
 import json
@@ -17,6 +18,10 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from delivery_fleet.mle_reservation import MLEConfig, add_mle_arguments, mle_config_from_args
+
+MLE_POLICIES = ("queue_mle_reservation", "full_mle_reservation")
 DEFAULT_POLICIES = (
     "full",
     "myopic_ab",
@@ -27,7 +32,16 @@ DEFAULT_POLICIES = (
 )
 POLICIES = (*DEFAULT_POLICIES, "full_uncertainty_idle", "full_uncertainty_idle_no_nn",
             "full_queue_aware", "full_queue_aware_no_nn",
-            "full_coordinated_idle", "full_coordinated_idle_no_nn")
+            "full_coordinated_idle", "full_coordinated_idle_no_nn", *MLE_POLICIES)
+MLE_FIELDS = (
+    "mle_idle_mode", "mle_processes", "mle_reservation_confidence",
+    "mle_reservation_observed_arrivals", "mle_reservation_updates",
+    "mle_reservation_activations", "mle_reservation_deactivations",
+    "mle_reservation_active_minutes", "mle_reservation_planning_seconds",
+    "mle_reservation_candidates_scored", "mle_reservation_budget_fallbacks",
+    "mle_reservation_final_reason", "mle_reservation_last_decision_reason",
+    "mle_reservation_first_activation_min", "mle_reservation_decisions_file",
+)
 QUEUE_FIELDS = (
     "policy_version", "assignment_queue_forecast", "queue_wait_records_file",
     "delivery_queue_wait_total_min", "delivery_queue_visit_count",
@@ -53,6 +67,7 @@ FIELDS = (
     "idle_commit_rejected", "idle_pending_blocked_epochs", "idle_switch_gain_fraction", "idle_retarget_cooldown_min",
     "idle_decisions_file",
     *QUEUE_FIELDS,
+    *MLE_FIELDS,
 )
 
 
@@ -110,6 +125,7 @@ def policy_command(
     relocation_uncertainty_penalty: float = 1.0,
     switching_gain_fraction: float = 0.005,
     retarget_cooldown_min: float = 2.0,
+    mle_config: MLEConfig | None = None,
 ) -> list[str]:
     if policy not in POLICIES:
         raise ValueError(f"unknown policy {policy!r}")
@@ -126,6 +142,8 @@ def policy_command(
         "full_queue_aware_no_nn": "run_nyc_queue_aware_policy.py",
         "full_coordinated_idle": "run_nyc_coordinated_idle_policy.py",
         "full_coordinated_idle_no_nn": "run_nyc_coordinated_idle_policy.py",
+        "queue_mle_reservation": "run_nyc_mle_reservation_policy.py",
+        "full_mle_reservation": "run_nyc_mle_reservation_policy.py",
     }[policy]
     command = [python, str(ROOT / "scripts" / script), "--graph", str(graph),
                "--scenario", str(scenario), "--output", str(output)]
@@ -137,11 +155,11 @@ def policy_command(
         ]
     if policy in {"full", "full_no_nn", "full_uncertainty_idle", "full_uncertainty_idle_no_nn",
                   "full_queue_aware", "full_queue_aware_no_nn",
-                  "full_coordinated_idle", "full_coordinated_idle_no_nn"}:
+                  "full_coordinated_idle", "full_coordinated_idle_no_nn", *MLE_POLICIES}:
         command += ["--idle-processes", str(idle_processes)]
     if policy in {"full", "full_no_idle", "full_uncertainty_idle", "full_queue_aware", "full_coordinated_idle"}:
         command += ["--reservation-model", str(spatial_model)]
-    if policy in {"full_coordinated_idle", "full_coordinated_idle_no_nn"}:
+    if policy in {"full_coordinated_idle", "full_coordinated_idle_no_nn", "full_mle_reservation"}:
         if any(not math.isfinite(v) or v < 0 for v in (switching_gain_fraction, retarget_cooldown_min)):
             raise ValueError("switch gain fraction and cooldown must be finite and non-negative")
         command += ["--idle-switch-gain-fraction", str(switching_gain_fraction),
@@ -154,7 +172,18 @@ def policy_command(
         command += ["--reservation-model", str(paper_model),
                     "--reservation-style", "paper_moving_average",
                     "--reservation-lookback-min", "100"]
+    if policy in MLE_POLICIES:
+        mode = "coordinated" if policy == "full_mle_reservation" else "legacy"
+        command += ["--mle-idle-mode", mode]
+        for name, value in asdict(mle_config or MLEConfig()).items():
+            command += ["--mle-"+name.replace("_", "-"), str(value)]
     return command
+
+
+def mle_worker_budget(simulators: int, idle_processes: int, mle_processes: int) -> int:
+    """Inline scoring needs no child pool. Controller threads are not compute workers."""
+    return simulators * (1 + (idle_processes if idle_processes > 1 else 0)
+                         + (mle_processes if mle_processes > 1 else 0))
 
 
 def summarize(result: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
@@ -173,7 +202,7 @@ def summarize(result: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
         "simulation_finish_min": float(result["simulation_finish_min"]),
         "result_file": str(job["output"]), "log_file": str(job["log"]), "error": "",
         **{name: result.get(name, "") for name in FIELDS
-           if name.startswith("idle_") or name in QUEUE_FIELDS},
+           if name.startswith("idle_") or name in QUEUE_FIELDS or name in MLE_FIELDS},
     }
 
 
@@ -348,9 +377,18 @@ def main() -> None:
     parser.add_argument("--adopt-existing-results", action="store_true")
     parser.add_argument("--policies", nargs="+", choices=POLICIES, default=list(DEFAULT_POLICIES))
     parser.add_argument("--dry-run", action="store_true")
+    add_mle_arguments(parser)
     args = parser.parse_args()
+    try:
+        mle_config = mle_config_from_args(args)
+    except ValueError as exc:
+        parser.error(str(exc))
     if min(args.processes, args.idle_processes, args.shortlist_k) <= 0:
         parser.error("process counts and shortlist K must be positive")
+    if set(args.policies) & set(MLE_POLICIES):
+        budget = mle_worker_budget(args.processes, args.idle_processes, mle_config.processes)
+        if budget > 60:
+            parser.error(f"MLE comparison needs up to {budget} compute workers; cap is 60")
     if args.timeout_seconds < 0:
         parser.error("timeout must be non-negative")
     if any(not math.isfinite(v) or v < 0 for v in (args.idle_switch_gain_fraction, args.idle_retarget_cooldown_min)):
@@ -401,6 +439,7 @@ def main() -> None:
                     relocation_uncertainty_penalty=args.idle_relocation_uncertainty_penalty,
                     switching_gain_fraction=args.idle_switch_gain_fraction,
                     retarget_cooldown_min=args.idle_retarget_cooldown_min,
+                    mle_config=mle_config,
                 )
                 def signature_for(source: str) -> str:
                     return hashlib.sha256(json.dumps({
@@ -451,6 +490,7 @@ def main() -> None:
         "idle_relocation_uncertainty_penalty": args.idle_relocation_uncertainty_penalty,
         "idle_switch_gain_fraction": args.idle_switch_gain_fraction,
         "idle_retarget_cooldown_min": args.idle_retarget_cooldown_min,
+        "mle_reservation_config": asdict(mle_config) if set(args.policies) & set(MLE_POLICIES) else None,
         "timeout_seconds": args.timeout_seconds,
         "compatible_source_fingerprints": args.compatible_source_fingerprint,
     })
