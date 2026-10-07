@@ -186,6 +186,16 @@ def mle_worker_budget(simulators: int, idle_processes: int, mle_processes: int) 
                          + (mle_processes if mle_processes > 1 else 0))
 
 
+def order_jobs(jobs: list[dict[str, Any]], mode: str) -> list[dict[str, Any]]:
+    if mode == "city-major":
+        return jobs
+    if mode != "round-robin":
+        raise ValueError(f"unknown job order {mode!r}")
+    # Launch each policy/seed across cities before moving to the next policy.
+    # Large-city jobs start early, while small maps provide early results.
+    return sorted(jobs, key=lambda j: (j["scenario_index"], j["policy_index"], j["city_index"]))
+
+
 def summarize(result: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
     delivered = int(result["delivered"])
     on_time = int(result["on_time"])
@@ -377,6 +387,7 @@ def main() -> None:
     parser.add_argument("--adopt-existing-results", action="store_true")
     parser.add_argument("--policies", nargs="+", choices=POLICIES, default=list(DEFAULT_POLICIES))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--job-order", choices=["city-major", "round-robin"], default="city-major")
     add_mle_arguments(parser)
     args = parser.parse_args()
     try:
@@ -416,18 +427,18 @@ def main() -> None:
     source_hash = _source_digest()
     jobs: list[dict[str, Any]] = []
     graph_hashes: dict[Path, str] = {}
-    for city, city_data in suite["cities"].items():
+    for city_index, (city, city_data) in enumerate(suite["cities"].items()):
         graph = _resolve(base, city_data["graph"])
         if graph not in graph_hashes:
             graph_hashes[graph] = _sha256(graph)
-        for record in city_data["test"]:
+        for scenario_index, record in enumerate(city_data["test"]):
             if args.scenario_ids is not None and record["id"] not in args.scenario_ids:
                 continue
             scenario = _resolve(base, record["scenario"])
             if not scenario.is_file():
                 raise FileNotFoundError(scenario)
             scenario_hash = _sha256(scenario)
-            for policy in args.policies:
+            for policy_index, policy in enumerate(args.policies):
                 job_dir = results_dir / city / record["id"] / policy
                 output = job_dir / "result.json"
                 command = policy_command(
@@ -454,6 +465,7 @@ def main() -> None:
                     *(signature_for(value) for value in args.compatible_source_fingerprint),
                 }
                 jobs.append({
+                    "city_index": city_index, "scenario_index": scenario_index, "policy_index": policy_index,
                     "city": city, "scenario_id": record["id"], "seed": record["seed"],
                     "orders": record["orders"], "policy": policy,
                     "output": output, "log": job_dir / "runner.log",
@@ -462,6 +474,7 @@ def main() -> None:
                     "command": command, "signature": signature,
                     "accepted_signatures": accepted_signatures,
                 })
+    jobs = order_jobs(jobs, args.job_order)
     for job in jobs:
         stamp_path = job["stamp_path"]
         try:
@@ -482,6 +495,7 @@ def main() -> None:
     results_dir.mkdir(parents=True, exist_ok=True)
     _atomic_json(results_dir / "run_manifest.json", {
         "suite": str(suite_path), "policies": list(args.policies),
+        "job_order": args.job_order,
         "spatial_model": str(spatial_model), "paper_model": str(paper_model),
         "model_sha256": model_hashes, "source_sha256": source_hash,
         "graph_sha256": {str(path): digest for path, digest in graph_hashes.items()},

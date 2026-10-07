@@ -25,10 +25,13 @@ from delivery_fleet.scenario_creator import (
     ImportanceDistribution,
     NodeDemandProfile,
     ScenarioCreator,
+    Scenario,
 )
 
 
-CITIES = ("tel_aviv", "haifa", "manhattan", "new_york_city", "barcelona")
+DEFAULT_CITIES = ("tel_aviv", "haifa", "manhattan", "new_york_city", "barcelona")
+NEW_CITIES = ("beijing", "sydney", "moscow", "johannesburg", "new_delhi", "paris")
+CITIES = (*DEFAULT_CITIES, *NEW_CITIES)
 LEVELS = (1.0, 2.0, 5.0)
 
 
@@ -76,13 +79,16 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--graph-dir", type=Path, default=ROOT / "data/graphs")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "data/scenarios/multicity_v1")
-    parser.add_argument("--cities", nargs="+", choices=CITIES, default=list(CITIES))
+    parser.add_argument("--cities", nargs="+", choices=CITIES, default=list(DEFAULT_CITIES))
     parser.add_argument("--train-per-city", type=int, default=20)
     parser.add_argument("--test-per-city", type=int, default=5)
     parser.add_argument("--duration-hours", type=int, default=12)
     parser.add_argument("--base-seed", type=int, default=20261001)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--resume", action="store_true", help="Reuse exactly matching generated scenario files.")
     args = parser.parse_args()
+    if args.resume and args.overwrite:
+        parser.error("choose resume or overwrite, not both")
     if min(args.train_per_city, args.test_per_city, args.duration_hours) <= 0:
         parser.error("train/test counts and duration must be positive")
 
@@ -125,9 +131,16 @@ def main() -> None:
                 )
                 scenario = creator.create(city, demand, seed)
                 scenario_path = output_dir / split / f"{city}_{split}_{index:03d}.json"
-                if scenario_path.exists() and not args.overwrite:
-                    raise FileExistsError(f"refusing to overwrite {scenario_path}")
-                scenario.save_json(scenario_path)
+                if scenario_path.exists() and args.resume:
+                    if Scenario.load_json(scenario_path) != scenario:
+                        raise RuntimeError(f"incompatible existing scenario: {scenario_path}")
+                else:
+                    if scenario_path.exists() and not args.overwrite:
+                        raise FileExistsError(f"refusing to overwrite {scenario_path}")
+                    scenario_path.parent.mkdir(parents=True, exist_ok=True)
+                    temporary = scenario_path.with_suffix('.json.tmp')
+                    scenario.save_json(temporary)
+                    temporary.replace(scenario_path)
                 counts = Counter(float(order.importance) for order in scenario.orders)
                 if split == "train":
                     train_counts.update(counts)

@@ -19,6 +19,11 @@ results remain unchanged. No NN retraining is needed. See
 [MLE reservation v1](docs/mle_reservation_v1.md) for the math, assumptions,
 limitations, parallel-worker limits, logs and VM launch command.
 
+The separate [six-new-city all-policy campaign](docs/new_city_benchmarks_v7.md)
+uses Beijing, Sydney, Moscow, Johannesburg, New Delhi and Paris from the
+`uncertainty-aware-idle-relocation` map branch, preserving the five original
+cities and reusing the existing NNs without retraining.
+
 ## Core setting
 
 - Pickup-to-delivery requests arrive online.

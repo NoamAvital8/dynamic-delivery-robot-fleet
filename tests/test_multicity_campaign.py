@@ -13,8 +13,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from create_multicity_suite import make_demand
-from run_multicity_experiments import DEFAULT_POLICIES, POLICIES, _atomic_json, _execute, policy_command, summarize
+from create_multicity_suite import CITIES, DEFAULT_CITIES, NEW_CITIES, make_demand
+from run_multicity_experiments import DEFAULT_POLICIES, POLICIES, _atomic_json, _execute, order_jobs, policy_command, summarize
 from run_multicity_campaign import _effective_workers
 from delivery_fleet.charging import annotate_nearest_charging_stations
 from delivery_fleet.fleet import RobotType
@@ -48,6 +48,45 @@ def test_suite_demand_is_node_level_and_normalized() -> None:
     assert 0.2 <= per_robot <= 0.42
     assert np.all(profile.lambda_by_bucket > 0)
     assert np.all(profile.lambda_by_bucket.sum(axis=1) > 0)
+
+
+def test_new_city_suite_excludes_original_cities_when_selected(tmp_path) -> None:
+    assert len(DEFAULT_CITIES)==5 and len(NEW_CITIES)==6
+    assert len(CITIES)==11 and not set(DEFAULT_CITIES)&set(NEW_CITIES)
+    graph_dir=tmp_path/'graphs';graph_dir.mkdir()
+    for city in NEW_CITIES:
+        graph=nx.path_graph(3)
+        for node in graph:
+            graph.nodes[node].update(x=20.+node*.001,y=-25.)
+        nx.set_edge_attributes(graph,100.,'length')
+        nx.write_graphml(graph,graph_dir/f'{city}.graphml')
+    out=tmp_path/'suite'
+    command=[sys.executable,str(ROOT/'scripts/create_multicity_suite.py'),
+        '--graph-dir',str(graph_dir),'--output-dir',str(out),'--cities',*NEW_CITIES,
+        '--train-per-city','2','--test-per-city','5','--duration-hours','12',
+        '--base-seed','20261007']
+    subprocess.run(command,cwd=ROOT,check=True,capture_output=True,text=True,timeout=30)
+    suite=json.loads((out/'suite.json').read_text())
+    assert tuple(suite['cities'])==NEW_CITIES
+    assert not set(suite['cities'])&set(DEFAULT_CITIES)
+    for city,data in suite['cities'].items():
+        assert len(data['test'])==5 and len(data['train'])==2
+        assert {r['seed'] for r in data['test']}.isdisjoint(r['seed'] for r in data['train'])
+        assert all(r['id'].startswith(city+'_test_') for r in data['test'])
+    assert sum(len(d['test']) for d in suite['cities'].values())*len(POLICIES)==420
+    before={p:p.read_bytes() for p in out.glob('test/*.json')}
+    subprocess.run([*command,'--resume'],cwd=ROOT,check=True,capture_output=True,text=True,timeout=30)
+    assert all(p.read_bytes()==data for p,data in before.items())
+
+
+def test_round_robin_starts_all_cities_early_without_changing_jobs():
+    jobs=[{'city_index':c,'scenario_index':s,'policy_index':p}
+          for c in range(6) for s in range(5) for p in range(14)]
+    assert order_jobs(jobs,'city-major') is jobs
+    ordered=order_jobs(jobs,'round-robin')
+    assert [j['city_index'] for j in ordered[:6]]==list(range(6))
+    assert all(j['scenario_index']==0 and j['policy_index']==0 for j in ordered[:6])
+    assert len(ordered)==420 and {id(j) for j in ordered}=={id(j) for j in jobs}
 
 
 def test_policy_commands_preserve_baselines_and_enable_uncertainty_variants(tmp_path) -> None:
