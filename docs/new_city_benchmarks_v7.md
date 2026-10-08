@@ -1,5 +1,40 @@
 # Six new cities: isolated all-policy benchmark campaign
 
+## Scope revision on 2026-10-08
+
+The user selected exactly the ten previously reported policies: `myopic_ab`,
+`reactive_insertion`, `paper_sa_adapted`, `full_no_nn`, `full_no_idle`, `full`,
+`full_queue_aware`, `full_coordinated_idle`, `queue_mle_reservation`,
+`full_mle_reservation`. The active target is now **300 evaluations** (10 x 5 x 6),
+not 420. The original 14-policy configuration below remains historical context.
+
+Only the scheduler is replaced. Existing simulator PIDs are recorded and adopted
+without signals, restarts or log truncation. Completed result bytes and signatures
+remain unchanged. The removed variants' queued jobs are never launched.
+`operations/continue_selected_city_policies.py` lives outside the fingerprinted
+simulator source directories, so changing scheduling does not invalidate outputs.
+The former outer/scheduling controllers are identified by PID/start ticks,
+frozen during handoff and retired individually, never by process group.
+
+`scope_change.json` preserves original manifests/launch metadata, selected policy
+IDs and adopted simulator identities. Original metadata and summary tables are
+also backed up. `launch.json` then describes the replacement controller;
+`campaign_status.json` and the active benchmark manifest describe the 300-run scope.
+`campaign.json` remains the untouched original input record.
+
+Current progress log: `stages/benchmarks_selected10.log`.
+
+After confirming no selected-scope controller is alive, restart only the operational
+controller with the shared VM Python and
+`operations/continue_selected_city_policies.py --campaign <campaign-folder>`.
+Its lock prevents duplicate operational controllers. It preserves recorded live
+simulators and rejects unclaimed running jobs instead of duplicating them. Do not
+restart the original 420-run preparation wrapper for this revised campaign.
+
+The earlier 5–10 day estimate below was superseded by observed slow large-city
+baselines. The revised ten-policy estimate is roughly **10–20 days remaining**,
+possibly longer; this is an uncertain planning estimate, not a measured completion ETA.
+
 Source maps are from `uncertainty-aware-idle-relocation` at
 `6d060021a2feb556999418708426613bf9a53f57`, not the older main checkout.
 The six GraphML files are Git LFS objects. Their sizes and SHA-256 checksums
