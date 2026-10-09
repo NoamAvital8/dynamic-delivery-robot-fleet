@@ -24,6 +24,15 @@ also backed up. `launch.json` then describes the replacement controller;
 
 Current progress log: `stages/benchmarks_selected10.log`.
 
+For a read-only live summary from Windows PowerShell, dot-source
+`operations/Show-FleetSummary.ps1` in your local checkout, then run
+`Show-FleetSummary`. Add `-Deliveries` for delivered/on-time/late counts.
+It connects with OpenSSH (password prompt or existing SSH key), stores no
+credentials, and reads only the selected jobs from the active VM manifest.
+Every loss cell includes its completed/planned count; do not compare unequal
+partial scenario totals. The dependency-free VM helper is
+`operations/show_city_campaign_summary.py`.
+
 After confirming no selected-scope controller is alive, restart only the operational
 controller with the shared VM Python and
 `operations/continue_selected_city_policies.py --campaign <campaign-folder>`.
