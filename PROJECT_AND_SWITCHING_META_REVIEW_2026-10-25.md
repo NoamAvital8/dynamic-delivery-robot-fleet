@@ -1,10 +1,12 @@
 # Delivery robot fleet and new switching meta-model: AI review handoff
 
-Status: **25 October 2026; review fixes and bounded development pilot completed; full training and final test remain unstarted.**
+Status: **25 October 2026; full development training for XGBoost and NN started at 22:45 Israel time; final test remains unopened.**
+
+Read [the full-training launch record](docs/FULL_DEVELOPMENT_LAUNCH_2026-10-25.md) for the 800/200 development split, 64-worker resource setup, logs and immutable launch evidence. The earlier build and pilot receipts describe their pre-launch verification times.
 
 **Current revision:** both reviews of `2ffd002` have been addressed; read [the review-fix addendum](docs/switching_review_fixes_20261025.md) and [the production pilot and audit report](docs/SWITCHING_PILOT_RESULTS_2026-10-25.md). The pilot found and fixed a finished-episode projection bug. Campaign identity also now guards online refit cadence. Label version is `projected_completion_fifo_v2_event_order`; source identities distinguish the corrected scorer from earlier artifacts. Original receipts under `review_bundle/evidence/build/` remain historical; current receipts are `review_bundle/CURRENT_BUILD_SOURCES.json` and `CURRENT_BUILD_VERIFICATION.json`.
 
-This document gives a reviewer enough context and source/data access to audit the proposed training. It describes the intended behavior and the implementation; it does **not** certify that the implementation is correct. The owner separately authorized the bounded pilot described in its report. Reviewers should inspect its saved evidence. Do not interpret this handoff, historical documents, or launch examples as permission to generate new scenarios, fit models, start delivery simulations, resume services, or change VM jobs.
+This document gives a reviewer enough context and source/data access to audit the proposed training. It describes the intended behavior and the implementation; it does **not** certify that the implementation is correct. The owner separately authorized the bounded pilot and then full development training. The final test remains unauthorized. Reviewers should inspect its saved evidence. Do not interpret this handoff, historical documents, or launch examples as permission to generate new scenarios, fit models, start delivery simulations, resume services, or change VM jobs.
 
 ## 1. Repository and which version to review
 
@@ -53,7 +55,7 @@ These experiments must be kept distinct:
 | Reservation FCNNs | Reservation fractions inside individual dispatch policies | Two pretrained `.npz` files are provided under `review_bundle/data/base_models/{spatial,paper}/`; fixed dependencies of the benchmark portfolio |
 | Original dynamic meta-selector | Repeated policy choices using observed runtime state; a HistGradientBoosting regressor | Existing historical training and comparisons; source under backend `meta_policy/`, evidence under `review_bundle/evidence/original_dynamic/` |
 | Static start-only selectors | Choose one policy at the start and retain it for a whole episode | Older FCNN, XGBoost, decision tree, and Extra Trees models and reports under `review_bundle/evidence/static_selectors/` |
-| **New small-city switching selectors** | Repeated 15-minute choices, learned from their own trajectories and projected completion labels | **XGBoost and 64/32-unit NN under `src/fleet_switching/`; bounded pilot fits exist, full campaign unstarted** |
+| **New small-city switching selectors** | Repeated 15-minute choices, learned from their own trajectories and projected completion labels | **XGBoost and 64/32-unit NN under `src/fleet_switching/`; bounded pilot fits exist; full development campaign now running** |
 
 The new design is not simply retraining the static selector. Most of its cost will be counterfactual simulation to create labels, not fitting a small neural network or tree ensemble.
 
@@ -201,6 +203,7 @@ Paths below are relative to this branch, so they work in a clone or on GitHub.
 | File | Responsibility / review entry point |
 |---|---|
 | [`operations/switching_meta.py`](operations/switching_meta.py) | Standalone readable launcher; resolves local `src/` or VM staged `code/src/` |
+| [`operations/run_switching_development.py`](operations/run_switching_development.py) | Detached full-development supervisor: verifies source/scope, prepares 800/200 inputs, trains both families and validates; no final-test command |
 | [`operations/switching_pilot.py`](operations/switching_pilot.py) | Explicit capped pilot: 16 training inputs, two development validation inputs, at most eight episode workers and shared two-hour guard |
 | [`operations/switching_pilot_validation.py`](operations/switching_pilot_validation.py) | Twenty controlled candidate continuations on two existing development inputs; no fitting or final test |
 | [`operations/switching_pilot_report.py`](operations/switching_pilot_report.py) | Offline evidence/hash checks and measured time extrapolation; imports no simulator and never fits |
@@ -286,7 +289,7 @@ Historical JSON metadata often retains absolute VM paths as provenance. Those pa
 - Virtual environments, native shared libraries, credentials and SSH keys are not versioned. Package requirements and the VM inventory are supplied instead. Native dependency compatibility and exact numerical reproducibility still need checking in a fresh environment.
 - Older large raw graph files in the repository may use Git LFS; those are separate from the 12 ordinary-Git compressed maps in this package. New training does not need to redownload maps from OpenStreetMap.
 
-No essential new-training source, prepared map, or fixed reservation weight is intentionally left only on the VM. The missing new artifacts reflect unstarted work, and the omitted caches/environments are derived/runtime state.
+No essential training source, prepared map, or fixed reservation weight is intentionally left only on the VM. All 1,000 full-development inputs and launch evidence are now archived in Git. Live replay, evolving model versions, logs and full runtime checkpoints remain on the VM while the campaign runs; they are not represented as completed/final artifacts.
 
 ## 10. Review without VM access
 
@@ -333,7 +336,7 @@ The owner originally provided SSH access as `ssh gal.pinto@132.68.161.40`. This 
 | `/data/workspace/robot_delivery/dynamic-delivery-robot-fleet` | Main VM project and venv |
 | `/data/workspace/robot_delivery/dynamic-delivery-robot-fleet-meta-policy` | Preserved simulator checkout at the pinned backend commit |
 | Main project `runs/icaps_small_city_maps_v1_20261025` | Prepared small-city manifest and new maps |
-| Main project `runs/icaps_small_city_switching_v4_pilot_fixes_20261025` | Target for revised source-only build: `src/`, `operations/`, `configs/small_city_switching_v2.json`, tests and build receipts; check current verification receipt for staging status |
+| Main project `runs/icaps_small_city_switching_v4_pilot_fixes_20261025` | Verified v4 build and active full-development campaign; see the launch record and live status files |
 | Main project `.venv/bin/python` | Existing VM interpreter |
 | Main project `runs/icaps_static_policy_nn_v1_20261024/dependencies` | Existing isolated CPU-XGBoost dependency directory referenced by VM config |
 
@@ -351,7 +354,7 @@ Both learners need approximately **800,000 training branches**. Complete develop
 
 The original build had 31 synthetic tests passing locally and on the VM. Current scoped test counts and hashes are recorded in [CURRENT_BUILD_VERIFICATION.json](review_bundle/CURRENT_BUILD_VERIFICATION.json) and [CURRENT_BUILD_SOURCES.json](review_bundle/CURRENT_BUILD_SOURCES.json). The revised suite exercises pure queue/event arithmetic, backend-shaped fixtures, stub collector transitions, content tampering, checkpoint fallback, native-thread limits with a stubbed publisher, process failure/cleanup and fixed-weight NN derivatives. No actual optimizer or production event engine is used.
 
-The portable helper verifies all 177 original export hashes and current-source hashes; the 12 prepared maps remain unchanged. A bounded pilot now supplies actual scenario generation, learner optimization, queue projection, branch-order, fitting/serialization, interruption/resume, memory, runtime and matched outcome evidence. Full training and final-test evaluation remain unstarted. The reservation-model provenance audit reconstructed both 100-row historical training archives and found no held-out-city overlap; its historical-immutability qualification is recorded in the report.
+The portable helper verifies all 177 original export hashes and current-source hashes; the 12 prepared maps remain unchanged. A bounded pilot now supplies actual scenario generation, learner optimization, queue projection, branch-order, fitting/serialization, interruption/resume, memory, runtime and matched outcome evidence. Full development training subsequently started as documented in the launch record; final test remains unopened. The reservation-model provenance audit reconstructed both 100-row historical training archives and found no held-out-city overlap; its historical-immutability qualification is recorded in the report.
 
 Power-loss behavior and arbitrary storage failures remain untested. The pilot's eight-worker throughput does not establish 64-worker throughput, and two validation inputs do not establish geographic generalization.
 

@@ -61,7 +61,7 @@ for missing committed boundaries; mismatches fail closed. Opening final test
 prevents further development in the same campaign. Windows/storage limitations
 and remaining production verification are described in the addendum.
 
-## Source-only VM build
+## Verified VM build and current campaign
 
 Target directory (see review_bundle/CURRENT_BUILD_VERIFICATION.json for actual
 staging status; SSH may be unavailable):
@@ -76,9 +76,10 @@ The only read-only operational command is:
 
     python -B operations/switching_meta.py plan --config configs/small_city_switching_v2.json
 
-For a future explicitly authorized launch, the command sequence is prepare,
-train, prepare-test, evaluate, each requiring --execute. Train now includes
-matched development baselines. Evaluate includes both frozen selectors and all
+The active development supervisor runs prepare and train only, both requiring
+--execute. Train includes matched development baselines. Future prepare-test
+and evaluate steps require separate authorization after model selection.
+Evaluate includes both frozen selectors and all
 ten matched fixed benchmarks, complete reporting and a development-selected
 fixed baseline. Do not run a second controller against the same output.
 
@@ -100,5 +101,4 @@ The synthetic suite uses pure fixtures, stub transitions/publication,
 child-process controls and fixed-weight arithmetic. A separate bounded pilot
 has exercised the production runtime, queue projection, actual fitting,
 serialization, interruption/resume and matched development comparisons. Its
-evidence and immutable source snapshot are bundled. No full campaign or final
-test has been launched. The future campaign must use its own fresh output.
+evidence and immutable source snapshot are bundled. The final test remains unopened. The full development campaign has now started in the verified v4 output; see [the launch record](FULL_DEVELOPMENT_LAUNCH_2026-10-25.md). Do not start a duplicate controller.

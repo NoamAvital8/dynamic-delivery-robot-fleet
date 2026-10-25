@@ -1,0 +1,180 @@
+{
+  "observed_utc": "2026-10-25T20:51:48.506685+00:00",
+  "status": {
+    "available_gib": 142.17760467529297,
+    "child_pid": 1789396,
+    "controller": {
+      "available_gib": 141.91730117797852,
+      "complete_episodes": 72,
+      "expected": 1600,
+      "fit_family": null,
+      "fitted_states": {
+        "nn": 2062,
+        "xgboost": 2021
+      },
+      "replay": {
+        "nn": {
+          "bootstrap_states": 2122,
+          "city_states": {
+            "delft": 401,
+            "haifa": 318,
+            "leuven": 391,
+            "manhattan": 65,
+            "new_delhi": 404,
+            "oxford": 401,
+            "palo_alto": 243,
+            "tel_aviv": 228
+          },
+          "count": 2451,
+          "mean_teacher_margin": 0.5071805974008646,
+          "mean_teacher_regret": 2.8093248042931864,
+          "policy_states": {
+            "full": 47,
+            "full_coordinated_idle": 64,
+            "full_mle_reservation": 9,
+            "full_no_idle": 19,
+            "full_no_nn": 19,
+            "full_queue_aware": 11,
+            "myopic_ab": 21,
+            "paper_sa_adapted": 40,
+            "queue_mle_reservation": 58,
+            "reactive_insertion": 2163
+          },
+          "profile_states": {
+            "charging_pressure": 280,
+            "ordinary": 645,
+            "priority_shift": 373,
+            "spatial_shift": 567,
+            "surge": 586
+          },
+          "watermark": 4909
+        },
+        "xgboost": {
+          "bootstrap_states": 2104,
+          "city_states": {
+            "delft": 405,
+            "haifa": 325,
+            "leuven": 389,
+            "manhattan": 66,
+            "new_delhi": 404,
+            "oxford": 401,
+            "palo_alto": 242,
+            "tel_aviv": 227
+          },
+          "count": 2459,
+          "mean_teacher_margin": 0.5234236592593139,
+          "mean_teacher_regret": 2.0199757112057446,
+          "policy_states": {
+            "full": 27,
+            "full_coordinated_idle": 24,
+            "full_mle_reservation": 76,
+            "full_no_idle": 24,
+            "full_no_nn": 29,
+            "full_queue_aware": 33,
+            "myopic_ab": 6,
+            "paper_sa_adapted": 48,
+            "queue_mle_reservation": 58,
+            "reactive_insertion": 2134
+          },
+          "profile_states": {
+            "charging_pressure": 280,
+            "ordinary": 646,
+            "priority_shift": 371,
+            "spatial_shift": 570,
+            "surge": 592
+          },
+          "watermark": 4910
+        }
+      },
+      "running": 64,
+      "stage": "model_driven_collection"
+    },
+    "final_test_opened": false,
+    "fit_threads": 4,
+    "held_out_cities": [
+      "cambridge_uk",
+      "ghent",
+      "lucca",
+      "salamanca"
+    ],
+    "load_average": [
+      68.70458984375,
+      49.79296875,
+      24.87939453125
+    ],
+    "stage": "training_and_validation",
+    "supervisor_pid": 1789179,
+    "training_episodes_complete": 73,
+    "training_episodes_expected": 1600,
+    "updated_utc": "2026-10-25T20:51:46.121722+00:00",
+    "validation_outcomes_complete": 0,
+    "validation_outcomes_expected": 2400,
+    "worker_limit": 64
+  },
+  "models": {
+    "xgboost": {
+      "learner_id": "dea9d58e1456329e019824657778fb6c93fa58b1f061b9e99c95171aa3ce56db",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/models/xgboost/c6b6aa42a9c613ca0b54b155bd4dfa558ec8b974de22260e36c797150e4bae7e.json",
+      "science_id": "83b76cbdab4d5e9ad8bfc7ccd8052f8a9b64d4b96e9c555427e7c9dfb713318b",
+      "sha256": "3a8ee2c3a3c56591e476cb72e7a93c60df48a11b86f07b29a0fcea1c9d164758",
+      "training_states": 2021
+    },
+    "nn": {
+      "learner_id": "68d088d75ee8323823757e36d20cf327b69a2aa09dc1de47d690bc0a4aaaa74a",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/models/nn/dbfefde39b7b56adfe13ac620d24b22654d4327186985d5d2b8876641a8d57c8.json",
+      "science_id": "83b76cbdab4d5e9ad8bfc7ccd8052f8a9b64d4b96e9c555427e7c9dfb713318b",
+      "sha256": "30266f80d23d51276b237e94443d9df4aa46d9baea1a665396fffa27234928a1",
+      "training_states": 2062
+    }
+  },
+  "fit_native_thread_evidence": {
+    "xgboost": {
+      "native_libraries_inside_limit": [
+        {
+          "architecture": "Haswell",
+          "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 4,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "Haswell",
+          "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 4,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 4,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ]
+    },
+    "nn": {
+      "native_libraries_inside_limit": [
+        {
+          "architecture": "Haswell",
+          "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 4,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ]
+    }
+  },
+  "final_test_opened": false,
+  "test_manifest_exists": false
+}

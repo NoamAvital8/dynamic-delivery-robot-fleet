@@ -2,8 +2,8 @@
 
 This is the current implementation addendum after the two external reviews of
 commit `2ffd002`. A separately authorized bounded pilot is now documented in
-[the pilot report](SWITCHING_PILOT_RESULTS_2026-10-25.md); full training and
-final-test evaluation remain unstarted. Training and evaluation require explicit
+[the pilot report](SWITCHING_PILOT_RESULTS_2026-10-25.md); the subsequent full development launch is documented in
+[the launch record](FULL_DEVELOPMENT_LAUNCH_2026-10-25.md); final test remains unopened. Training and evaluation require explicit
 `--execute`. The original review inputs are archived under
 `review_bundle/evidence/reviews/`.
 
@@ -112,7 +112,7 @@ queue, fit, restart, branch-order and matched outcome checks. It supersedes the
 unmeasured timing budget above. The pilot found a completed-episode projection
 bug, fixed with a guarded zero-unfinished-work result, and campaign identity now
 includes online refit cadence. These source changes are staged in the new v4
-source-only build. Full training remains unstarted. Longer lookahead, explicit
+source-only build. Full development training subsequently started; see the launch record. Longer lookahead, explicit
 exploration and a learned terminal fleet value remain proposed experiments;
 the 15-minute decisions, 12-hour arrival horizon and four held-out cities are
 unchanged.

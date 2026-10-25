@@ -4,6 +4,10 @@ Repository: https://github.com/NoamAvital8/dynamic-delivery-robot-fleet
 
 Branch: `codex/small-city-switching-review-20261025`.
 
+This report records the completed pilot before full training. The owner later
+authorized [the full development campaign](FULL_DEVELOPMENT_LAUNCH_2026-10-25.md),
+which started at 22:45 Israel time on 25 October. The four final-test cities remain unopened.
+
 This is a bounded development pilot, authorized separately from full training.
 It uses two fresh 12-hour scenarios in each of the eight development cities,
 one ordinary and one charging-pressure input. Both XGBoost and the small NN
@@ -155,7 +159,7 @@ a research baseline, and the NN's small matched wins give it a plausible chance.
 They do not justify a claim that more training will beat every benchmark. A
 later controlled comparison of a short common continuation or a terminal fleet
 value would address the observed ranking limitation. No such objective change
-or full campaign has been launched. Keep the complete fixed-policy validation
+or full campaign had been launched at the time of this pilot assessment. Keep the complete fixed-policy validation
 comparison and the four-city final holdout when choosing the next experiment.
 
 ## Updated full-campaign time estimate
@@ -234,8 +238,8 @@ other VM load and 64-worker disk/replay contention.
 The pinned simulator remains commit
 `5e76f5384aec98e9d5a538b27dae205df301fa28` in the preserved VM checkout and
 `review_bundle/backend/`. The source-only full-campaign target is
-`runs/icaps_small_city_switching_v4_pilot_fixes_20261025`; full training has
-not been launched there. The prior v2/v3 builds remain preserved.
+`runs/icaps_small_city_switching_v4_pilot_fixes_20261025`; it was initially verified without launching training, and now runs the
+separately authorized development campaign linked above. The prior v2/v3 builds remain preserved.
 
 The failed pilot is `runs/icaps_small_city_pilot_v1_20261025`; the corrected
 pilot is `runs/icaps_small_city_pilot_v2_20261025`, both under the main VM project.

@@ -1,0 +1,18 @@
+{
+  "format": "repository_paths_v1",
+  "files": {
+    "review_bundle/evidence/full_development_launch_20261025/campaign.json": "7272171d77fb3b22a4094f9acdfe970d4ffd835e73284f7536100008e24c28cf",
+    "review_bundle/evidence/full_development_launch_20261025/development_manifest.json": "0254b435b3da02705dc285e5149dffa22a44a783a92aa99809f58fdd34546813",
+    "review_bundle/evidence/full_development_launch_20261025/DEVELOPMENT_SCENARIOS.jsonl.gz": "3079f279b2953fa1b3cdc0bc1a6b60fbbe967ab7ae076346363db96ed5ffb2f5",
+    "review_bundle/evidence/full_development_launch_20261025/FULL_DEVELOPMENT_DATA_VERIFIED.json": "1401f4a713128bfb72735d6263b04c82571564d2cbb925bfca7270bee8151571",
+    "review_bundle/evidence/full_development_launch_20261025/FULL_RUN_LAUNCH.json": "ab40a534d715e3829318479e86c562b257487d840bf932764470e43fce1b93f4",
+    "review_bundle/evidence/full_development_launch_20261025/LAUNCH_CONFIG.json": "fa38931eeb94b3924cd7b3f2ad9e9116b71c4d3566bcc2bb3ea12097c565aea4",
+    "review_bundle/evidence/full_development_launch_20261025/README.md": "7f08dd4529295168d2b91db9b75da7760d2d9fcf94d5513484ea633fbc9fd64b",
+    "review_bundle/evidence/full_development_launch_20261025/run_switching_development.py": "20f80c793fe56dbaeb12dccc99251d8e2ed0ab64ce46a2d652b0e47b01f62039",
+    "review_bundle/evidence/full_development_launch_20261025/SOURCE_MANIFEST_AT_LAUNCH.json": "b620d117bed39f1b61fbbdadb7c83226411cc025768521218edba3dfe604a483",
+    "review_bundle/evidence/full_development_launch_20261025/SOURCE_VERIFICATION_BEFORE_LAUNCH.json": "579860bb14ee7de38a9eeedbe714ef43582286dbaf66fb63d14a96a4dd58f7f7",
+    "review_bundle/evidence/full_development_launch_20261025/STARTUP_RESOURCE_CHECK.json": "1d2d7e48c35c1d9b6745027764dc5581dad6bc6a3182f197bb7c14198d472391",
+    "review_bundle/evidence/full_development_launch_20261025/STARTUP_STATUS.json": "08bf188f69575e96c6090dbbb39e15116d428721de4116f26a163cb6719f2b2d"
+  },
+  "scope": "immutable startup evidence; full development training running; final test unopened"
+}

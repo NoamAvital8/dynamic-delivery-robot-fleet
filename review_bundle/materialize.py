@@ -50,11 +50,18 @@ def verify():
         path = (ROOT / name).resolve()
         if not path.is_relative_to(pilot_manifest.parent.resolve()) or sha(path) != expected:
             raise ValueError("Pilot evidence checksum mismatch: " + name)
+    launch_manifest = BUNDLE / "evidence/full_development_launch_20261025/LAUNCH_EVIDENCE_SOURCES.json"
+    launch_files = read(launch_manifest)["files"] if launch_manifest.exists() else {}
+    for name, expected in launch_files.items():
+        path = (ROOT / name).resolve()
+        if not path.is_relative_to(launch_manifest.parent.resolve()) or sha(path) != expected:
+            raise ValueError("Full-development launch checksum mismatch: " + name)
     metadata = read(BUNDLE / "data/map_manifest.json")
     return {"status":"verified","backend_commit":provenance["backend_commit"],
             "exported_files_verified":len(provenance["source_files"]),
             "new_build_files_verified":len(sources["files"]),"maps":len(metadata["maps"]),
             "pilot_evidence_files_verified":len(pilot_files),
+            "full_development_launch_files_verified":len(launch_files),
             "compressed_map_bytes":sum(r["compressed_bytes"] for r in metadata["maps"]),
             "inflated_map_bytes":sum(r["uncompressed_bytes"] for r in metadata["maps"]),
             "training_started":False,"simulations_started":0}

@@ -1,0 +1,79 @@
+{
+  "observed_utc": "2026-10-25T20:47:47.852914+00:00",
+  "sample_seconds": 5.122188493143767,
+  "training_process_cpu_core_equivalents": 63.51386725331679,
+  "host_busy_excluding_steal_percent": 94.09337676438653,
+  "host_iowait_percent": 0.010857763300760043,
+  "host_steal_percent": 0.0,
+  "descendant_process_count": 65,
+  "controller_pid": 1789396,
+  "training_status": {
+    "available_gib": 147.69520950317383,
+    "complete_episodes": 22,
+    "expected": 1600,
+    "fit_family": null,
+    "fitted_states": {
+      "nn": 0,
+      "xgboost": 0
+    },
+    "replay": {
+      "nn": {
+        "bootstrap_states": 1092,
+        "city_states": {
+          "delft": 158,
+          "haifa": 117,
+          "leuven": 209,
+          "manhattan": 4,
+          "new_delhi": 232,
+          "oxford": 239,
+          "palo_alto": 60,
+          "tel_aviv": 73
+        },
+        "count": 1092,
+        "mean_teacher_margin": 0.2934118537627043,
+        "mean_teacher_regret": 1.5107142478325648,
+        "policy_states": {
+          "reactive_insertion": 1092
+        },
+        "profile_states": {
+          "charging_pressure": 108,
+          "ordinary": 268,
+          "priority_shift": 241,
+          "spatial_shift": 230,
+          "surge": 245
+        },
+        "watermark": 2182
+      },
+      "xgboost": {
+        "bootstrap_states": 1090,
+        "city_states": {
+          "delft": 153,
+          "haifa": 116,
+          "leuven": 209,
+          "manhattan": 4,
+          "new_delhi": 232,
+          "oxford": 242,
+          "palo_alto": 61,
+          "tel_aviv": 73
+        },
+        "count": 1090,
+        "mean_teacher_margin": 0.2942844558895159,
+        "mean_teacher_regret": 1.511907568217023,
+        "policy_states": {
+          "reactive_insertion": 1090
+        },
+        "profile_states": {
+          "charging_pressure": 111,
+          "ordinary": 267,
+          "priority_shift": 241,
+          "spatial_shift": 229,
+          "surge": 242
+        },
+        "watermark": 2178
+      }
+    },
+    "running": 64,
+    "stage": "model_driven_collection"
+  },
+  "test_opened": false
+}

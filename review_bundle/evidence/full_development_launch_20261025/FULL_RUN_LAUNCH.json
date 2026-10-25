@@ -1,0 +1,41 @@
+{
+  "launched_utc": "2026-10-25T20:45:05.507330+00:00",
+  "supervisor_pid": 1789179,
+  "command": [
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python",
+    "-B",
+    "-u",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/operations/run_switching_development.py",
+    "--execute",
+    "--expected-source-sha256",
+    "b620d117bed39f1b61fbbdadb7c83226411cc025768521218edba3dfe604a483"
+  ],
+  "source_code_git_commit": "7846354e189dc2e7b03e0404d6f76e8c1bc836fe",
+  "source_manifest_sha256": "b620d117bed39f1b61fbbdadb7c83226411cc025768521218edba3dfe604a483",
+  "supervisor_sha256": "20f80c793fe56dbaeb12dccc99251d8e2ed0ab64ce46a2d652b0e47b01f62039",
+  "config_sha256": "fa38931eeb94b3924cd7b3f2ad9e9116b71c4d3566bcc2bb3ea12097c565aea4",
+  "output": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025",
+  "families": [
+    "xgboost",
+    "nn"
+  ],
+  "training_inputs": 800,
+  "validation_inputs": 200,
+  "training_actor_episodes": 1600,
+  "development_validation_outcomes": 2400,
+  "worker_limit": 64,
+  "fit_threads": 4,
+  "memory_reserve_gib": 64,
+  "held_out_cities": [
+    "cambridge_uk",
+    "ghent",
+    "salamanca",
+    "lucca"
+  ],
+  "final_test_authorized": false,
+  "automatic_steps": [
+    "prepare",
+    "train"
+  ],
+  "ssh_disconnect_safe": true
+}

@@ -13,6 +13,7 @@ A separately authorized bounded development pilot has run. See
 [its report](../docs/SWITCHING_PILOT_RESULTS_2026-10-25.md) and
 `evidence/switching_pilot_20261025/` for input rosters, replay, small fitted
 models, matched outcomes, integration gates, reservation-model provenance and
-the measured training-time estimate. Full training and final-test evaluation
-remain unstarted. The 4 test cities remain held out. Read the main handoff's
+the measured training-time estimate. The full development campaign subsequently started; see
+[the launch record](../docs/FULL_DEVELOPMENT_LAUNCH_2026-10-25.md) and
+`evidence/full_development_launch_20261025/`. Final-test evaluation remains unopened. The 4 test cities remain held out. Read the main handoff's
 limitations before interpreting these small development results.
