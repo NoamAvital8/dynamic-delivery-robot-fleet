@@ -1,10 +1,10 @@
 # Delivery robot fleet and new switching meta-model: AI review handoff
 
-Status: **25 October 2026; review fixes implemented, new experiment not run.**
+Status: **25 October 2026; review fixes and bounded development pilot completed; full training and final test remain unstarted.**
 
-**Current revision:** both reviews of `2ffd002` have been addressed; read [the review-fix addendum](docs/switching_review_fixes_20261025.md) for the change list and remaining verification limits. Label version is `projected_completion_fifo_v2_event_order`. Original receipts under `review_bundle/evidence/build/` remain historical; the current receipts are `review_bundle/CURRENT_BUILD_SOURCES.json` and `CURRENT_BUILD_VERIFICATION.json`.
+**Current revision:** both reviews of `2ffd002` have been addressed; read [the review-fix addendum](docs/switching_review_fixes_20261025.md) and [the production pilot and audit report](docs/SWITCHING_PILOT_RESULTS_2026-10-25.md). The pilot found and fixed a finished-episode projection bug. Campaign identity also now guards online refit cadence. Label version is `projected_completion_fifo_v2_event_order`; source identities distinguish the corrected scorer from earlier artifacts. Original receipts under `review_bundle/evidence/build/` remain historical; current receipts are `review_bundle/CURRENT_BUILD_SOURCES.json` and `CURRENT_BUILD_VERIFICATION.json`.
 
-This document gives a reviewer enough context and source/data access to audit the proposed training. It describes the intended behavior and the implementation; it does **not** certify that the implementation is correct. The owner has asked for code review before running anything. Do not interpret this handoff, historical documents, or launch examples as permission to generate new scenarios, fit models, start delivery simulations, resume services, or change VM jobs.
+This document gives a reviewer enough context and source/data access to audit the proposed training. It describes the intended behavior and the implementation; it does **not** certify that the implementation is correct. The owner separately authorized the bounded pilot described in its report. Reviewers should inspect its saved evidence. Do not interpret this handoff, historical documents, or launch examples as permission to generate new scenarios, fit models, start delivery simulations, resume services, or change VM jobs.
 
 ## 1. Repository and which version to review
 
@@ -53,7 +53,7 @@ These experiments must be kept distinct:
 | Reservation FCNNs | Reservation fractions inside individual dispatch policies | Two pretrained `.npz` files are provided under `review_bundle/data/base_models/{spatial,paper}/`; fixed dependencies of the benchmark portfolio |
 | Original dynamic meta-selector | Repeated policy choices using observed runtime state; a HistGradientBoosting regressor | Existing historical training and comparisons; source under backend `meta_policy/`, evidence under `review_bundle/evidence/original_dynamic/` |
 | Static start-only selectors | Choose one policy at the start and retain it for a whole episode | Older FCNN, XGBoost, decision tree, and Extra Trees models and reports under `review_bundle/evidence/static_selectors/` |
-| **New small-city switching selectors** | Repeated 15-minute choices, learned from their own trajectories and projected completion labels | **New XGBoost and 64/32-unit NN code under `src/fleet_switching/`; neither has been fitted** |
+| **New small-city switching selectors** | Repeated 15-minute choices, learned from their own trajectories and projected completion labels | **XGBoost and 64/32-unit NN under `src/fleet_switching/`; bounded pilot fits exist, full campaign unstarted** |
 
 The new design is not simply retraining the static selector. Most of its cost will be counterfactual simulation to create labels, not fitting a small neural network or tree ensemble.
 
@@ -100,7 +100,7 @@ The new dataset plan is:
 - Both learners use the same scenario inputs for fair matching, but run their own model-chosen paths: **1,600 training actor episodes + 400 frozen-selector validation episodes**. All ten fixed policies also run on the same 200 validation inputs, adding **2,000 fixed-policy episodes**, so complete development validation contains 2,400 matched outcomes.
 - Four final-test cities × 50 = **200 future test inputs**, to be created only after development models are frozen. Evaluating both selectors and all ten fixed policies needs **2,400 matched episodes**; the current `evaluate` command includes all of them.
 
-All **new** scenarios, labels, and learned switching weights are currently absent because generation/training has not been launched. The prepared maps already exist. Development generation must not open test graphs or create test inputs. Test-city metadata and maps are packaged for audit and later evaluation; they are not model-training examples.
+The bounded pilot has its own 16 training inputs, two fresh development validation inputs, labels and small fitted models. They are archived under `review_bundle/evidence/switching_pilot_20261025/`. They are not a full campaign or final models. Development generation must not open test graphs or create test inputs. Test-city metadata and maps are packaged for audit and later evaluation; they are not model-training examples.
 
 `config.py` hard-codes separate development and held-out sets. Guards are applied during map selection, dataset loading, collection, and fitting. Validation is within development cities but uses disjoint seeds/workloads and contributes no fitting data or scaler statistics. Test outcomes must never influence hyperparameters, projections, thresholds, model-family selection, or feature normalization.
 
@@ -150,7 +150,7 @@ The controller refits each family after roughly **2,000 additional labeled state
 
 XGBoost and NN have separate replay/actor directories. They share inputs, not the chosen next states or the teacher-best trajectory. Validation/test use one explicitly frozen model for the whole episode and do not collect counterfactual training labels.
 
-Action intents, full row-content hashes, per-job locks, fsynced atomic replacement, a persisted initial snapshot, and retained current/previous checkpoint pairs support interruption/resume. A saved intent must retain its original action if a newer model is published during interruption. The adapter restores the selected pre-projection snapshot to prevent scoring cache writes from contaminating subsequent physical states. A lost committed boundary is accepted only if exact serialized bytes can be reproduced from a retained state and original intent; otherwise recovery fails closed. Production snapshot reproduction and storage-failure behavior remain untested. Async publication timing can change trajectories between clean runs even with fixed random seeds; per-decision model hashes are therefore essential provenance.
+Action intents, full row-content hashes, per-job locks, fsynced atomic replacement, a persisted initial snapshot, and retained current/previous checkpoint pairs support interruption/resume. A saved intent must retain its original action if a newer model is published during interruption. The adapter restores the selected pre-projection snapshot to prevent scoring cache writes from contaminating subsequent physical states. A lost committed boundary is accepted only if exact serialized bytes can be reproduced from a retained state and original intent; otherwise recovery fails closed. A real interruption/resume intent gate now passes. Power-loss behavior and arbitrary storage failures remain untested. Async publication timing can change trajectories between clean runs even with fixed random seeds; per-decision model hashes are therefore essential provenance.
 
 ## 6. Models and input features
 
@@ -201,6 +201,9 @@ Paths below are relative to this branch, so they work in a clone or on GitHub.
 | File | Responsibility / review entry point |
 |---|---|
 | [`operations/switching_meta.py`](operations/switching_meta.py) | Standalone readable launcher; resolves local `src/` or VM staged `code/src/` |
+| [`operations/switching_pilot.py`](operations/switching_pilot.py) | Explicit capped pilot: 16 training inputs, two development validation inputs, at most eight episode workers and shared two-hour guard |
+| [`operations/switching_pilot_validation.py`](operations/switching_pilot_validation.py) | Twenty controlled candidate continuations on two existing development inputs; no fitting or final test |
+| [`operations/switching_pilot_report.py`](operations/switching_pilot_report.py) | Offline evidence/hash checks and measured time extrapolation; imports no simulator and never fits |
 | [`src/fleet_switching/cli.py`](src/fleet_switching/cli.py), [`__main__.py`](src/fleet_switching/__main__.py) | Read-only `plan`; all other commands reject without `--execute` |
 | [`configs/small_city_switching_v2.json`](configs/small_city_switching_v2.json) | VM paths and experiment/resource settings; generate a portable copy before use elsewhere |
 | [`src/fleet_switching/config.py`](src/fleet_switching/config.py) | Fixed city/action sets, `Config`, split guards, identity/hash helpers, atomic JSON, locks, CPU/RAM admission |
@@ -218,6 +221,7 @@ Paths below are relative to this branch, so they work in a clone or on GitHub.
 | [`src/fleet_switching/features.py`](src/fleet_switching/features.py) | Additional observable route-work, queue and spatial supply/demand features |
 | [`src/fleet_switching/reporting.py`](src/fleet_switching/reporting.py) | Matched 12-participant comparisons, development-selected fixed baseline and paired intervals |
 | [`docs/switching_review_fixes_20261025.md`](docs/switching_review_fixes_20261025.md) | Current fix list, estimates and verification limits |
+| [`docs/SWITCHING_PILOT_RESULTS_2026-10-25.md`](docs/SWITCHING_PILOT_RESULTS_2026-10-25.md) | Production pilot, provenance audit, matched outcomes, target-ranking limitation and measured time estimate |
 | [`docs/small_city_switching_v2.md`](docs/small_city_switching_v2.md) | Original build notes, VM staging details, future launch commands and estimate |
 | [`requirements-switching.txt`](requirements-switching.txt) | New learner dependencies; not a complete simulator environment lock |
 | [`review_bundle/requirements-review.txt`](review_bundle/requirements-review.txt) | Broader packages for local source/test review; prepared graphs do not need a new OSM download |
@@ -329,7 +333,7 @@ The owner originally provided SSH access as `ssh gal.pinto@132.68.161.40`. This 
 | `/data/workspace/robot_delivery/dynamic-delivery-robot-fleet` | Main VM project and venv |
 | `/data/workspace/robot_delivery/dynamic-delivery-robot-fleet-meta-policy` | Preserved simulator checkout at the pinned backend commit |
 | Main project `runs/icaps_small_city_maps_v1_20261025` | Prepared small-city manifest and new maps |
-| Main project `runs/icaps_small_city_switching_v3_review_fixes_20261025` | Target for revised source-only build: `src/`, `operations/`, `configs/small_city_switching_v2.json`, tests and build receipts; check current verification receipt for staging status |
+| Main project `runs/icaps_small_city_switching_v4_pilot_fixes_20261025` | Target for revised source-only build: `src/`, `operations/`, `configs/small_city_switching_v2.json`, tests and build receipts; check current verification receipt for staging status |
 | Main project `.venv/bin/python` | Existing VM interpreter |
 | Main project `runs/icaps_static_policy_nn_v1_20261024/dependencies` | Existing isolated CPU-XGBoost dependency directory referenced by VM config |
 
@@ -339,23 +343,21 @@ Older campaigns, paused workers, existing maps and legacy models are preserved. 
 
 The VM reports **72 logical CPUs / 36 physical core IDs**. Admission allows up to **64 simultaneous episode processes**, each with one numerical thread. Every episode gets a fresh process. One separately budgeted asynchronous fitter uses four threads; branches remain sequential inside an episode.
 
-Admission retains a **64 GiB available-memory reserve**, budgets **1.5 GiB per prospective episode**, accounts for submitted workers whose allocation is not yet visible, and separately reserves **8 GiB for fitting**. Crossing the reserve triggers cooperative shutdown and bounded termination of unresponsive owned processes. This is monitored admission, not a hard cgroup limit or protection against unrelated VM allocations. Actual startup, RSS and throughput remain unmeasured.
+Admission retains a **64 GiB available-memory reserve**, budgets **1.5 GiB per prospective episode**, accounts for submitted workers whose allocation is not yet visible, and separately reserves **8 GiB for fitting**. Crossing the reserve triggers cooperative shutdown and bounded termination of unresponsive owned processes. This is monitored admission, not a hard cgroup limit or protection against unrelated VM allocations. Startup, RSS and eight-worker throughput are now measured in the pilot report; 64-worker scaling remains an estimate.
 
-Both learners need approximately **800,000 training branches**. Complete development validation adds approximately **120,000 windows**: 400 selector episodes and 2,000 fixed-policy episodes. Applying the unmeasured 0.7–2.5 seconds/window band to 920,000 windows gives 179–639 worker-hours. At 36 effective workers plus an assumed 2–6 hours of overhead, the arithmetic is **about 7–24 elapsed hours**.
-
-Budget **24–48 hours for the first full development campaign**, pending measurements of the corrected edge-level scorer, fresh-process startup, refits, replay and workload drains. Final-test comparison is additional. These are conditional estimates, not measured completion promises. Historical old-window timings in the planner are context, not corrected-scorer benchmarks.
+Both learners need approximately **800,000 training branches**. Complete development validation adds approximately **120,000 windows**: 400 selector episodes and 2,000 fixed-policy episodes. Read [the measured pilot report](docs/SWITCHING_PILOT_RESULTS_2026-10-25.md) and `review_bundle/evidence/switching_pilot_20261025/TRAINING_TIME_ESTIMATE.json` for the current estimate and its assumptions. The old unmeasured 7–24-hour arithmetic / 24–48-hour precautionary budget is superseded. Final-test time is additional and remains unmeasured; its cities were not simulated for timing.
 
 ## 13. What has and has not been verified
 
 The original build had 31 synthetic tests passing locally and on the VM. Current scoped test counts and hashes are recorded in [CURRENT_BUILD_VERIFICATION.json](review_bundle/CURRENT_BUILD_VERIFICATION.json) and [CURRENT_BUILD_SOURCES.json](review_bundle/CURRENT_BUILD_SOURCES.json). The revised suite exercises pure queue/event arithmetic, backend-shaped fixtures, stub collector transitions, content tampering, checkpoint fallback, native-thread limits with a stubbed publisher, process failure/cleanup and fixed-weight NN derivatives. No actual optimizer or production event engine is used.
 
-The portable helper verifies all 177 original export hashes and current-source hashes; the 12 prepared maps remain unchanged. **No new scenario generation, production delivery simulation, model fitting, training campaign, final-test evaluation or pilot has been run.**
+The portable helper verifies all 177 original export hashes and current-source hashes; the 12 prepared maps remain unchanged. A bounded pilot now supplies actual scenario generation, learner optimization, queue projection, branch-order, fitting/serialization, interruption/resume, memory, runtime and matched outcome evidence. Full training and final-test evaluation remain unstarted. The reservation-model provenance audit reconstructed both 100-row historical training archives and found no held-out-city overlap; its historical-immutability qualification is recorded in the report.
 
-Production fixed-policy parity, adapter/projector integration, cold fitting/serialization, cross-process snapshot reproduction, power-loss behavior, real memory and throughput still need a separately authorized bounded development pilot. Synthetic tests are not production certification.
+Power-loss behavior and arbitrary storage failures remain untested. The pilot's eight-worker throughput does not establish 64-worker throughput, and two validation inputs do not establish geographic generalization.
 
 The 15-minute actor-chosen transition rule, 12-hour arrival horizon and four held-out cities are unchanged. The terminal score still omits future demand and future fleet value. Longer lookahead, explicit exploration and a learned terminal value remain research proposals. New observable route-work and spatial supply/demand features reduce some input aliasing without supplying future arrivals.
 
-There is no new-selector performance result. Matched reporting now covers both selectors and all ten fixed policies, a fixed baseline selected on development data, and hindsight best fixed per scenario as a separate diagnostic. Incomplete/mismatched comparisons are rejected. Paired intervals are conditional on the observed cities; four final cities do not establish universal geographic generalization.
+There are small development-pilot performance results in the report, not final-test results. Matched reporting covers both selectors and all ten fixed policies, a fixed baseline selected on development data, and hindsight best fixed per scenario as a separate diagnostic. Incomplete/mismatched comparisons are rejected. Paired intervals are conditional on the observed cities; four final cities do not establish universal geographic generalization.
 
 ## 14. Specific questions for the reviewing AI
 

@@ -13,7 +13,7 @@ import math
 from pathlib import Path
 import sys
 
-from .projection import OrderCost, Session, Step, Waiting, project
+from .projection import OrderCost, Result, Session, Step, Waiting, project
 from . import backend_lifecycle
 
 
@@ -67,6 +67,17 @@ def exact_distance(ns, source, target):
 
 def completion_projection(ns):
     now = float(ns["now"])
+    if ns.get("_meta_finished", False):
+        # advance(until) stops the delivery engine at its final dropoff, then
+        # sets now=until. Background edge events can therefore predate now.
+        # They have no terminal delivery cost once every admitted order is done.
+        if (ns["pending"] or ns["service_lock"]
+                or any(s.orders for s in ns["schedules"].values())
+                or ns["delivered"] != len(ns["scenario"].orders)):
+            raise ValueError("Finished runtime still contains unfinished delivery work")
+        return Result(0., {}, {r.spec.id:now for r in ns["robots"]}, 0.), {
+            "pending_orders":0,"assigned_orders":0,"reconstructed_route_legs":0,
+            "projected_queue_wait_min":0.,"finished_delivery_branch":True}
     power = float(ns["DEFAULT_CHARGING_POWER_W"])
     known = event_orders(ns)
 

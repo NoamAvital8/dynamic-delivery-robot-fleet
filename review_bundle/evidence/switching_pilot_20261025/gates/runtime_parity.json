@@ -1,0 +1,6 @@
+{
+  "exit_code": 0,
+  "wall_seconds": 50.20377886900678,
+  "output": ".........................                                                [100%]\n25 passed in 49.76s\n",
+  "scope": "independent tiny runtime fixtures; no held-out-city or full-training inputs"
+}

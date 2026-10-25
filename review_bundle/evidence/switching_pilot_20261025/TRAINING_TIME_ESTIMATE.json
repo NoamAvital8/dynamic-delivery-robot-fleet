@@ -1,0 +1,97 @@
+{
+  "scope": "1600 training episodes plus 2400 development validation episodes; final test excluded",
+  "measured_pilot_episode_workers": 8,
+  "future_admitted_episode_workers": 64,
+  "future_effective_worker_equivalent_range": [
+    24,
+    36
+  ],
+  "training_worker_hours_same_50_50_mix": 83.81653536958038,
+  "training_worker_hours_80_20_ordinary_proxy": 85.585704185348,
+  "training_high_work_multiplier": 2.0,
+  "validation_low_high_work_multipliers": [
+    0.7,
+    1.5
+  ],
+  "validation_window_proxy_seconds_by_city": {
+    "delft": 85.27190013654763,
+    "haifa": 150.93540898879291,
+    "leuven": 48.14511656045215,
+    "manhattan": 664.6102846246213,
+    "new_delhi": 35.997348433942534,
+    "oxford": 34.391313255007844,
+    "palo_alto": 246.09796083328547,
+    "tel_aviv": 147.94634022627724
+  },
+  "validation_calibration_observed_cities": [
+    "manhattan",
+    "new_delhi"
+  ],
+  "validation_observed_to_training_window_proxy_ratio": 3.0929136429316064,
+  "validation_worker_hours_calibrated_proxy": 36.42925633387047,
+  "fit_extrapolation": {
+    "xgboost": {
+      "pilot_final_states": 829,
+      "pilot_final_fit_seconds": 4.1359060648828745,
+      "projected_final_states": 41450,
+      "projected_number_of_refits": 21,
+      "assumed_size_exponents": [
+        1.0,
+        1.3
+      ],
+      "projected_sum_fit_hours": [
+        0.6394966672162586,
+        1.8173805447275615
+      ],
+      "projected_final_fit_seconds": [
+        206.79530324414372,
+        668.7005372067099
+      ]
+    },
+    "nn": {
+      "pilot_final_states": 810,
+      "pilot_final_fit_seconds": 1.0076758000068367,
+      "projected_final_states": 40500,
+      "projected_number_of_refits": 21,
+      "assumed_size_exponents": [
+        1.0,
+        1.1
+      ],
+      "projected_sum_fit_hours": [
+        0.15913398693523603,
+        0.22537482623677654
+      ],
+      "projected_final_fit_seconds": [
+        50.38379000034183,
+        74.50541422528278
+      ]
+    }
+  },
+  "training_plus_validation_elapsed_hours_range": [
+    3.3580223815481824,
+    11.95172590727691
+  ],
+  "rounded_planning_budget_hours_range": [
+    3,
+    12
+  ],
+  "central_expectation_hours_range": [
+    4,
+    6
+  ],
+  "practical_first_campaign_budget_hours_range": [
+    6,
+    12
+  ],
+  "budget_interpretation": "Judgmental planning bands, not confidence intervals or a runtime guarantee; the arithmetic range includes an optimistic lower bound",
+  "method": "Summed worker costs, separately calibrated validation and size-extrapolated fits; not pilot elapsed multiplied by 50",
+  "limitations": [
+    "Only two training inputs per city; ordinary and charging-pressure, not all five production profiles",
+    "Only two fresh validation inputs; transferring the validation calibration to six other cities is unmeasured",
+    "64-worker SMT, memory, disk and SQLite contention have not been benchmarked",
+    "Online learning can change trajectory cost and drain length",
+    "Fit scaling exponents and effective concurrency are assumptions, not measurements"
+  ],
+  "full_training_started": false,
+  "final_test_time": "Not measured; held-out maps and workloads were not simulated"
+}

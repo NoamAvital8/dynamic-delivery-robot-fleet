@@ -44,10 +44,17 @@ def verify():
                     name.removeprefix("code/") if name.startswith("code/") else overrides.get(name,name))
         if sha(ROOT / relative) != expected:
             raise ValueError("Current implementation source checksum mismatch: " + relative)
+    pilot_manifest = BUNDLE / "evidence/switching_pilot_20261025/PILOT_EVIDENCE_SOURCES.json"
+    pilot_files = read(pilot_manifest)["files"] if pilot_manifest.exists() else {}
+    for name, expected in pilot_files.items():
+        path = (ROOT / name).resolve()
+        if not path.is_relative_to(pilot_manifest.parent.resolve()) or sha(path) != expected:
+            raise ValueError("Pilot evidence checksum mismatch: " + name)
     metadata = read(BUNDLE / "data/map_manifest.json")
     return {"status":"verified","backend_commit":provenance["backend_commit"],
             "exported_files_verified":len(provenance["source_files"]),
             "new_build_files_verified":len(sources["files"]),"maps":len(metadata["maps"]),
+            "pilot_evidence_files_verified":len(pilot_files),
             "compressed_map_bytes":sum(r["compressed_bytes"] for r in metadata["maps"]),
             "inflated_map_bytes":sum(r["uncompressed_bytes"] for r in metadata["maps"]),
             "training_started":False,"simulations_started":0}

@@ -44,9 +44,11 @@ def estimate(config, cpus=72, memory_gib=171.):
         "historical_window_seconds_by_city":{"new_delhi":.0863,"haifa":.2774,"tel_aviv":.4054,"manhattan":2.026},
         "assumed_seconds_per_branch_including_projection_range":[.7,2.5],
         "estimated_collection_and_validation_worker_hours_range":worker_hours,
-        "estimated_training_plus_validation_elapsed_hours_range":elapsed,
-        "first_campaign_budget_hours_range":[24,48],
-        "estimate_status":"Unbenchmarked corrected scorer, fresh-process startup and refits; conditional arithmetic only",
+        "legacy_unmeasured_training_plus_validation_elapsed_hours_range":elapsed,
+        "legacy_first_campaign_budget_hours_range":[24,48],
+        "estimate_status":"Legacy unmeasured arithmetic; consult the measured development-pilot report for the default full-campaign estimate",
+        "measured_pilot_report":"docs/SWITCHING_PILOT_RESULTS_2026-10-25.md",
+        "measured_pilot_estimate":"review_bundle/evidence/switching_pilot_20261025/TRAINING_TIME_ESTIMATE.json",
         "scope_note":"Both learners plus selectors and all ten fixed policies on development validation; final test excluded",
         "launches_training":False,"launches_simulations":False}
 

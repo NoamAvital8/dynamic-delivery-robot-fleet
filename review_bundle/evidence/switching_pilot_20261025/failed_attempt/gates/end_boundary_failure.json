@@ -1,0 +1,12 @@
+{
+  "before_time": 720.0,
+  "boundary_time": 735.0,
+  "finished_flag": true,
+  "delivered": 100,
+  "orders": 100,
+  "pending": 0,
+  "assigned": 0,
+  "moving_event_times": [
+    730.8279526163435
+  ]
+}

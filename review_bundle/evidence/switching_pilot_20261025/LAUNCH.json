@@ -1,0 +1,22 @@
+{
+  "pid": 1774479,
+  "command": [
+    "timeout",
+    "--signal=TERM",
+    "--kill-after=20s",
+    "6986s",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python",
+    "-B",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_pilot_v2_20261025/code/operations/switching_pilot.py",
+    "all",
+    "--base-config",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v3_review_fixes_20261025/configs/small_city_switching_v2.json",
+    "--root",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_pilot_v2_20261025",
+    "--execute"
+  ],
+  "scope": "pilot_only",
+  "preserved_failed_attempt": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_pilot_v1_20261025",
+  "remaining_original_budget_seconds": 6955.240702867508,
+  "full_training_started": false
+}

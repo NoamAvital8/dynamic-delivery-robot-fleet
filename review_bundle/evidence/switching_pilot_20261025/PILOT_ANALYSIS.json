@@ -1,0 +1,219 @@
+{
+  "inputs_verified": 18,
+  "training_episode_receipts_verified": 32,
+  "matched_validation_outcomes": 24,
+  "training_rows_content_hashes_verified": 1639,
+  "candidate_branches": 16390,
+  "actor_model_versions_content_hashes_verified": 9,
+  "held_out_cities_used": [],
+  "per_city": {
+    "delft": {
+      "ordinary": {
+        "mean_seconds": 75.09099718544167,
+        "worker_seconds": [
+          74.7935320448596,
+          75.38846232602373
+        ],
+        "orders": 133,
+        "robots": 31
+      },
+      "charging_pressure": {
+        "mean_seconds": 112.50576019694563,
+        "worker_seconds": [
+          112.69565433985554,
+          112.31586605403572
+        ],
+        "orders": 192,
+        "robots": 35
+      }
+    },
+    "haifa": {
+      "ordinary": {
+        "mean_seconds": 194.40339063003194,
+        "worker_seconds": [
+          192.85501249996014,
+          195.95176876010373
+        ],
+        "orders": 191,
+        "robots": 35
+      },
+      "charging_pressure": {
+        "mean_seconds": 129.34931427252013,
+        "worker_seconds": [
+          128.8358758050017,
+          129.86275274003856
+        ],
+        "orders": 140,
+        "robots": 35
+      }
+    },
+    "leuven": {
+      "ordinary": {
+        "mean_seconds": 40.505887854029424,
+        "worker_seconds": [
+          40.41529754898511,
+          40.59647815907374
+        ],
+        "orders": 100,
+        "robots": 20
+      },
+      "charging_pressure": {
+        "mean_seconds": 67.6392242469592,
+        "worker_seconds": [
+          65.85465391911566,
+          69.42379457480274
+        ],
+        "orders": 166,
+        "robots": 27
+      }
+    },
+    "manhattan": {
+      "ordinary": {
+        "mean_seconds": 683.6651153770508,
+        "worker_seconds": [
+          675.7371948640794,
+          691.5930358900223
+        ],
+        "orders": 310,
+        "robots": 80
+      },
+      "charging_pressure": {
+        "mean_seconds": 708.3206208449556,
+        "worker_seconds": [
+          695.3959525818937,
+          721.2452891080175
+        ],
+        "orders": 331,
+        "robots": 60
+      }
+    },
+    "new_delhi": {
+      "ordinary": {
+        "mean_seconds": 42.909584511537105,
+        "worker_seconds": [
+          42.20360094611533,
+          43.61556807695888
+        ],
+        "orders": 81,
+        "robots": 19
+      },
+      "charging_pressure": {
+        "mean_seconds": 39.24726972403005,
+        "worker_seconds": [
+          39.35474872519262,
+          39.139790722867474
+        ],
+        "orders": 111,
+        "robots": 13
+      }
+    },
+    "oxford": {
+      "ordinary": {
+        "mean_seconds": 50.18659071298316,
+        "worker_seconds": [
+          50.034817348001525,
+          50.3383640779648
+        ],
+        "orders": 135,
+        "robots": 20
+      },
+      "charging_pressure": {
+        "mean_seconds": 29.551766806049272,
+        "worker_seconds": [
+          29.826009892160073,
+          29.277523719938472
+        ],
+        "orders": 83,
+        "robots": 14
+      }
+    },
+    "palo_alto": {
+      "ordinary": {
+        "mean_seconds": 381.97803665394895,
+        "worker_seconds": [
+          378.51192508498207,
+          385.4441482229158
+        ],
+        "orders": 331,
+        "robots": 67
+      },
+      "charging_pressure": {
+        "mean_seconds": 142.64189000346232,
+        "worker_seconds": [
+          142.4452658649534,
+          142.83851414197125
+        ],
+        "orders": 179,
+        "robots": 43
+      }
+    },
+    "tel_aviv": {
+      "ordinary": {
+        "mean_seconds": 93.03309820045251,
+        "worker_seconds": [
+          90.69002166599967,
+          95.37617473490536
+        ],
+        "orders": 114,
+        "robots": 40
+      },
+      "charging_pressure": {
+        "mean_seconds": 226.3667260844959,
+        "worker_seconds": [
+          220.13385389000177,
+          232.59959827899002
+        ],
+        "orders": 252,
+        "robots": 41
+      }
+    }
+  },
+  "teacher": {
+    "xgboost": {
+      "states": 829,
+      "mean_projected_regret_per_robot": 0.28264485021534175,
+      "all_policy_costs_tied_states": 249,
+      "bootstrap_states": 207,
+      "chosen_policies": {
+        "reactive_insertion": 321,
+        "full_coordinated_idle": 83,
+        "full_no_idle": 66,
+        "full_mle_reservation": 102,
+        "full": 30,
+        "paper_sa_adapted": 95,
+        "full_no_nn": 58,
+        "myopic_ab": 39,
+        "queue_mle_reservation": 26,
+        "full_queue_aware": 9
+      },
+      "distinct_actor_versions": 5
+    },
+    "nn": {
+      "states": 810,
+      "mean_projected_regret_per_robot": 0.12942169474068008,
+      "all_policy_costs_tied_states": 214,
+      "bootstrap_states": 208,
+      "chosen_policies": {
+        "reactive_insertion": 292,
+        "full_no_idle": 101,
+        "full": 108,
+        "full_coordinated_idle": 88,
+        "queue_mle_reservation": 76,
+        "full_no_nn": 41,
+        "myopic_ab": 13,
+        "full_queue_aware": 38,
+        "full_mle_reservation": 31,
+        "paper_sa_adapted": 22
+      },
+      "distinct_actor_versions": 4
+    }
+  },
+  "training_collection_wall_seconds": 1073.7327815901954,
+  "training_episode_worker_seconds": 6034.790546609787,
+  "validation_wall_seconds": 520.6716672279872,
+  "validation_episode_worker_seconds": 2600.3026879546233,
+  "training_raw_window_seconds": 5653.582692235708,
+  "training_projection_seconds": 217.9768316464033,
+  "minimum_available_gib": 166.4499855041504,
+  "maximum_episode_peak_rss_gib": 0.7940635681152344
+}

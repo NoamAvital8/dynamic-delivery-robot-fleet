@@ -9,7 +9,8 @@ from . import LABEL_VERSION
 from .config import DEVELOPMENT, HELD_OUT, POLICIES, identity, immutable, read, sha
 
 SCIENTIFIC_SETTINGS = ("decision_minutes", "duration_hours", "base_seed", "train_per_city",
-    "validation_per_city", "test_per_city", "bootstrap_policy", "max_post_horizon_minutes")
+    "validation_per_city", "test_per_city", "bootstrap_policy", "max_post_horizon_minutes",
+    "update_every_states")
 
 
 def package_versions(config):

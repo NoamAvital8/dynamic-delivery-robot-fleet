@@ -1,0 +1,12 @@
+{
+  "verified_utc": "2026-10-25T19:46:21.020615+00:00",
+  "vm_target": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025",
+  "code_files_verified": 29,
+  "synthetic_test_result": "................................................................         [100%]\n64 passed in 2.02s",
+  "read_only_plan_passed": true,
+  "full_campaign_artifacts_absent": true,
+  "full_training_started": false,
+  "held_out_test_evaluations_started": 0,
+  "verification_temp": "/tmp/switching_v4_verify_si3q3jsa",
+  "prior_v3_build_preserved": true
+}

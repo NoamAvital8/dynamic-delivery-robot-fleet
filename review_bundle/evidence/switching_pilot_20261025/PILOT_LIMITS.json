@@ -1,0 +1,39 @@
+{
+  "scope": "audit_and_bounded_development_pilot_only",
+  "development_cities": [
+    "tel_aviv",
+    "haifa",
+    "manhattan",
+    "new_delhi",
+    "delft",
+    "leuven",
+    "oxford",
+    "palo_alto"
+  ],
+  "held_out_cities": [
+    "cambridge_uk",
+    "ghent",
+    "salamanca",
+    "lucca"
+  ],
+  "training_scenarios_per_city": 2,
+  "profiles": [
+    "ordinary",
+    "charging_pressure"
+  ],
+  "training_inputs_total": 16,
+  "training_actor_episodes_total": 32,
+  "validation_cities": [
+    "new_delhi",
+    "manhattan"
+  ],
+  "validation_inputs_total": 2,
+  "validation_selector_and_fixed_episodes_total": 24,
+  "scenario_duration_hours": 12,
+  "decision_minutes": 15,
+  "worker_limit": 8,
+  "fit_threads": 4,
+  "periodic_refit_states": 200,
+  "maximum_collection_wall_seconds": 7200,
+  "full_training_authorized": false
+}

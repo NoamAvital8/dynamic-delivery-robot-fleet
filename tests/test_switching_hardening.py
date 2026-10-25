@@ -105,6 +105,13 @@ def test_science_includes_exact_operations_dependency(tmp_path):
     assert science_id(config) != before
 
 
+def test_campaign_rejects_changed_online_update_cadence(tmp_path):
+    config,_=campaign_fixture(tmp_path)
+    ensure_campaign(config,create=True)
+    with pytest.raises(ValueError,match='Campaign identity'):
+        ensure_campaign(replace(config,update_every_states=config.update_every_states//2))
+
+
 def test_manifest_requires_every_city_and_exact_split_counts(tmp_path):
     config,maps=campaign_fixture(tmp_path)
     campaign=ensure_campaign(config,create=True)

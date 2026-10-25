@@ -1,0 +1,15 @@
+{
+  "fixture_initial_positions": "all robots at charger 0; idle robots begin known background charging",
+  "queued_robots_at_probe": 1,
+  "projection_loss": 813.2172429218303,
+  "actual_loss": 813.2172429218303,
+  "absolute_loss_difference": 0.0,
+  "delivered": 3,
+  "actual_queue_wait_minutes": 30.486666666666764,
+  "diagnostics": {
+    "pending_orders": 0,
+    "assigned_orders": 3,
+    "reconstructed_route_legs": 0,
+    "projected_queue_wait_min": 30.486666666666764
+  }
+}

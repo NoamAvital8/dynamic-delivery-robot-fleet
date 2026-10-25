@@ -66,7 +66,7 @@ and remaining production verification are described in the addendum.
 Target directory (see review_bundle/CURRENT_BUILD_VERIFICATION.json for actual
 staging status; SSH may be unavailable):
 
-/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v3_review_fixes_20261025
+/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025
 
 Launcher: operations/switching_meta.py.
 Config: configs/small_city_switching_v2.json.
@@ -89,12 +89,16 @@ Linux; portable source inspection and the scoped synthetic suite work on Windows
 
 ## Conditional estimate and verification
 
-Approximately 800,000 training branches plus 120,000 validation windows give
-about 7–24 elapsed hours under the unmeasured planning assumptions. Budget
-24–48 hours for the first full development campaign until actual corrected
-projection/startup/refit/RAM measurements exist. Final test is additional.
+Approximately 800,000 training branches plus 120,000 validation windows are
+planned. The old unmeasured 7–24-hour arithmetic and 24–48-hour precautionary
+budget are superseded by [the measured pilot report](SWITCHING_PILOT_RESULTS_2026-10-25.md)
+and `review_bundle/evidence/switching_pilot_20261025/TRAINING_TIME_ESTIMATE.json`.
+Final-test runtime remains unmeasured and is additional.
 
 Current scoped counts are in review_bundle/CURRENT_BUILD_VERIFICATION.json.
-Only pure fixtures, stub transitions/publication, child-process controls and
-fixed-weight arithmetic are exercised. No production FleetRuntime, scenario
-generation, actual model optimization, delivery simulation or pilot is launched.
+The synthetic suite uses pure fixtures, stub transitions/publication,
+child-process controls and fixed-weight arithmetic. A separate bounded pilot
+has exercised the production runtime, queue projection, actual fitting,
+serialization, interruption/resume and matched development comparisons. Its
+evidence and immutable source snapshot are bundled. No full campaign or final
+test has been launched. The future campaign must use its own fresh output.

@@ -1,0 +1,457 @@
+{"xgboost": {"rows": 32, "fit_and_roundtrip_seconds": 0.90473519009538, "maximum_prediction_roundtrip_error": 0.0, "native_libraries": [{"user_api": "blas", "internal_api": "openblas", "num_threads": 4, "prefix": "libscipy_openblas", "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so", "version": "0.3.31.dev", "threading_layer": "pthreads", "architecture": "Haswell"}, {"user_api": "blas", "internal_api": "openblas", "num_threads": 4, "prefix": "libscipy_openblas", "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so", "version": "0.3.34.106.0", "threading_layer": "pthreads", "architecture": "Haswell"}, {"user_api": "openmp", "internal_api": "openmp", "num_threads": 4, "prefix": "libgomp", "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0", "version": null}]}, "nn": {"rows": 32, "fit_and_roundtrip_seconds": 0.05407178099267185, "maximum_prediction_roundtrip_error": 0.0, "native_libraries": [{"user_api": "blas", "internal_api": "openblas", "num_threads": 4, "prefix": "libscipy_openblas", "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so", "version": "0.3.31.dev", "threading_layer": "pthreads", "architecture": "Haswell"}, {"user_api": "blas", "internal_api": "openblas", "num_threads": 4, "prefix": "libscipy_openblas", "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so", "version": "0.3.34.106.0", "threading_layer": "pthreads", "architecture": "Haswell"}, {"user_api": "openmp", "internal_api": "openmp", "num_threads": 4, "prefix": "libgomp", "filepath": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0", "version": null}]}}
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/leuven.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/leuven.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/delft.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/delft.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/haifa.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/haifa.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 21 charging stations; using them
+graph already has 21 charging stations; using them
+graph nodes=11,357 edges=15,309
+orders=100 duration=720.0 min
+charging stations=21
+graph nodes=11,357 edges=15,309
+orders=100 duration=720.0 min
+robots=20 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 8, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+charging stations=21
+robots=20 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 8, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+building shared charger distance index...
+exact shared index 21/21 rows elapsed=0s
+graph already has 27 charging stations; using them
+charger index dense=True build=0.3s
+charger index dense=True build=0.3s
+graph nodes=15,073 edges=20,161
+orders=133 duration=720.0 min
+charging stations=27
+robots=31 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 8, <RobotType.MIDDLE_MAN: 'middle_man'>: 12, <RobotType.ENDURO: 'enduro'>: 6, <RobotType.OOMPH: 'oomph'>: 5}
+building shared charger distance index...
+graph already has 27 charging stations; using them
+graph nodes=15,073 edges=20,161
+orders=133 duration=720.0 min
+charging stations=27
+robots=31 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 8, <RobotType.MIDDLE_MAN: 'middle_man'>: 12, <RobotType.ENDURO: 'enduro'>: 6, <RobotType.OOMPH: 'oomph'>: 5}
+graph already has 52 charging stations; using them
+graph already has 52 charging stations; using them
+building shared charger distance index...
+graph nodes=16,135 edges=23,234
+orders=191 duration=720.0 min
+charging stations=52
+graph nodes=16,135 edges=23,234
+orders=191 duration=720.0 min
+charging stations=52
+robots=35 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 9, <RobotType.MIDDLE_MAN: 'middle_man'>: 14, <RobotType.ENDURO: 'enduro'>: 7, <RobotType.OOMPH: 'oomph'>: 5}
+robots=35 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 9, <RobotType.MIDDLE_MAN: 'middle_man'>: 14, <RobotType.ENDURO: 'enduro'>: 7, <RobotType.OOMPH: 'oomph'>: 5}
+building shared charger distance index...
+building shared charger distance index...
+exact shared index 27/27 rows elapsed=0s
+charger index dense=True build=0.4s
+charger index dense=True build=0.3s
+exact shared index 52/52 rows elapsed=0s
+charger index dense=True build=0.6s
+charger index dense=True build=0.6s
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=310 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=310 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+exact shared index 23/23 rows elapsed=0s
+charger index dense=True build=0.8s
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=81 duration=720.0 min
+charging stations=25
+robots=19 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 7, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=81 duration=720.0 min
+charging stations=25
+robots=19 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 7, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+exact shared index 25/25 rows elapsed=0s
+charger index dense=True build=0.3s
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/oxford.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/oxford.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,425 edges=10,671
+orders=135 duration=720.0 min
+charging stations=25
+robots=20 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 8, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+exact shared index 25/25 rows elapsed=0s
+charger index dense=True build=0.3s
+graph already has 25 charging stations; using them
+graph nodes=8,425 edges=10,671
+orders=135 duration=720.0 min
+charging stations=25
+robots=20 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 8, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/palo_alto.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/palo_alto.graphml
+graph already has 18 charging stations; using them
+graph nodes=27,315 edges=36,320
+orders=331 duration=720.0 min
+charging stations=18
+robots=67 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 17, <RobotType.MIDDLE_MAN: 'middle_man'>: 27, <RobotType.ENDURO: 'enduro'>: 13, <RobotType.OOMPH: 'oomph'>: 10}
+building shared charger distance index...
+exact shared index 18/18 rows elapsed=0s
+charger index dense=True build=0.6s
+graph already has 18 charging stations; using them
+graph nodes=27,315 edges=36,320
+orders=331 duration=720.0 min
+charging stations=18
+robots=67 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 17, <RobotType.MIDDLE_MAN: 'middle_man'>: 27, <RobotType.ENDURO: 'enduro'>: 13, <RobotType.OOMPH: 'oomph'>: 10}
+building shared charger distance index...
+charger index dense=True build=0.3s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/tel_aviv.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/tel_aviv.graphml
+graph already has 20 charging stations; using them
+graph nodes=19,903 edges=29,544
+orders=114 duration=720.0 min
+charging stations=20
+robots=40 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 10, <RobotType.MIDDLE_MAN: 'middle_man'>: 16, <RobotType.ENDURO: 'enduro'>: 8, <RobotType.OOMPH: 'oomph'>: 6}
+building shared charger distance index...
+exact shared index 20/20 rows elapsed=0s
+charger index dense=True build=0.5s
+graph already has 20 charging stations; using them
+graph nodes=19,903 edges=29,544
+orders=114 duration=720.0 min
+charging stations=20
+robots=40 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 10, <RobotType.MIDDLE_MAN: 'middle_man'>: 16, <RobotType.ENDURO: 'enduro'>: 8, <RobotType.OOMPH: 'oomph'>: 6}
+building shared charger distance index...
+charger index dense=True build=0.3s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/delft.graphml
+graph already has 27 charging stations; using them
+graph nodes=15,073 edges=20,161
+orders=192 duration=720.0 min
+charging stations=27
+robots=35 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 9, <RobotType.MIDDLE_MAN: 'middle_man'>: 14, <RobotType.ENDURO: 'enduro'>: 7, <RobotType.OOMPH: 'oomph'>: 5}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/delft.graphml
+graph already has 27 charging stations; using them
+graph nodes=15,073 edges=20,161
+orders=192 duration=720.0 min
+charging stations=27
+robots=35 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 9, <RobotType.MIDDLE_MAN: 'middle_man'>: 14, <RobotType.ENDURO: 'enduro'>: 7, <RobotType.OOMPH: 'oomph'>: 5}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/haifa.graphml
+graph already has 52 charging stations; using them
+graph nodes=16,135 edges=23,234
+orders=140 duration=720.0 min
+charging stations=52
+robots=35 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 9, <RobotType.MIDDLE_MAN: 'middle_man'>: 14, <RobotType.ENDURO: 'enduro'>: 7, <RobotType.OOMPH: 'oomph'>: 5}
+building shared charger distance index...
+charger index dense=True build=0.3s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/haifa.graphml
+graph already has 52 charging stations; using them
+graph nodes=16,135 edges=23,234
+orders=140 duration=720.0 min
+charging stations=52
+robots=35 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 9, <RobotType.MIDDLE_MAN: 'middle_man'>: 14, <RobotType.ENDURO: 'enduro'>: 7, <RobotType.OOMPH: 'oomph'>: 5}
+building shared charger distance index...
+charger index dense=True build=0.3s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/leuven.graphml
+graph already has 21 charging stations; using them
+graph nodes=11,357 edges=15,309
+orders=166 duration=720.0 min
+charging stations=21
+robots=27 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 7, <RobotType.MIDDLE_MAN: 'middle_man'>: 11, <RobotType.ENDURO: 'enduro'>: 5, <RobotType.OOMPH: 'oomph'>: 4}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/leuven.graphml
+graph already has 21 charging stations; using them
+graph nodes=11,357 edges=15,309
+orders=166 duration=720.0 min
+charging stations=21
+robots=27 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 7, <RobotType.MIDDLE_MAN: 'middle_man'>: 11, <RobotType.ENDURO: 'enduro'>: 5, <RobotType.OOMPH: 'oomph'>: 4}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=331 duration=720.0 min
+charging stations=23
+robots=60 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 15, <RobotType.MIDDLE_MAN: 'middle_man'>: 24, <RobotType.ENDURO: 'enduro'>: 12, <RobotType.OOMPH: 'oomph'>: 9}
+building shared charger distance index...
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=331 duration=720.0 min
+charging stations=23
+robots=60 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 15, <RobotType.MIDDLE_MAN: 'middle_man'>: 24, <RobotType.ENDURO: 'enduro'>: 12, <RobotType.OOMPH: 'oomph'>: 9}
+building shared charger distance index...
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=111 duration=720.0 min
+charging stations=25
+robots=13 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 3, <RobotType.MIDDLE_MAN: 'middle_man'>: 5, <RobotType.ENDURO: 'enduro'>: 3, <RobotType.OOMPH: 'oomph'>: 2}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=111 duration=720.0 min
+charging stations=25
+robots=13 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 3, <RobotType.MIDDLE_MAN: 'middle_man'>: 5, <RobotType.ENDURO: 'enduro'>: 3, <RobotType.OOMPH: 'oomph'>: 2}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/oxford.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,425 edges=10,671
+orders=83 duration=720.0 min
+charging stations=25
+robots=14 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 3, <RobotType.MIDDLE_MAN: 'middle_man'>: 6, <RobotType.ENDURO: 'enduro'>: 3, <RobotType.OOMPH: 'oomph'>: 2}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/oxford.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,425 edges=10,671
+orders=83 duration=720.0 min
+charging stations=25
+robots=14 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 3, <RobotType.MIDDLE_MAN: 'middle_man'>: 6, <RobotType.ENDURO: 'enduro'>: 3, <RobotType.OOMPH: 'oomph'>: 2}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/palo_alto.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/palo_alto.graphml
+graph already has 18 charging stations; using them
+graph nodes=27,315 edges=36,320
+orders=179 duration=720.0 min
+charging stations=18
+robots=43 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 11, <RobotType.MIDDLE_MAN: 'middle_man'>: 17, <RobotType.ENDURO: 'enduro'>: 9, <RobotType.OOMPH: 'oomph'>: 6}
+building shared charger distance index...
+graph already has 18 charging stations; using them
+graph nodes=27,315 edges=36,320
+orders=179 duration=720.0 min
+charging stations=18
+robots=43 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 11, <RobotType.MIDDLE_MAN: 'middle_man'>: 17, <RobotType.ENDURO: 'enduro'>: 9, <RobotType.OOMPH: 'oomph'>: 6}
+building shared charger distance index...
+charger index dense=True build=0.4s
+charger index dense=True build=0.3s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/tel_aviv.graphml
+graph already has 20 charging stations; using them
+graph nodes=19,903 edges=29,544
+orders=252 duration=720.0 min
+charging stations=20
+robots=41 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 10, <RobotType.MIDDLE_MAN: 'middle_man'>: 17, <RobotType.ENDURO: 'enduro'>: 8, <RobotType.OOMPH: 'oomph'>: 6}
+building shared charger distance index...
+charger index dense=True build=0.3s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/tel_aviv.graphml
+graph already has 20 charging stations; using them
+graph nodes=19,903 edges=29,544
+orders=252 duration=720.0 min
+charging stations=20
+robots=41 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 10, <RobotType.MIDDLE_MAN: 'middle_man'>: 17, <RobotType.ENDURO: 'enduro'>: 8, <RobotType.OOMPH: 'oomph'>: 6}
+building shared charger distance index...
+charger index dense=True build=0.3s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+graph already has 25 charging stations; using them
+building shared charger distance index...
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+charger index dense=True build=0.2s
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+graph already has 23 charging stations; using them
+graph already has 23 charging stations; using them
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+graph already has 23 charging stations; using them
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+building shared charger distance index...
+building shared charger distance index...
+building shared charger distance index...
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+charger index dense=True build=0.5s
+charger index dense=True build=0.5s
+charger index dense=True build=0.5s
+charger index dense=True build=0.5s
+charger index dense=True build=0.5s
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+charger index dense=True build=0.5s
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+charger index dense=True build=0.5s
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml
+graph already has 23 charging stations; using them
+graph nodes=36,423 edges=57,562
+orders=303 duration=720.0 min
+charging stations=23
+robots=80 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 20, <RobotType.MIDDLE_MAN: 'middle_man'>: 32, <RobotType.ENDURO: 'enduro'>: 16, <RobotType.OOMPH: 'oomph'>: 12}
+building shared charger distance index...
+charger index dense=True build=0.5s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+graph already has 25 charging stations; using them
+building shared charger distance index...
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+loading graph: /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+graph already has 25 charging stations; using them
+graph nodes=8,254 edges=11,525
+orders=94 duration=720.0 min
+charging stations=25
+robots=21 types={<RobotType.SPEEDY_MCQUEEN: 'speedy_mcqueen'>: 5, <RobotType.MIDDLE_MAN: 'middle_man'>: 9, <RobotType.ENDURO: 'enduro'>: 4, <RobotType.OOMPH: 'oomph'>: 3}
+building shared charger distance index...
+charger index dense=True build=0.2s
+charger index dense=True build=0.2s

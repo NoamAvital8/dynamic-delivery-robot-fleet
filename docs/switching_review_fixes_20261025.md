@@ -1,8 +1,9 @@
 # Review fixes: small-city switching selectors
 
 This is the current implementation addendum after the two external reviews of
-commit `2ffd002`. No new scenarios, trained selectors or production simulation
-results have been created. Training and evaluation still require explicit
+commit `2ffd002`. A separately authorized bounded pilot is now documented in
+[the pilot report](SWITCHING_PILOT_RESULTS_2026-10-25.md); full training and
+final-test evaluation remain unstarted. Training and evaluation require explicit
 `--execute`. The original review inputs are archived under
 `review_bundle/evidence/reviews/`.
 
@@ -86,7 +87,7 @@ hard operating-system memory limit or protection against unrelated VM allocation
 
 Label version: **`projected_completion_fifo_v2_event_order`**. Existing v1 replay
 and checkpoints are intentionally incompatible. The default VM output is the new
-`runs/icaps_small_city_switching_v3_review_fixes_20261025` directory. Old builds,
+`runs/icaps_small_city_switching_v4_pilot_fixes_20261025` directory. Old builds,
 campaigns, maps and weights remain preserved.
 
 The plan now includes approximately 800,000 training branches plus 120,000
@@ -105,13 +106,16 @@ transitions, child-process control stubs, content-tampering fixtures, a fixed
 weight gradient check and a stubbed publisher. No actual optimizer, scenario
 generator or production event engine is invoked by this suite.
 
-The next separately authorized work should be a small development-only production
-integration pilot: all ten fixed-policy adapters, branch-order parity, current
-event ties, low batteries, route reconstruction, cold fits/serialization, crash
-cut points, peak memory and ranking usefulness versus completed continuations.
-No pilot is launched by this build. Longer lookahead, explicit exploration and a
-learned terminal fleet value remain proposed experiments; the 15-minute decisions,
-12-hour arrival horizon and four held-out cities are unchanged.
+A separately authorized production pilot now covers all eight development
+cities. Read [its report](SWITCHING_PILOT_RESULTS_2026-10-25.md) for actual runtime,
+queue, fit, restart, branch-order and matched outcome checks. It supersedes the
+unmeasured timing budget above. The pilot found a completed-episode projection
+bug, fixed with a guarded zero-unfinished-work result, and campaign identity now
+includes online refit cadence. These source changes are staged in the new v4
+source-only build. Full training remains unstarted. Longer lookahead, explicit
+exploration and a learned terminal fleet value remain proposed experiments;
+the 15-minute decisions, 12-hour arrival horizon and four held-out cities are
+unchanged.
 
 `requirements-switching-vm-pins.txt` pins the observed direct VM packages from the
 existing environment inventory. It is not a full transitive/native lock, and no

@@ -1,0 +1,19 @@
+{
+  "src/fleet_switching/backend.py": "fce66a3027fecad5db42072e0ff2e6c8d70d7c516fb2728dde3b652afc9d9edf",
+  "src/fleet_switching/backend_lifecycle.py": "7ce0ae0d71b024d85e14df655044963ddfebbd11424c7d398e5234bc7cf0ad53",
+  "src/fleet_switching/cli.py": "ff202a41fce8c18ec58c3592e218d2d91229bb4a217452f66fcab3ac687000d2",
+  "src/fleet_switching/collection.py": "869a8a051041e1f807f896e4c3e5ba1ddde83668d70a68542e9ca3c6742183a2",
+  "src/fleet_switching/config.py": "c92f4c01564551cdcff1cd0580d48503161b955cf150ac09dca73645aba0680c",
+  "src/fleet_switching/data.py": "f710b0b384d04bf73be01db647e1dc856521a43076e5069d5c6785e6038d6a3e",
+  "src/fleet_switching/execution.py": "d0cbd9dd2bba0665cc01f46f592981877abfcc64a37960af49024fe38aec6f90",
+  "src/fleet_switching/features.py": "63e927ab8bac966437691340b88ea26886eec968344c22f9d782f2d3d1beb2e3",
+  "src/fleet_switching/models.py": "9da21f535d9a37d336df22599af8563eecf05c1d18e93f5ed20279eacdc568ee",
+  "src/fleet_switching/projection.py": "a63440696d5f02aca58dcaf03791a60cf57d13aebb2b66cbfaa34878bd558458",
+  "src/fleet_switching/provenance.py": "fc79abd26d3c743fafc5fc828bde9137e3e0e82f608b398a1518fa7c32e3e88c",
+  "src/fleet_switching/replay.py": "c9b6a76675f65fca2486626e759b230b5a57723f33a76b785767457224c587d5",
+  "src/fleet_switching/reporting.py": "0b40de46e94d0fc4f4218764f931ef700d326f9f1afde876578141199051b334",
+  "src/fleet_switching/workflow.py": "3b44fc9f98123349526e62a9b414415590c42e975865ab58db1802e1102d7ae3",
+  "src/fleet_switching/__init__.py": "dff56820b118d4d30f3b5d86209972100b3069035994c8469c82cfedd53cd67c",
+  "src/fleet_switching/__main__.py": "3129adff95e0f38b87ab34cddfc27082c7892bcaec267ff5d40f160fdf55b44a",
+  "operations/switching_pilot.py": "a8c552accedcaf65753b0935a81ef2d2bd27b66b96667489f7a28472bfcc66b4"
+}

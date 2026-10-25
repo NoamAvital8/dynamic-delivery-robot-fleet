@@ -1,0 +1,19 @@
+{
+  "pid": 1781571,
+  "command": [
+    "timeout",
+    "--signal=TERM",
+    "--kill-after=20s",
+    "5306s",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python",
+    "-B",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_pilot_v2_20261025/code/operations/switching_pilot_validation.py",
+    "--root",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_pilot_v2_20261025",
+    "--execute"
+  ],
+  "remaining_original_pilot_budget_seconds": 5286,
+  "maximum_episode_workers": 8,
+  "new_scenarios": 0,
+  "held_out_cities_used": []
+}

@@ -1,0 +1,12 @@
+{
+  "dataset": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_multicity_v2_precision/training/paper/targets.npz",
+  "model": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_multicity_v2_precision/training/paper/reservation_fcnn.npz",
+  "paper_architecture": "C+1 inputs, one C-neuron tanh hidden layer",
+  "heterogeneous_output": "joint KxC output with per-type softmax",
+  "processes": 60,
+  "restarts": 256,
+  "selected_seed": 270,
+  "selection_training_loss": 1.2761482314729338,
+  "selection_validation_loss": 0.5863160072817668,
+  "final_all_training_instances_loss": 1.131699873067685
+}

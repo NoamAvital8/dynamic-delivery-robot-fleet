@@ -1,0 +1,1 @@
+{"baseline_loss": 82.14502164502126, "delivered": 3, "loss_difference": 0.0, "new_live_action": "myopic_ab", "resumed_loss": 82.14502164502126, "saved_action": "reactive_insertion", "saved_model_is_original": true, "steps": 1}

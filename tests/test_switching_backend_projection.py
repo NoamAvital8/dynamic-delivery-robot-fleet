@@ -144,3 +144,17 @@ def test_undirected_pending_shortlist_uses_one_pickup_row(tmp_path):
     result,_=completion_projection(ns)
     assert result.completed[9]==3.
     assert len(sources)<20  # Full eligible-fleet ranking no longer needs 80 rows.
+
+
+def test_finished_delivery_branch_ignores_background_events_before_boundary():
+    r=robot(1,0,80,True)
+    ns=namespace([r]);ns.update(now=735.,_meta_finished=True,delivered=1,scenario=NS(orders=[object()]))
+    # This is a real engine condition: final dropoff stops the engine before
+    # advance() sets the clock to the requested decision boundary.
+    ns['events']=[(730.,1,10,'background_node_arrival',NS(robot_id=1,node_id=2,time_min=730.))]
+    result,info=completion_projection(ns)
+    assert result.loss==0. and result.completed=={}
+    assert info['finished_delivery_branch'] is True
+    ns['pending']=[order(2,1,2)]
+    with pytest.raises(ValueError,match='unfinished delivery work'):
+        completion_projection(ns)
