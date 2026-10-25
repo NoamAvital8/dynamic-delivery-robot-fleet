@@ -1,0 +1,10 @@
+# Source review + synthetic tests; no automatic package installation occurs.
+numpy>=1.26
+scipy>=1.11
+networkx>=3.2
+scikit-learn>=1.4
+xgboost>=2.0
+pytest>=8
+requests>=2.31
+threadpoolctl>=3.1
+# OSMnx is only needed to download new maps; all twelve review maps are included.

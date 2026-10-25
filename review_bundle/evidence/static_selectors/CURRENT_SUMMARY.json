@@ -1,0 +1,966 @@
+{
+  "updated_utc": "2026-10-25T13:30:01.550272+00:00",
+  "complete": 27,
+  "expected": 48,
+  "table": {
+    "beijing": {
+      "fcnn": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "full_coordinated_idle",
+        "total_loss": 0,
+        "mean_loss": null
+      },
+      "xgboost": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "full_mle_reservation",
+        "total_loss": 0,
+        "mean_loss": null
+      },
+      "decision_tree": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 0,
+        "mean_loss": null
+      },
+      "extra_trees": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 0,
+        "mean_loss": null
+      }
+    },
+    "paris": {
+      "fcnn": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "full_coordinated_idle",
+        "total_loss": 80759.67062610833,
+        "mean_loss": 40379.835313054165
+      },
+      "xgboost": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "full_mle_reservation",
+        "total_loss": 80161.8320110316,
+        "mean_loss": 40080.9160055158
+      },
+      "decision_tree": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 73715.17858550162,
+        "mean_loss": 36857.58929275081
+      },
+      "extra_trees": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 73715.17858550162,
+        "mean_loss": 36857.58929275081
+      }
+    },
+    "new_delhi": {
+      "fcnn": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "full_coordinated_idle",
+        "total_loss": 5653.573923236407,
+        "mean_loss": 2826.7869616182033
+      },
+      "xgboost": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "full_mle_reservation",
+        "total_loss": 5389.881277497952,
+        "mean_loss": 2694.940638748976
+      },
+      "decision_tree": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 6032.456364769787,
+        "mean_loss": 3016.2281823848934
+      },
+      "extra_trees": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 6032.456364769787,
+        "mean_loss": 3016.2281823848934
+      }
+    },
+    "johannesburg": {
+      "fcnn": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "full_coordinated_idle",
+        "total_loss": 1937806.6779657647,
+        "mean_loss": 968903.3389828823
+      },
+      "xgboost": {
+        "complete": 1,
+        "expected": 2,
+        "policy": "full_mle_reservation",
+        "total_loss": 449490.0039316327,
+        "mean_loss": 449490.0039316327
+      },
+      "decision_tree": {
+        "complete": 1,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 421730.8741346977,
+        "mean_loss": 421730.8741346977
+      },
+      "extra_trees": {
+        "complete": 1,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 421730.8741346977,
+        "mean_loss": 421730.8741346977
+      }
+    },
+    "moscow": {
+      "fcnn": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "queue_mle_reservation",
+        "total_loss": 3232830.6564258737,
+        "mean_loss": 1616415.3282129369
+      },
+      "xgboost": {
+        "complete": 1,
+        "expected": 2,
+        "policy": "full_mle_reservation",
+        "total_loss": 2277377.001931801,
+        "mean_loss": 2277377.001931801
+      },
+      "decision_tree": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 0,
+        "mean_loss": null
+      },
+      "extra_trees": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 0,
+        "mean_loss": null
+      }
+    },
+    "sydney": {
+      "fcnn": {
+        "complete": 2,
+        "expected": 2,
+        "policy": "queue_mle_reservation",
+        "total_loss": 11248180.187339867,
+        "mean_loss": 5624090.093669933
+      },
+      "xgboost": {
+        "complete": 1,
+        "expected": 2,
+        "policy": "full_mle_reservation",
+        "total_loss": 4616055.070668068,
+        "mean_loss": 4616055.070668068
+      },
+      "decision_tree": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 0,
+        "mean_loss": null
+      },
+      "extra_trees": {
+        "complete": 0,
+        "expected": 2,
+        "policy": "reactive_insertion",
+        "total_loss": 0,
+        "mean_loss": null
+      }
+    }
+  },
+  "rows": [
+    {
+      "status": "blocked_preserved_worker",
+      "city": "beijing",
+      "scenario_id": "beijing_test_000",
+      "policy": "full_coordinated_idle",
+      "model_kind": "fcnn",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93"
+    },
+    {
+      "status": "pending",
+      "city": "beijing",
+      "scenario_id": "beijing_test_001",
+      "policy": "full_coordinated_idle",
+      "model_kind": "fcnn",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93"
+    },
+    {
+      "status": "complete",
+      "signature": "02258babcfff3997b9d1a45281b1e3fc4187646ea178136fa14d5a7f061bb90f",
+      "city": "paris",
+      "scenario_id": "paris_test_000",
+      "policy": "full_coordinated_idle",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 39851.63630933854,
+      "delivered": 750,
+      "on_time": 749,
+      "late": 1,
+      "wall_clock_seconds": 1185.7615432669409,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_000/full_coordinated_idle/result.json",
+      "result_sha256": "c798f2ae9f9000fe11971127271fb7f44e3015b64eef280c667cd27d46b6811b",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.927535+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "ba43e8347e7da39869073d75f58c11917a5fc28e0da5aba052f591f513ee559b",
+      "city": "paris",
+      "scenario_id": "paris_test_001",
+      "policy": "full_coordinated_idle",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 40908.03431676979,
+      "delivered": 751,
+      "on_time": 746,
+      "late": 5,
+      "wall_clock_seconds": 1108.0281369281001,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_001/full_coordinated_idle/result.json",
+      "result_sha256": "da1bcf364b188f876588ee3ce9ef51599acdc829b2b0b33f38c9dfc6c267c3fd",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.930297+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "171a47ce7518e5f192998c18a19739b2231da5a936e51d2d1474875d7c4eb1d9",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_000",
+      "policy": "full_coordinated_idle",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 2585.380263943094,
+      "delivered": 62,
+      "on_time": 62,
+      "late": 0,
+      "wall_clock_seconds": 14.398356976918876,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_000/full_coordinated_idle/result.json",
+      "result_sha256": "535485c2971d5271dac26bb270c7182b766eebaeac39244823d8b23c1470fbb9",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.932463+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "b4ed943655aed15898bc8d3e1ccef856be6aa9faed79ea8bf72fc468172a3844",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_001",
+      "policy": "full_coordinated_idle",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 3068.193659293312,
+      "delivered": 73,
+      "on_time": 73,
+      "late": 0,
+      "wall_clock_seconds": 15.498560703010298,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_001/full_coordinated_idle/result.json",
+      "result_sha256": "645f54d53ba51954308bd8858d2d2f14a70d1fbecbd2ba0399ccf988ba302a25",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.935207+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "2779cfe13cafe21a1d2ee7350bcde04a30c2f80c05cf5c5f916b1f9d7744c4dd",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_000",
+      "policy": "full_coordinated_idle",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 449490.0039316327,
+      "delivered": 1103,
+      "on_time": 362,
+      "late": 741,
+      "wall_clock_seconds": 7480.636312532006,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/johannesburg/johannesburg_test_000/full_coordinated_idle/result.json",
+      "result_sha256": "00693cf7b9b099acce87046827942afe45398da531cdb43cfd36aeac35f9909c",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.938213+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "31f3db0596c061c57d444d3e4b6af9321593464e9b8b2c2497505f62a3fdb6a7",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_001",
+      "policy": "full_coordinated_idle",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 1488316.674034132,
+      "delivered": 1557,
+      "on_time": 294,
+      "late": 1263,
+      "wall_clock_seconds": 20451.60027723899,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/johannesburg/johannesburg_test_001/full_coordinated_idle/result.json",
+      "result_sha256": "8070b97cb9b978641f1b241a62fc85c1d1f819d05db7a52850e491a157528911",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.941699+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "37369201ae9eaa824de05a0df758a9abdc78335eeaefda4b501cf9cdab607a36",
+      "city": "moscow",
+      "scenario_id": "moscow_test_000",
+      "policy": "queue_mle_reservation",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 2283616.628084489,
+      "delivered": 4472,
+      "on_time": 1722,
+      "late": 2750,
+      "wall_clock_seconds": 54434.93360129499,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/moscow/moscow_test_000/queue_mle_reservation/result.json",
+      "result_sha256": "9bb98aacc821efe9117247bdfa23fbd0eac6d00c8e4cad58d3bc9065ab9f66ad",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.945624+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "6ae92b564924392778c5505e68e10f22a86e521993d672afeb924da96cdd5ce8",
+      "city": "moscow",
+      "scenario_id": "moscow_test_001",
+      "policy": "queue_mle_reservation",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 949214.0283413844,
+      "delivered": 3803,
+      "on_time": 2020,
+      "late": 1783,
+      "wall_clock_seconds": 33934.37691645196,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/moscow/moscow_test_001/queue_mle_reservation/result.json",
+      "result_sha256": "dd68eb2b46c7c38e9375f7f86356c9cc541fba85efb83496eaeb5f9200e219f7",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.949035+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "e118c64df1f3203cff460897fba12ec4f16691f4269a4317850f634082d4c409",
+      "city": "sydney",
+      "scenario_id": "sydney_test_000",
+      "policy": "queue_mle_reservation",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 4616681.143884799,
+      "delivered": 3566,
+      "on_time": 623,
+      "late": 2943,
+      "wall_clock_seconds": 105759.37161443301,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/sydney/sydney_test_000/queue_mle_reservation/result.json",
+      "result_sha256": "f81a800b80b624de3dc0b92ecc8ec95c9e1802a2ac9d2f22d08bb7cf0239f67e",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:06:03.952933+00:00",
+      "switches": 0,
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "complete",
+      "signature": "fa2e1da80df892ffaeb215ef30e0b681513c1f948321070ae51297fb10716ce8",
+      "city": "sydney",
+      "scenario_id": "sydney_test_001",
+      "policy": "queue_mle_reservation",
+      "model_sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93",
+      "loss": 6631499.043455067,
+      "delivered": 4184,
+      "on_time": 596,
+      "late": 3588,
+      "wall_clock_seconds": 511060.90444169106,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/sydney/sydney_test_001/queue_mle_reservation/result.json",
+      "result_sha256": "7a3e5361e27cadcb472af124326d98d0824477383574e1c274deb1c1e852bd7c",
+      "switches": 0,
+      "method": "explicitly_approved_preserved_original_worker_resume",
+      "completed_utc": "2026-10-25T03:35:23.456057+00:00",
+      "model_kind": "fcnn"
+    },
+    {
+      "status": "pending",
+      "city": "beijing",
+      "scenario_id": "beijing_test_000",
+      "policy": "full_mle_reservation",
+      "model_kind": "xgboost",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1"
+    },
+    {
+      "status": "waiting_for_64GiB_reserve_and_48GiB_worker_allowance",
+      "city": "beijing",
+      "scenario_id": "beijing_test_001",
+      "policy": "full_mle_reservation",
+      "model_kind": "xgboost",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1"
+    },
+    {
+      "status": "complete",
+      "signature": "dbf719bbd0d335b3a7ed4652e97a2093fdd742bf3a6515d3463340ce43081406",
+      "city": "paris",
+      "scenario_id": "paris_test_000",
+      "policy": "full_mle_reservation",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1",
+      "loss": 39653.503448058174,
+      "delivered": 750,
+      "on_time": 749,
+      "late": 1,
+      "wall_clock_seconds": 1190.6220674209762,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_000/full_mle_reservation/result.json",
+      "result_sha256": "d98aec3d69a7bcc49b350f937ba09d9a4f1489272036d3005c912896582926fe",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.322187+00:00",
+      "switches": 0,
+      "model_kind": "xgboost"
+    },
+    {
+      "status": "complete",
+      "signature": "6b6d3a0060fa8460ed06a4af54f8bc30904e95e7d82522d1d7b763bd35e87b67",
+      "city": "paris",
+      "scenario_id": "paris_test_001",
+      "policy": "full_mle_reservation",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1",
+      "loss": 40508.328562973424,
+      "delivered": 751,
+      "on_time": 747,
+      "late": 4,
+      "wall_clock_seconds": 1055.3825422249502,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_001/full_mle_reservation/result.json",
+      "result_sha256": "7c9449130a70e8a8a84a4ffecb2dd0f8b2c2ee5f5fce03e4f44725c36d36d645",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.323226+00:00",
+      "switches": 0,
+      "model_kind": "xgboost"
+    },
+    {
+      "status": "complete",
+      "signature": "da88dd0be8f9d9e56fec04db55a7cc4f5df740e36c516596ee8de8363a321679",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_000",
+      "policy": "full_mle_reservation",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1",
+      "loss": 2568.7685922513956,
+      "delivered": 62,
+      "on_time": 62,
+      "late": 0,
+      "wall_clock_seconds": 14.241928774979897,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_000/full_mle_reservation/result.json",
+      "result_sha256": "252015d54f17c613b67e268ffa52660de7060d7ac19c7cd54a828fb1441fe692",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.324134+00:00",
+      "switches": 0,
+      "model_kind": "xgboost"
+    },
+    {
+      "status": "complete",
+      "signature": "f24ef4f57126c666999517ba8c909c65a6de925600d24cf19728c8e430eaec2d",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_001",
+      "policy": "full_mle_reservation",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1",
+      "loss": 2821.1126852465563,
+      "delivered": 73,
+      "on_time": 73,
+      "late": 0,
+      "wall_clock_seconds": 15.147029484971426,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_001/full_mle_reservation/result.json",
+      "result_sha256": "b76bb15d45725b849cf61e21f1f675680bc0a4a8e08d3e85487b3f531038cae9",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.325024+00:00",
+      "switches": 0,
+      "model_kind": "xgboost"
+    },
+    {
+      "status": "complete",
+      "signature": "2babecf1233d187a7c359e704d7368b76f8e2a6ea122c8d8ce612b6a7f0b7f14",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_000",
+      "policy": "full_mle_reservation",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1",
+      "loss": 449490.0039316327,
+      "delivered": 1103,
+      "on_time": 362,
+      "late": 741,
+      "wall_clock_seconds": 7157.080403331085,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/johannesburg/johannesburg_test_000/full_mle_reservation/result.json",
+      "result_sha256": "4119117f6e01a23e66e7fd18f921f6e49aeef32638c8b075c1c986ea15c08d72",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.325956+00:00",
+      "switches": 0,
+      "model_kind": "xgboost"
+    },
+    {
+      "status": "pending",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_001",
+      "policy": "full_mle_reservation",
+      "model_kind": "xgboost",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1"
+    },
+    {
+      "status": "complete",
+      "signature": "5e2b919be8ed00502cd90098ff772e0a7b6df18a020b99655995cb19f37ff4ed",
+      "city": "moscow",
+      "scenario_id": "moscow_test_000",
+      "policy": "full_mle_reservation",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1",
+      "loss": 2277377.001931801,
+      "delivered": 4472,
+      "on_time": 1723,
+      "late": 2749,
+      "wall_clock_seconds": 86296.50403985905,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/moscow/moscow_test_000/full_mle_reservation/result.json",
+      "result_sha256": "ac8fa945e561fc593b4e30649f0d0aeaa671159f430fc2a73e6000e82383da70",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.326926+00:00",
+      "switches": 0,
+      "model_kind": "xgboost"
+    },
+    {
+      "status": "pending",
+      "city": "moscow",
+      "scenario_id": "moscow_test_001",
+      "policy": "full_mle_reservation",
+      "model_kind": "xgboost",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1"
+    },
+    {
+      "status": "complete",
+      "signature": "ea28c7d550a34468b55a000f5eb9d59879c0a09b54a3245badbba3c45a3b86b4",
+      "city": "sydney",
+      "scenario_id": "sydney_test_000",
+      "policy": "full_mle_reservation",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1",
+      "loss": 4616055.070668068,
+      "delivered": 3566,
+      "on_time": 610,
+      "late": 2956,
+      "wall_clock_seconds": 131665.68592071906,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/sydney/sydney_test_000/full_mle_reservation/result.json",
+      "result_sha256": "4a26f91dd8d95f081c2f24218b95fdf8dfb708ce48a0a110ff10cc096afb3d19",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.327891+00:00",
+      "switches": 0,
+      "model_kind": "xgboost"
+    },
+    {
+      "status": "pending",
+      "city": "sydney",
+      "scenario_id": "sydney_test_001",
+      "policy": "full_mle_reservation",
+      "model_kind": "xgboost",
+      "model_sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1"
+    },
+    {
+      "status": "pending",
+      "city": "beijing",
+      "scenario_id": "beijing_test_000",
+      "policy": "reactive_insertion",
+      "model_kind": "decision_tree",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    {
+      "status": "pending",
+      "city": "beijing",
+      "scenario_id": "beijing_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "decision_tree",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    {
+      "status": "complete",
+      "signature": "f95ac26dc8ec5eacd46ccb7e1967a45f98fef31e4434bf11a9649ab5aa375304",
+      "city": "paris",
+      "scenario_id": "paris_test_000",
+      "policy": "reactive_insertion",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3",
+      "loss": 38175.86482653694,
+      "delivered": 750,
+      "on_time": 749,
+      "late": 1,
+      "wall_clock_seconds": 1126.3885345089948,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_000/reactive_insertion/result.json",
+      "result_sha256": "0a03ea28ac53090003df7368f47bb403e78f9f2c09b5fe2d7d9534b8591efdf1",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.328755+00:00",
+      "switches": 0,
+      "model_kind": "decision_tree"
+    },
+    {
+      "status": "complete",
+      "signature": "765c2aa4fe1c5ed78f28e397a04d563cf6d8d0e1705c353c408ab405c7790da2",
+      "city": "paris",
+      "scenario_id": "paris_test_001",
+      "policy": "reactive_insertion",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3",
+      "loss": 35539.31375896468,
+      "delivered": 751,
+      "on_time": 751,
+      "late": 0,
+      "wall_clock_seconds": 1111.5749889280414,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_001/reactive_insertion/result.json",
+      "result_sha256": "fa91521717c090c87a3a7a321dcc74243e283cf0f121a9c57b5f57f4a89b8bed",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.329532+00:00",
+      "switches": 0,
+      "model_kind": "decision_tree"
+    },
+    {
+      "status": "complete",
+      "signature": "9f3e28e67c5d3f6dabf142645bfc58cf760ad213e5b56a1642387ffedc4459f1",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_000",
+      "policy": "reactive_insertion",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3",
+      "loss": 2933.5053087597694,
+      "delivered": 62,
+      "on_time": 61,
+      "late": 1,
+      "wall_clock_seconds": 3.608463835902512,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_000/reactive_insertion/result.json",
+      "result_sha256": "cb4fa71c7ba025b4b9b00dcab99926f272c767ae76cff962efbc881f200b1e29",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.330276+00:00",
+      "switches": 0,
+      "model_kind": "decision_tree"
+    },
+    {
+      "status": "complete",
+      "signature": "0f6dcd7f8366937df78f4190c9900b4f9e07e99d84162862c184d648c6c76496",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_001",
+      "policy": "reactive_insertion",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3",
+      "loss": 3098.951056010018,
+      "delivered": 73,
+      "on_time": 73,
+      "late": 0,
+      "wall_clock_seconds": 4.055201556067914,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_001/reactive_insertion/result.json",
+      "result_sha256": "825c1133ee86097bc3f2413cd0fc750543d09396a7a8da50c9c59713b8b1c8f3",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.331026+00:00",
+      "switches": 0,
+      "model_kind": "decision_tree"
+    },
+    {
+      "status": "complete",
+      "signature": "fa35a4e57dfbe8db48fde6e557310f6781d8ce43328c14f9ad329069e22c2d76",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_000",
+      "policy": "reactive_insertion",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3",
+      "loss": 421730.8741346977,
+      "delivered": 1103,
+      "on_time": 377,
+      "late": 726,
+      "wall_clock_seconds": 71309.45339999907,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/johannesburg/johannesburg_test_000/reactive_insertion/result.json",
+      "result_sha256": "14cd5b45c8eb92fe760fee3298c37029ef6511240e81e108b90fa4f1e20b2140",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.331789+00:00",
+      "switches": 0,
+      "model_kind": "decision_tree"
+    },
+    {
+      "status": "pending",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "decision_tree",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    {
+      "status": "pending",
+      "city": "moscow",
+      "scenario_id": "moscow_test_000",
+      "policy": "reactive_insertion",
+      "model_kind": "decision_tree",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    {
+      "status": "pending",
+      "city": "moscow",
+      "scenario_id": "moscow_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "decision_tree",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    {
+      "status": "pending",
+      "city": "sydney",
+      "scenario_id": "sydney_test_000",
+      "policy": "reactive_insertion",
+      "model_kind": "decision_tree",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    {
+      "status": "pending",
+      "city": "sydney",
+      "scenario_id": "sydney_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "decision_tree",
+      "model_sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    {
+      "status": "pending",
+      "city": "beijing",
+      "scenario_id": "beijing_test_000",
+      "policy": "reactive_insertion",
+      "model_kind": "extra_trees",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    },
+    {
+      "status": "pending",
+      "city": "beijing",
+      "scenario_id": "beijing_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "extra_trees",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    },
+    {
+      "status": "complete",
+      "signature": "f95ac26dc8ec5eacd46ccb7e1967a45f98fef31e4434bf11a9649ab5aa375304",
+      "city": "paris",
+      "scenario_id": "paris_test_000",
+      "policy": "reactive_insertion",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed",
+      "loss": 38175.86482653694,
+      "delivered": 750,
+      "on_time": 749,
+      "late": 1,
+      "wall_clock_seconds": 1126.3885345089948,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_000/reactive_insertion/result.json",
+      "result_sha256": "0a03ea28ac53090003df7368f47bb403e78f9f2c09b5fe2d7d9534b8591efdf1",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.328755+00:00",
+      "switches": 0,
+      "model_kind": "extra_trees"
+    },
+    {
+      "status": "complete",
+      "signature": "765c2aa4fe1c5ed78f28e397a04d563cf6d8d0e1705c353c408ab405c7790da2",
+      "city": "paris",
+      "scenario_id": "paris_test_001",
+      "policy": "reactive_insertion",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed",
+      "loss": 35539.31375896468,
+      "delivered": 751,
+      "on_time": 751,
+      "late": 0,
+      "wall_clock_seconds": 1111.5749889280414,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/paris/paris_test_001/reactive_insertion/result.json",
+      "result_sha256": "fa91521717c090c87a3a7a321dcc74243e283cf0f121a9c57b5f57f4a89b8bed",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.329532+00:00",
+      "switches": 0,
+      "model_kind": "extra_trees"
+    },
+    {
+      "status": "complete",
+      "signature": "9f3e28e67c5d3f6dabf142645bfc58cf760ad213e5b56a1642387ffedc4459f1",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_000",
+      "policy": "reactive_insertion",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed",
+      "loss": 2933.5053087597694,
+      "delivered": 62,
+      "on_time": 61,
+      "late": 1,
+      "wall_clock_seconds": 3.608463835902512,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_000/reactive_insertion/result.json",
+      "result_sha256": "cb4fa71c7ba025b4b9b00dcab99926f272c767ae76cff962efbc881f200b1e29",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.330276+00:00",
+      "switches": 0,
+      "model_kind": "extra_trees"
+    },
+    {
+      "status": "complete",
+      "signature": "0f6dcd7f8366937df78f4190c9900b4f9e07e99d84162862c184d648c6c76496",
+      "city": "new_delhi",
+      "scenario_id": "new_delhi_test_001",
+      "policy": "reactive_insertion",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed",
+      "loss": 3098.951056010018,
+      "delivered": 73,
+      "on_time": 73,
+      "late": 0,
+      "wall_clock_seconds": 4.055201556067914,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/new_delhi/new_delhi_test_001/reactive_insertion/result.json",
+      "result_sha256": "825c1133ee86097bc3f2413cd0fc750543d09396a7a8da50c9c59713b8b1c8f3",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.331026+00:00",
+      "switches": 0,
+      "model_kind": "extra_trees"
+    },
+    {
+      "status": "complete",
+      "signature": "fa35a4e57dfbe8db48fde6e557310f6781d8ce43328c14f9ad329069e22c2d76",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_000",
+      "policy": "reactive_insertion",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed",
+      "loss": 421730.8741346977,
+      "delivered": 1103,
+      "on_time": 377,
+      "late": 726,
+      "wall_clock_seconds": 71309.45339999907,
+      "result_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/benchmarks/johannesburg/johannesburg_test_000/reactive_insertion/result.json",
+      "result_sha256": "14cd5b45c8eb92fe760fee3298c37029ef6511240e81e108b90fa4f1e20b2140",
+      "method": "exact_existing_fixed_policy_outcome",
+      "completed_utc": "2026-10-24T15:08:44.331789+00:00",
+      "switches": 0,
+      "model_kind": "extra_trees"
+    },
+    {
+      "status": "pending",
+      "city": "johannesburg",
+      "scenario_id": "johannesburg_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "extra_trees",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    },
+    {
+      "status": "pending",
+      "city": "moscow",
+      "scenario_id": "moscow_test_000",
+      "policy": "reactive_insertion",
+      "model_kind": "extra_trees",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    },
+    {
+      "status": "pending",
+      "city": "moscow",
+      "scenario_id": "moscow_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "extra_trees",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    },
+    {
+      "status": "pending",
+      "city": "sydney",
+      "scenario_id": "sydney_test_000",
+      "policy": "reactive_insertion",
+      "model_kind": "extra_trees",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    },
+    {
+      "status": "pending",
+      "city": "sydney",
+      "scenario_id": "sydney_test_001",
+      "policy": "reactive_insertion",
+      "model_kind": "extra_trees",
+      "model_sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    }
+  ],
+  "validation_matched_only": {
+    "new_seed": {
+      "fcnn": {
+        "paired_scenarios": 20,
+        "total_loss": 666036.6018681311,
+        "training_selected_fixed_total_loss": 667322.5310627837
+      },
+      "xgboost": {
+        "paired_scenarios": 20,
+        "total_loss": 663735.3676904178,
+        "training_selected_fixed_total_loss": 667322.5310627837
+      },
+      "decision_tree": {
+        "paired_scenarios": 20,
+        "total_loss": 1180556.0164218915,
+        "training_selected_fixed_total_loss": 667322.5310627837
+      },
+      "extra_trees": {
+        "paired_scenarios": 20,
+        "total_loss": 1179721.0155364857,
+        "training_selected_fixed_total_loss": 667322.5310627837
+      }
+    },
+    "unseen_city": {
+      "fcnn": {
+        "paired_scenarios": 21,
+        "total_loss": 687858.1396073446,
+        "training_selected_fixed_total_loss": 687354.7732465148
+      },
+      "xgboost": {
+        "paired_scenarios": 21,
+        "total_loss": 1331835.2495108822,
+        "training_selected_fixed_total_loss": 687354.7732465148
+      },
+      "decision_tree": {
+        "paired_scenarios": 21,
+        "total_loss": 1199995.046748338,
+        "training_selected_fixed_total_loss": 687354.7732465148
+      },
+      "extra_trees": {
+        "paired_scenarios": 21,
+        "total_loss": 1199995.046748338,
+        "training_selected_fixed_total_loss": 687354.7732465148
+      }
+    }
+  },
+  "protected_dependencies": [
+    {
+      "city": "beijing",
+      "scenario_id": "beijing_test_000",
+      "policy": "full_coordinated_idle",
+      "pids": [
+        800387
+      ]
+    }
+  ],
+  "matched_test_only": {
+    "fcnn": {
+      "scenarios": 5,
+      "total_loss": 535903.2484809774,
+      "cities": [
+        "johannesburg",
+        "new_delhi",
+        "paris"
+      ]
+    },
+    "xgboost": {
+      "scenarios": 5,
+      "total_loss": 535041.7172201623,
+      "cities": [
+        "johannesburg",
+        "new_delhi",
+        "paris"
+      ]
+    },
+    "decision_tree": {
+      "scenarios": 5,
+      "total_loss": 501478.5090849691,
+      "cities": [
+        "johannesburg",
+        "new_delhi",
+        "paris"
+      ]
+    },
+    "extra_trees": {
+      "scenarios": 5,
+      "total_loss": 501478.5090849691,
+      "cities": [
+        "johannesburg",
+        "new_delhi",
+        "paris"
+      ]
+    }
+  },
+  "unique_physical_cases": 36,
+  "note": "Do not rank partial city cells with different scenario coverage."
+}

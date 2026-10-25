@@ -1,1 +1,11 @@
 data/graphs/*.graphml filter=lfs diff=lfs merge=lfs -text
+
+# The review bundle contains compressed maps; no new Git LFS objects are needed.
+review_bundle/** -text
+# Preserve exact scientific-source bytes across Windows and Linux checkouts.
+src/fleet_switching/*.py text eol=lf
+operations/switching_meta.py text eol=lf
+configs/small_city_switching_v2.json text eol=lf
+docs/small_city_switching_v2.md text eol=lf
+tests/test_switching_*.py text eol=lf
+requirements-switching.txt text eol=lf

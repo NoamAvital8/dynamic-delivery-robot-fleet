@@ -1,0 +1,48 @@
+{
+  "collected_utc": "2026-10-25T13:59:55.890264+00:00",
+  "python": "3.14.4",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+  "logical_cpus": 72,
+  "affinity_cpus": 72,
+  "packages": {
+    "numpy": {
+      "venv_version": "2.5.3",
+      "dependency_dir_version": null
+    },
+    "scipy": {
+      "venv_version": "1.18.1",
+      "dependency_dir_version": null
+    },
+    "networkx": {
+      "venv_version": "3.7",
+      "dependency_dir_version": null
+    },
+    "scikit-learn": {
+      "venv_version": "1.9.1",
+      "dependency_dir_version": null
+    },
+    "xgboost": {
+      "venv_version": null,
+      "dependency_dir_version": "3.4.1",
+      "dependency_dir_distribution": "xgboost-cpu",
+      "wheel_sha256": "1f16331f5c6beb2b40fbd4bf2834333062d93c9eb38b76186a5c206841dc1809"
+    },
+    "pytest": {
+      "venv_version": "9.1.1",
+      "dependency_dir_version": null
+    },
+    "requests": {
+      "venv_version": "2.34.2",
+      "dependency_dir_version": null
+    },
+    "osmnx": {
+      "venv_version": "2.1.1",
+      "dependency_dir_version": null
+    },
+    "threadpoolctl": {
+      "venv_version": "3.7.0",
+      "dependency_dir_version": null
+    }
+  },
+  "note": "Read-only installed-distribution inventory; no models or runtime instantiated. dependency_dir packages take precedence if configured. XGBoost import is supplied by the xgboost-cpu distribution; its installation receipt and directory were inspected separately."
+}

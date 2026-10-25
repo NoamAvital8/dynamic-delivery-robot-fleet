@@ -2,6 +2,8 @@
 
 Course project for **AI and Autonomous Systems**.
 
+For the October 2026 small-city switching meta-model, start with the [AI review handoff](PROJECT_AND_SWITCHING_META_REVIEW_2026-10-25.md). The review branch includes the new XGBoost/NN training sources, a pinned simulator dependency, prepared maps, and historical evidence for review without VM access.
+
 We study online planning and assignment for a heterogeneous fleet of autonomous delivery robots operating on a city graph under stochastic demand and travel times.
 
 ## Core setting

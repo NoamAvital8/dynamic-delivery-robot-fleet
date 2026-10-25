@@ -1,0 +1,445 @@
+{
+  "verified_results": 18,
+  "old_artifacts_unchanged": 462,
+  "initial_states_features_and_first_choices_equal": true,
+  "workloads": [
+    {
+      "city": "tel_aviv",
+      "profile": "steady_heavy",
+      "orders": 164,
+      "results": {
+        "current_5pct_error1": {
+          "loss": 17876.168949812352,
+          "on_time": 119,
+          "late": 45,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 2,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 300.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 20
+        },
+        "relaxed_1pct_error025": {
+          "loss": 17876.168949812352,
+          "on_time": 119,
+          "late": 45,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 2,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 300.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 20
+        },
+        "argmin_0pct_error0": {
+          "loss": 18273.38034583675,
+          "on_time": 122,
+          "late": 42,
+          "switches": 12,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 3,
+          "policy_minutes": {
+            "full_coordinated_idle": 15.0,
+            "full_mle_reservation": 165.0,
+            "full_no_idle": 30.0,
+            "full_queue_aware": 30.0,
+            "paper_sa_adapted": 45.0,
+            "queue_mle_reservation": 30.0
+          },
+          "percent_vs_current": 2.222016345558031,
+          "different_physical_checkpoints_vs_current": 17,
+          "common_physical_checkpoints": 20
+        }
+      }
+    },
+    {
+      "city": "tel_aviv",
+      "profile": "shift_heavy",
+      "orders": 170,
+      "results": {
+        "current_5pct_error1": {
+          "loss": 30272.412507816105,
+          "on_time": 116,
+          "late": 54,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 4,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 450.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 30
+        },
+        "relaxed_1pct_error025": {
+          "loss": 30272.412507816105,
+          "on_time": 116,
+          "late": 54,
+          "switches": 1,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 4,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 270.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 180.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 10,
+          "common_physical_checkpoints": 30
+        },
+        "argmin_0pct_error0": {
+          "loss": 29434.69602083285,
+          "on_time": 123,
+          "late": 47,
+          "switches": 14,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 3,
+          "policy_minutes": {
+            "full_coordinated_idle": 60.0,
+            "full_mle_reservation": 120.0,
+            "full_no_idle": 45.0,
+            "full_queue_aware": 30.0,
+            "paper_sa_adapted": 90.0,
+            "queue_mle_reservation": 15.0
+          },
+          "percent_vs_current": -2.7672604116601662,
+          "different_physical_checkpoints_vs_current": 22,
+          "common_physical_checkpoints": 24
+        }
+      }
+    },
+    {
+      "city": "haifa",
+      "profile": "steady_heavy",
+      "orders": 125,
+      "results": {
+        "current_5pct_error1": {
+          "loss": 15475.926906599125,
+          "on_time": 86,
+          "late": 39,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 2,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 315.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 21
+        },
+        "relaxed_1pct_error025": {
+          "loss": 15475.926906599125,
+          "on_time": 86,
+          "late": 39,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 2,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 315.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 21
+        },
+        "argmin_0pct_error0": {
+          "loss": 14721.90611350263,
+          "on_time": 88,
+          "late": 37,
+          "switches": 13,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 3,
+          "policy_minutes": {
+            "full_coordinated_idle": 30.0,
+            "full_mle_reservation": 75.0,
+            "full_no_idle": 30.0,
+            "full_queue_aware": 15.0,
+            "paper_sa_adapted": 15.0,
+            "queue_mle_reservation": 150.0
+          },
+          "percent_vs_current": -4.872217332423379,
+          "different_physical_checkpoints_vs_current": 19,
+          "common_physical_checkpoints": 21
+        }
+      }
+    },
+    {
+      "city": "haifa",
+      "profile": "shift_heavy",
+      "orders": 139,
+      "results": {
+        "current_5pct_error1": {
+          "loss": 59696.99741629358,
+          "on_time": 68,
+          "late": 71,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 2,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 540.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 36
+        },
+        "relaxed_1pct_error025": {
+          "loss": 59696.99741629358,
+          "on_time": 68,
+          "late": 71,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 2,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 540.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 36
+        },
+        "argmin_0pct_error0": {
+          "loss": 60851.3792955908,
+          "on_time": 62,
+          "late": 77,
+          "switches": 17,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 2,
+          "policy_minutes": {
+            "full_coordinated_idle": 105.0,
+            "full_mle_reservation": 75.0,
+            "full_no_idle": 90.0,
+            "full_queue_aware": 30.0,
+            "paper_sa_adapted": 120.0,
+            "queue_mle_reservation": 15.0
+          },
+          "percent_vs_current": 1.9337352450864431,
+          "different_physical_checkpoints_vs_current": 27,
+          "common_physical_checkpoints": 29
+        }
+      }
+    },
+    {
+      "city": "manhattan",
+      "profile": "steady_heavy",
+      "orders": 300,
+      "results": {
+        "current_5pct_error1": {
+          "loss": 49152.29036110841,
+          "on_time": 189,
+          "late": 111,
+          "switches": 0,
+          "peak_busy_share": 0.958904109589041,
+          "peak_pending": 0,
+          "peak_charger_queued": 7,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 360.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 24
+        },
+        "relaxed_1pct_error025": {
+          "loss": 49152.29036110841,
+          "on_time": 189,
+          "late": 111,
+          "switches": 0,
+          "peak_busy_share": 0.958904109589041,
+          "peak_pending": 0,
+          "peak_charger_queued": 7,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 360.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 24
+        },
+        "argmin_0pct_error0": {
+          "loss": 49665.11940976761,
+          "on_time": 191,
+          "late": 109,
+          "switches": 11,
+          "peak_busy_share": 0.9452054794520548,
+          "peak_pending": 0,
+          "peak_charger_queued": 8,
+          "policy_minutes": {
+            "full_coordinated_idle": 60.0,
+            "full_mle_reservation": 180.0,
+            "full_no_idle": 30.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 15.0,
+            "queue_mle_reservation": 75.0
+          },
+          "percent_vs_current": 1.0433472070001004,
+          "different_physical_checkpoints_vs_current": 21,
+          "common_physical_checkpoints": 24
+        }
+      }
+    },
+    {
+      "city": "manhattan",
+      "profile": "shift_heavy",
+      "orders": 287,
+      "results": {
+        "current_5pct_error1": {
+          "loss": 76908.4015019187,
+          "on_time": 181,
+          "late": 106,
+          "switches": 0,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 16,
+          "policy_minutes": {
+            "full_coordinated_idle": 0.0,
+            "full_mle_reservation": 510.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.0,
+          "different_physical_checkpoints_vs_current": 0,
+          "common_physical_checkpoints": 34
+        },
+        "relaxed_1pct_error025": {
+          "loss": 76944.94385232618,
+          "on_time": 181,
+          "late": 106,
+          "switches": 1,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 16,
+          "policy_minutes": {
+            "full_coordinated_idle": 255.0,
+            "full_mle_reservation": 255.0,
+            "full_no_idle": 0.0,
+            "full_queue_aware": 0.0,
+            "paper_sa_adapted": 0.0,
+            "queue_mle_reservation": 0.0
+          },
+          "percent_vs_current": 0.04751412029615487,
+          "different_physical_checkpoints_vs_current": 16,
+          "common_physical_checkpoints": 34
+        },
+        "argmin_0pct_error0": {
+          "loss": 77064.90307817615,
+          "on_time": 181,
+          "late": 106,
+          "switches": 11,
+          "peak_busy_share": 1.0,
+          "peak_pending": 0,
+          "peak_charger_queued": 16,
+          "policy_minutes": {
+            "full_coordinated_idle": 45.0,
+            "full_mle_reservation": 195.0,
+            "full_no_idle": 45.0,
+            "full_queue_aware": 15.0,
+            "paper_sa_adapted": 195.0,
+            "queue_mle_reservation": 15.0
+          },
+          "percent_vs_current": 0.20349087121975806,
+          "different_physical_checkpoints_vs_current": 18,
+          "common_physical_checkpoints": 34
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "current_5pct_error1": {
+      "total_loss": 249382.19764354828,
+      "total_loss_percent_vs_current": 0.0,
+      "city_equal_percent_vs_current": 0.0,
+      "wins_ties_losses": [
+        0,
+        6,
+        0
+      ],
+      "actual_switches": 0
+    },
+    "relaxed_1pct_error025": {
+      "total_loss": 249418.73999395577,
+      "total_loss_percent_vs_current": 0.014653151168286804,
+      "city_equal_percent_vs_current": 0.009662634155930641,
+      "wins_ties_losses": [
+        0,
+        5,
+        1
+      ],
+      "actual_switches": 2
+    },
+    "argmin_0pct_error0": {
+      "total_loss": 250011.3842637068,
+      "total_loss_percent_vs_current": 0.2522981295793425,
+      "city_equal_percent_vs_current": 0.04955296397088915,
+      "wins_ties_losses": [
+        2,
+        0,
+        4
+      ],
+      "actual_switches": 78
+    }
+  },
+  "scientific_scope": "Fresh short high-demand development workloads on training-city maps. No fitting or final-test tuning. Directional evidence only."
+}

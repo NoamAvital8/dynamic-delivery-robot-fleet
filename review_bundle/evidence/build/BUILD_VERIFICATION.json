@@ -1,0 +1,15 @@
+{
+  "verified_utc": "2026-10-25T12:32:24.841523+00:00",
+  "status": "source_build_verified",
+  "synthetic_tests_passed_on_vm": 31,
+  "synthetic_tests_passed_locally": 31,
+  "production_runtime_instantiated": false,
+  "scenario_generation_started": false,
+  "delivery_simulations_started": 0,
+  "model_fit_started": false,
+  "training_controller_started": false,
+  "source_file_hashes_verified": 18,
+  "read_only_plan_passed": true,
+  "backend_definitions_imported_without_execution": true,
+  "production_integration_and_new_projection_timings": "not run, per user instruction"
+}

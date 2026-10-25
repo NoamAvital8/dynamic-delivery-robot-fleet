@@ -1,0 +1,27 @@
+{
+  "verified_utc": "2026-10-25T14:08:50.858331+00:00",
+  "scope": "Portable Git handoff verification; no scenario generation, model fitting or production simulation",
+  "export_checksums_verified": 177,
+  "new_staged_build_sources_verified": 18,
+  "maps_inflated_and_sha256_verified": 12,
+  "compressed_map_bytes": 22656638,
+  "inflated_map_bytes": 204739704,
+  "portable_config_read_only_plan": "passed",
+  "synthetic_tests_passed": 31,
+  "test_result": "31 passed in 2.11s",
+  "document_relative_links": "all resolved",
+  "historical_record_counts": {
+    "examples": 3942,
+    "train_examples": 3132,
+    "validation_examples": 810,
+    "rollouts": 23652,
+    "decisions": 15462,
+    "completions": 225,
+    "scenarios": 225
+  },
+  "production_runtime_instantiated": false,
+  "scenario_generation_started": false,
+  "delivery_simulations_started": 0,
+  "model_fit_started": false,
+  "training_controller_started": false
+}

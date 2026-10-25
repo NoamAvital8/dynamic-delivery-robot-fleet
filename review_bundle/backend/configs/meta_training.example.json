@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "spatial_model": "../runs/icaps_multicity_v2_precision/training/spatial/reservation_fcnn.npz",
+  "paper_model": "../runs/icaps_multicity_v2_precision/training/paper/reservation_fcnn.npz",
+  "policies": ["paper_sa_adapted", "full_no_idle", "full_queue_aware", "full_coordinated_idle",
+               "queue_mle_reservation", "full_mle_reservation"],
+  "holding_minutes": [15],
+  "default_holding_minutes": 15,
+  "scoring_horizon_minutes": 60,
+  "initial_policy": "full_no_idle",
+  "continuation_policy": "full_no_idle",
+  "exploration": {"stickiness": 0.75, "fixed_episode_fraction": 0.2},
+  "label_step_probability": 0.25,
+  "decide_until": "all_delivered",
+  "shortlist_k": 10,
+  "controller_settings": {"prior_concentration": 4.0},
+  "_note": "Use prepare_meta_manifest.py to generate fresh train/validation data and a real reserved-scenario registry. This file illustrates the schema only. Omitted controller settings take the original runners' defaults; unknown keys are rejected.",
+  "scenario_separation": {
+    "version": 1,
+    "policy": "fresh_train_and_validation",
+    "reference_suites": [
+      {"path": "../runs/replace_with_original_suite/suite.json", "sha256": "GENERATED_BY_PREPARER"}
+    ],
+    "reserved": [
+      {
+        "path": "../runs/replace_with_original_suite/original_test.json",
+        "seed": 20761001,
+        "sha256": "GENERATED_BY_PREPARER",
+        "workload_sha256": "GENERATED_BY_PREPARER"
+      }
+    ]
+  },
+  "episodes": [
+    {
+      "id": "example_train_000",
+      "city": "replace_with_city",
+      "split": "train",
+      "graph": "../data/graphs/replace_with_prepared_map.graphml",
+      "scenario": "../runs/meta_v2/manifest_scenarios/train/replace_with_NEW_training_scenario.json",
+      "prior_rates_per_hour": {"1": 10, "2": 2, "5": 1}
+    },
+    {
+      "id": "example_validation_000",
+      "city": "replace_with_city",
+      "split": "validation",
+      "graph": "../data/graphs/replace_with_prepared_map.graphml",
+      "scenario": "../runs/meta_v2/manifest_scenarios/validation/replace_with_NEW_validation_scenario.json",
+      "prior_rates_per_hour": {"1": 10, "2": 2, "5": 1}
+    }
+  ]
+}

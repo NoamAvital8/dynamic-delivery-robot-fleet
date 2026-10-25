@@ -1,0 +1,593 @@
+{
+  "version": 1,
+  "updated_utc": "2026-10-25T10:54:51.245572+00:00",
+  "status": "complete",
+  "plan": {
+    "existing_development_cities": [
+      "tel_aviv",
+      "haifa",
+      "manhattan",
+      "new_delhi"
+    ],
+    "additions": [
+      {
+        "key": "delft",
+        "place": "Delft, Netherlands",
+        "role": "development",
+        "center_latlon": [
+          52.0116,
+          4.3571
+        ]
+      },
+      {
+        "key": "leuven",
+        "place": "Leuven, Belgium",
+        "role": "development",
+        "center_latlon": [
+          50.8798,
+          4.7005
+        ]
+      },
+      {
+        "key": "oxford",
+        "place": "Oxford, United Kingdom",
+        "role": "development",
+        "center_latlon": [
+          51.752,
+          -1.2577
+        ]
+      },
+      {
+        "key": "palo_alto",
+        "place": "Palo Alto, California, USA",
+        "role": "development",
+        "center_latlon": [
+          37.4443,
+          -122.1598
+        ]
+      },
+      {
+        "key": "cambridge_uk",
+        "place": "Cambridge, United Kingdom",
+        "role": "reserved_final_test",
+        "center_latlon": [
+          52.2053,
+          0.1218
+        ]
+      },
+      {
+        "key": "ghent",
+        "place": "Ghent, Belgium",
+        "role": "reserved_final_test",
+        "center_latlon": [
+          51.0543,
+          3.7174
+        ]
+      },
+      {
+        "key": "salamanca",
+        "place": "Salamanca, Spain",
+        "role": "reserved_final_test",
+        "center_latlon": [
+          40.9701,
+          -5.6635
+        ]
+      },
+      {
+        "key": "lucca",
+        "place": "Lucca, Italy",
+        "role": "reserved_final_test",
+        "center_latlon": [
+          43.843,
+          10.507
+        ]
+      }
+    ],
+    "initial_bbox_half_width_m": 3000,
+    "accepted_node_range": [
+      5000,
+      40000
+    ],
+    "network_type": "walk",
+    "simplified": true,
+    "undirected": true,
+    "geometry_note": "Bounded urban areas; these are not whole administrative municipalities.",
+    "download_client": "OSMnx 2.1.1",
+    "download_script_sha256": "81bd4c9bcc3c54b79209e9c4312d5fc543ab0d0f1d20f302939168552c09a5f1",
+    "created_utc": "2026-10-25T10:37:50.259015+00:00"
+  },
+  "maps": [
+    {
+      "key": "tel_aviv",
+      "place": "Tel Aviv-Yafo, Israel",
+      "role": "development",
+      "source": "existing_prepared_graph",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/tel_aviv.graphml",
+      "sha256": "c08551e8e13d20a4d3a1d851ba4862f861fd06674ab88ff3ceda1c93e9a14db7",
+      "nodes": 19903,
+      "edges": 29544,
+      "charging_stations": 20,
+      "clusters": 22,
+      "suggested_default_robots": 40,
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/tel_aviv.graphml",
+      "compressed_path": "review_bundle/data/maps/tel_aviv.graphml.gz",
+      "uncompressed_bytes": 21620544,
+      "compressed_sha256": "6a8578c97b6f33ac7f3f327b7be55c0e70a3b1c071c1b1fc459fa056c469fe72",
+      "compressed_bytes": 2435537
+    },
+    {
+      "key": "haifa",
+      "place": "Haifa, Israel",
+      "role": "development",
+      "source": "existing_prepared_graph",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/haifa.graphml",
+      "sha256": "af37e910a762aadf5d775579b3aa99f57be57e6a940309133bb0882e9069c0f9",
+      "nodes": 16135,
+      "edges": 23234,
+      "charging_stations": 52,
+      "clusters": 28,
+      "suggested_default_robots": 33,
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/haifa.graphml",
+      "compressed_path": "review_bundle/data/maps/haifa.graphml.gz",
+      "uncompressed_bytes": 17498209,
+      "compressed_sha256": "bfddfcdef48c60d3f2140c166edeb4425adf01cd06f09b0aeb701de8027906ea",
+      "compressed_bytes": 2047559
+    },
+    {
+      "key": "manhattan",
+      "place": "Manhattan, New York City, New York, USA",
+      "role": "development",
+      "source": "existing_prepared_graph",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml",
+      "sha256": "40e734b0762ba9fae0e5ce7feb170b210634d9dd0b20daea35bbbc634cf73648",
+      "nodes": 36423,
+      "edges": 57562,
+      "charging_stations": 23,
+      "clusters": 31,
+      "suggested_default_robots": 73,
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/data/graphs/manhattan.graphml",
+      "compressed_path": "review_bundle/data/maps/manhattan.graphml.gz",
+      "uncompressed_bytes": 40627136,
+      "compressed_sha256": "68256be132fbb19964d087ea3f3888fd082f70fe95907b9963f3feb7f6a1a6e4",
+      "compressed_bytes": 4436189
+    },
+    {
+      "key": "new_delhi",
+      "place": "New Delhi, Delhi, India",
+      "role": "development",
+      "source": "existing_prepared_graph",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml",
+      "sha256": "eee4835f37908dac104529adedbbaca9d01b07a9e37db4ab634f8cb7e5a669fc",
+      "nodes": 8254,
+      "edges": 11525,
+      "charging_stations": 25,
+      "clusters": 20,
+      "suggested_default_robots": 17,
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_new_cities_v7_all_policies/maps/new_delhi.graphml",
+      "compressed_path": "review_bundle/data/maps/new_delhi.graphml.gz",
+      "uncompressed_bytes": 8563127,
+      "compressed_sha256": "603edc1855c0427a007ff6665760a64233a45b857addb339a66936dd88f4d784",
+      "compressed_bytes": 967747
+    },
+    {
+      "status": "complete",
+      "key": "delft",
+      "place": "Delft, Netherlands",
+      "role": "development",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/delft.graphml",
+      "sha256": "8dcb694558daac5b9dfac318383985c959962ca7c5e9e2f6d70dbe30f5247384",
+      "nodes": 15073,
+      "edges": 20161,
+      "charging_stations": 27,
+      "clusters": 26,
+      "hdbscan_noise_nodes": 7367,
+      "suggested_default_robots": 31,
+      "center_latlon": [
+        52.0116,
+        4.3571
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        4.313266489436067,
+        51.984620389935216,
+        4.400933510563933,
+        52.03857961006479
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/delft.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 15073,
+          "edges": 20161
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:39:10.071994+00:00",
+      "completed_utc": "2026-10-25T10:40:41.054286+00:00",
+      "wall_seconds": 90.98231519397814,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/delft.graphml",
+      "compressed_path": "review_bundle/data/maps/delft.graphml.gz",
+      "uncompressed_bytes": 15223677,
+      "compressed_sha256": "6939c3dd41ac24cdbf1a6a867060560b21c0d86de21b5d8c586263a91e9f0cc4",
+      "compressed_bytes": 1699569
+    },
+    {
+      "status": "complete",
+      "key": "leuven",
+      "place": "Leuven, Belgium",
+      "role": "development",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/leuven.graphml",
+      "sha256": "dfbde4468be45cf2214e22f4f8e316bd5c623edcb47f9b4adf5571bec49808d6",
+      "nodes": 11357,
+      "edges": 15309,
+      "charging_stations": 21,
+      "clusters": 27,
+      "hdbscan_noise_nodes": 5875,
+      "suggested_default_robots": 23,
+      "center_latlon": [
+        50.8798,
+        4.7005
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        4.657739659132409,
+        50.85282038993522,
+        4.74326034086759,
+        50.90677961006479
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/leuven.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 11357,
+          "edges": 15309
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:40:41.130657+00:00",
+      "completed_utc": "2026-10-25T10:42:10.025150+00:00",
+      "wall_seconds": 88.89452176506165,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/leuven.graphml",
+      "compressed_path": "review_bundle/data/maps/leuven.graphml.gz",
+      "uncompressed_bytes": 11782866,
+      "compressed_sha256": "eabf9142959e873eb4262ba866ee99edad5c2a0afb70f374db836bbbbc4b4e53",
+      "compressed_bytes": 1379042
+    },
+    {
+      "status": "complete",
+      "key": "oxford",
+      "place": "Oxford, United Kingdom",
+      "role": "development",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/oxford.graphml",
+      "sha256": "ed9e46087af7325b7ec0f20996e46a04079fc35b3b8422e1e8e5dbc84b92de56",
+      "nodes": 8425,
+      "edges": 10671,
+      "charging_stations": 25,
+      "clusters": 21,
+      "hdbscan_noise_nodes": 4200,
+      "suggested_default_robots": 17,
+      "center_latlon": [
+        51.752,
+        -1.2577
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        -1.301281115255197,
+        51.72502038993522,
+        -1.214118884744803,
+        51.77897961006479
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/oxford.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 8425,
+          "edges": 10671
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:42:10.097087+00:00",
+      "completed_utc": "2026-10-25T10:44:56.739657+00:00",
+      "wall_seconds": 166.64259927801322,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/oxford.graphml",
+      "compressed_path": "review_bundle/data/maps/oxford.graphml.gz",
+      "uncompressed_bytes": 8249213,
+      "compressed_sha256": "7d8e77aa13716c6f86e8e4df40e0fdb12efdd8c8cddd3be37157f020b7ce7466",
+      "compressed_bytes": 970053
+    },
+    {
+      "status": "complete",
+      "key": "palo_alto",
+      "place": "Palo Alto, California, USA",
+      "role": "development",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/palo_alto.graphml",
+      "sha256": "3710178de415a1c844cb8fcfc4f50182073783b7cf200528d8ea8d44d3daef3b",
+      "nodes": 27315,
+      "edges": 36320,
+      "charging_stations": 18,
+      "clusters": 26,
+      "hdbscan_noise_nodes": 16090,
+      "suggested_default_robots": 55,
+      "center_latlon": [
+        37.4443,
+        -122.1598
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        -122.19378172143026,
+        37.41732038993521,
+        -122.12581827856975,
+        37.471279610064784
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/palo_alto.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 27315,
+          "edges": 36320
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:44:56.775072+00:00",
+      "completed_utc": "2026-10-25T10:46:50.640159+00:00",
+      "wall_seconds": 113.86511057300959,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/palo_alto.graphml",
+      "compressed_path": "review_bundle/data/maps/palo_alto.graphml.gz",
+      "uncompressed_bytes": 27321276,
+      "compressed_sha256": "514acbe57317a43d14d231e7daf09e2d21bbd0c8e1abf2e56f1401dabd4d9b13",
+      "compressed_bytes": 2736323
+    },
+    {
+      "status": "complete",
+      "key": "cambridge_uk",
+      "place": "Cambridge, United Kingdom",
+      "role": "reserved_final_test",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/cambridge_uk.graphml",
+      "sha256": "94fe6155497ddcf91e9f7dd50b9a7da169fca316fcb0c6de790d7299bae228b4",
+      "nodes": 10868,
+      "edges": 13581,
+      "charging_stations": 21,
+      "clusters": 24,
+      "hdbscan_noise_nodes": 5488,
+      "suggested_default_robots": 22,
+      "center_latlon": [
+        52.2053,
+        0.1218
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        0.07777566088614479,
+        52.178320389935216,
+        0.16582433911385522,
+        52.232279610064786
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/cambridge_uk.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 10868,
+          "edges": 13581
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:46:50.774797+00:00",
+      "completed_utc": "2026-10-25T10:48:54.037364+00:00",
+      "wall_seconds": 123.26259050902445,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/cambridge_uk.graphml",
+      "compressed_path": "review_bundle/data/maps/cambridge_uk.graphml.gz",
+      "uncompressed_bytes": 10434869,
+      "compressed_sha256": "81a656956cafae861c396ea7da10b009c3cb0ceef4988869181e3c69fc6d1f49",
+      "compressed_bytes": 1169478
+    },
+    {
+      "status": "complete",
+      "key": "ghent",
+      "place": "Ghent, Belgium",
+      "role": "reserved_final_test",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/ghent.graphml",
+      "sha256": "cf8d8b15ab5a1ec1727763e1de2e9703d0e160fcb3568627784f8478c6e7dfb0",
+      "nodes": 13833,
+      "edges": 18860,
+      "charging_stations": 20,
+      "clusters": 24,
+      "hdbscan_noise_nodes": 7319,
+      "suggested_default_robots": 28,
+      "center_latlon": [
+        51.0543,
+        3.7174
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        3.6744787239588885,
+        51.02732038993521,
+        3.7603212760411115,
+        51.08127961006478
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/ghent.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 13833,
+          "edges": 18860
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:48:54.082932+00:00",
+      "completed_utc": "2026-10-25T10:51:51.912910+00:00",
+      "wall_seconds": 177.82999796106014,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/ghent.graphml",
+      "compressed_path": "review_bundle/data/maps/ghent.graphml.gz",
+      "uncompressed_bytes": 14399749,
+      "compressed_sha256": "986d3a25341b6ed06a187cb335bb675988e812465855160520762a8e9c11847e",
+      "compressed_bytes": 1660964
+    },
+    {
+      "status": "complete",
+      "key": "salamanca",
+      "place": "Salamanca, Spain",
+      "role": "reserved_final_test",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/salamanca.graphml",
+      "sha256": "95d3d8d475060cb29e86bae7cdcb38c32d6e631398deafb72d54d222d6a54aa0",
+      "nodes": 20425,
+      "edges": 29328,
+      "charging_stations": 15,
+      "clusters": 28,
+      "hdbscan_noise_nodes": 9173,
+      "suggested_default_robots": 41,
+      "center_latlon": [
+        40.9701,
+        -5.6635
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        -5.6992321292244394,
+        40.94312038993522,
+        -5.6277678707755605,
+        40.99707961006479
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/salamanca.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 20425,
+          "edges": 29328
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:51:51.979385+00:00",
+      "completed_utc": "2026-10-25T10:53:41.284640+00:00",
+      "wall_seconds": 109.30527845292818,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/salamanca.graphml",
+      "compressed_path": "review_bundle/data/maps/salamanca.graphml.gz",
+      "uncompressed_bytes": 21015082,
+      "compressed_sha256": "a89ff6139e72465f5ea4dc322ca9a208c55d17c14fb8e68be6ad0e0a9a930817",
+      "compressed_bytes": 2247875
+    },
+    {
+      "status": "complete",
+      "key": "lucca",
+      "place": "Lucca, Italy",
+      "role": "reserved_final_test",
+      "source": "new_download",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/lucca.graphml",
+      "sha256": "ae430df0a5ccd7e01bba0429996d6df0ee17ecd7aad489cc8fbe249d01f70b0b",
+      "nodes": 8111,
+      "edges": 10084,
+      "charging_stations": 20,
+      "clusters": 14,
+      "hdbscan_noise_nodes": 4494,
+      "suggested_default_robots": 17,
+      "center_latlon": [
+        43.843,
+        10.507
+      ],
+      "bbox_half_width_m": 3000,
+      "bbox_left_bottom_right_top": [
+        10.469592772903633,
+        43.81602038993522,
+        10.544407227096366,
+        43.86997961006479
+      ],
+      "boundary_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/boundaries/lucca.geojson",
+      "size_attempts": [
+        {
+          "bbox_half_width_m": 3000,
+          "nodes": 8111,
+          "edges": 10084
+        }
+      ],
+      "network_type": "walk",
+      "simplified": true,
+      "undirected": true,
+      "largest_connected_component_only": true,
+      "download_client": "OSMnx 2.1.1",
+      "overpass_endpoint": "https://overpass-api.de/api",
+      "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+      "started_utc": "2026-10-25T10:53:41.383980+00:00",
+      "completed_utc": "2026-10-25T10:54:50.930549+00:00",
+      "wall_seconds": 69.54658723890316,
+      "charger_source_sha256": "28912dce64774867545ee401725f85710e7ee77a765556651411045e404b2d6d",
+      "cluster_source_sha256": "75bf10be621a4d7c9ed7146db2c43f9ddb25577147cc9050b4a9c4f5dc68d436",
+      "vm_original_path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/maps/lucca.graphml",
+      "compressed_path": "review_bundle/data/maps/lucca.graphml.gz",
+      "uncompressed_bytes": 8003956,
+      "compressed_sha256": "dad645cc98f5b35ae0afdd252633584e6b39233e7626798740811053a224b04a",
+      "compressed_bytes": 906302
+    }
+  ],
+  "attribution": "Map data copyright OpenStreetMap contributors, ODbL 1.0",
+  "attribution_url": "https://www.openstreetmap.org/copyright",
+  "scope": "Static map download, charger placement and spatial clustering only",
+  "simulations_started": 0,
+  "training_started": false,
+  "test_cities_excluded_from_future_fitting": [
+    "cambridge_uk",
+    "ghent",
+    "salamanca",
+    "lucca"
+  ],
+  "portable_note": "Use the review materializer to construct local absolute paths; original path fields describe the VM."
+}

@@ -1,0 +1,12 @@
+{
+  "boot_id": "0b87fb28-7f84-499c-b470-9a476683bea0",
+  "complete": 225,
+  "elapsed_seconds": 481463.2787044321,
+  "failed": 0,
+  "host": "cogrob-srv1",
+  "pid": 451638,
+  "process_started_utc": "2026-10-15T15:00:19.257958+00:00",
+  "status": "complete",
+  "total": 225,
+  "written_utc": "2026-10-21T04:44:51.092750+00:00"
+}

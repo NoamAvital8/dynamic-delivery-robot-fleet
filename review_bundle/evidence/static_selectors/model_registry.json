@@ -1,0 +1,31 @@
+{
+  "models": {
+    "fcnn": {
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_static_policy_nn_v1_20261024/models/fcnn.json",
+      "sha256": "20a5e09883164d0064ade279d26046618427d5d9b1e9417683722c88e0f82c93"
+    },
+    "xgboost": {
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_static_policy_nn_v1_20261024/models/xgboost.json",
+      "sha256": "ee5d7da3adc44a49184751e5c40c7754c020a7a27e35f85417a8bf6d095f97b1"
+    },
+    "decision_tree": {
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_static_policy_nn_v1_20261024/models/decision_tree.json",
+      "sha256": "cf75e414963a341e7bcdccfa8f841774be84b7ce9d6ad21883d49a3deb6845c3"
+    },
+    "extra_trees": {
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_static_policy_nn_v1_20261024/models/extra_trees.json",
+      "sha256": "e533fcd53cdaab048c5eafd51ebe3fd0cddd1bebfdc806eee4a15236435369ed"
+    }
+  },
+  "frozen_utc": "2026-10-24T15:00:37.617450+00:00",
+  "training_data_sha256": "ce51e7906aed3a503b79e3a3432fcac0c02f4c7243c76dfdfdc60d86107cbed1",
+  "test_scenario_selection": "first two scenario IDs per city, independent of outcomes",
+  "test_cities_excluded_from_fitting": [
+    "beijing",
+    "paris",
+    "new_delhi",
+    "johannesburg",
+    "moscow",
+    "sydney"
+  ]
+}

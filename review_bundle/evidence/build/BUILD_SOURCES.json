@@ -1,0 +1,25 @@
+{
+  "source_only": true,
+  "training_started": false,
+  "simulations_started": 0,
+  "files": {
+    "code/src/fleet_switching/backend.py": "6942ed6bcc8f67cfd12dba3f6e751feac16bfa5189252c630f46835c8ea34cc8",
+    "code/src/fleet_switching/cli.py": "ff202a41fce8c18ec58c3592e218d2d91229bb4a217452f66fcab3ac687000d2",
+    "code/src/fleet_switching/collection.py": "ca3667b2467a3e656eaadd095ada000b0b5f78b5455862d3dd4399bfef8e36e2",
+    "code/src/fleet_switching/config.py": "90ee83c2e3f67ae771367d44de241dece24a66d79c1a02dca51f97cb12ec3661",
+    "code/src/fleet_switching/data.py": "2e94aa856308f8ef3dba0b7378033bce1be353351728486ceaf395dcfcc2aace",
+    "code/src/fleet_switching/models.py": "63d00a366f3b3441cb36cbb50ab961f790eb1387af58a1031572360ff2015e06",
+    "code/src/fleet_switching/projection.py": "bd51c5ad5b422d9618df32dae81bd737c124d64886173f365810870abf2affb4",
+    "code/src/fleet_switching/workflow.py": "5b4e99cf2a42fdb8174d204040c4556a0201e6c3790ab8c35f298ca59b242a50",
+    "code/src/fleet_switching/__init__.py": "a329af4a3d0aca1e1a5eb719c7a4e26f38f5337a4f7e9ad0aa0785a56acb311d",
+    "code/src/fleet_switching/__main__.py": "3129adff95e0f38b87ab34cddfc27082c7892bcaec267ff5d40f160fdf55b44a",
+    "operations/switching_meta.py": "1111a504e0f6c48320c74c19bc66ea0a5f76a9b2a4766ab4c362984efe5ff86e",
+    "config.json": "e7cc7c8c062066241ed49692ded87a8d89facd7200e86531883389ea0036de07",
+    "README.md": "d3637e8931db50f52db4968de11c5cf32933841810f1e91281cda17c1281a054",
+    "requirements.txt": "da9cc47f194452e634a3057df3c61065fd7b8fbf01176482fba1233c9238ccc2",
+    "tests/test_switching_backend_projection.py": "c096a497c523ff00ea3a38d4918b3dfc0a2a23d17cfd45b6e2218328f3a4bc3a",
+    "tests/test_switching_collector.py": "243adb20faa8538d217eee9353fed20bb49b86304b55b2b3398aeabde9bd8250",
+    "tests/test_switching_guards.py": "012a4389b744348db1e368511b4920007e9f066a6de12f5a1573d850042b1412",
+    "tests/test_switching_projection.py": "7817b181fadaf976fe1385fce5ff5143ea0cc5d36861b394fa9612dac22aa25d"
+  }
+}

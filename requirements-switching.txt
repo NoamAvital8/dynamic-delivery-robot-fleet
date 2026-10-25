@@ -1,0 +1,4 @@
+# Install explicitly in an isolated environment; the launcher never installs packages.
+numpy>=1.26
+scikit-learn>=1.4
+xgboost>=2.0
