@@ -40,7 +40,7 @@ class FakeBackend:
 def fixture(tmp_path):
     graph=tmp_path/'graph.json'; graph.write_text('{}')
     scenario=tmp_path/'scenario.json'; scenario.write_text('{}')
-    cfg=Config(backend_root='unused',map_manifest='unused',output=str(tmp_path/'out'),spatial_model='unused',paper_model='unused')
+    cfg=Config(backend_root='unused',map_manifest='unused',output=str(tmp_path/'out'),spatial_model=str(graph),paper_model=str(graph))
     episode={'id':'haifa_train_000','city':'haifa','split':'train','seed':1,'scenario':str(scenario),
              'scenario_sha256':sha(scenario),'graph':str(graph),'graph_sha256':sha(graph),
              'workload_sha256':'one','orders':1}
@@ -94,3 +94,60 @@ def test_changed_frozen_model_rejected_before_loading_backend(tmp_path):
     pointer={'path':str(model),'sha256':'wrong','science_id':'test-science'}
     with pytest.raises(ValueError,match='identity changed'):
         collection.collect_episode(cfg,e,'nn','test-science',frozen=pointer,backend_factory=FakeBackend)
+
+
+class TwoStepRuntime(FakeRuntime):
+    def advance(self,end):
+        assert end==self.now+15
+        self.now=end
+        self.loss+=1. if self.policy=='myopic_ab' else 10.
+        self.ns['delivered']=int(end>=30)
+
+
+class TwoStepBackend(FakeBackend):
+    def __init__(self,*args): self.runtime=TwoStepRuntime()
+
+
+def test_corrupt_latest_state_recovers_previous_pair_and_original_actor(tmp_path):
+    cfg,e,model=fixture(tmp_path)
+    result=collection.collect_episode(cfg,e,'nn','test-science',backend_factory=TwoStepBackend)
+    assert result['loss']==20.
+    folder=Path(cfg.output)/'actors/nn/train'/e['id']
+    (folder/'complete.json').unlink()
+    cp=read(folder/'checkpoint.json')
+    Path(cp['state_path']).write_bytes(b'corrupted newest state')
+    payload=read(model); payload['policy']='myopic_ab'; atomic(model,payload)
+    atomic(model.parent/'current.json',{'path':str(model),'sha256':sha(model)})
+    recovered=collection.collect_episode(cfg,e,'nn','test-science',backend_factory=TwoStepBackend)
+    assert recovered['loss']==20.
+    assert recovered['policy_minutes']=={'reactive_insertion':30.}
+    assert recovered['switches_after_initial_choice']==0
+    previous=read(folder/'checkpoint.previous.json')
+    assert previous['policy_minutes']=={'reactive_insertion':15.}
+
+
+def test_changed_base_weights_invalidate_completed_episode(tmp_path):
+    cfg,e,_=fixture(tmp_path)
+    collection.collect_episode(cfg,e,'nn','test-science',backend_factory=FakeBackend)
+    Path(cfg.spatial_model).write_bytes(b'changed fixed model')
+    with pytest.raises(ValueError,match='input bytes changed|different experiment'):
+        collection.collect_episode(cfg,e,'nn','test-science',backend_factory=FakeBackend)
+
+
+def test_first_intent_restart_uses_persisted_initial_state(tmp_path,monkeypatch):
+    cfg,e,_=fixture(tmp_path)
+    original=collection.Predictor.choose
+    calls=[]
+    def choose_then_fail(self,features):
+        calls.append('choose')
+        return original(self,features)
+    monkeypatch.setattr(collection.Predictor,'choose',choose_then_fail)
+    original_advance=FakeRuntime.advance
+    monkeypatch.setattr(FakeRuntime,'advance',lambda *args:(_ for _ in ()).throw(RuntimeError('after intent')))
+    with pytest.raises(RuntimeError,match='after intent'):
+        collection.collect_episode(cfg,e,'nn','test-science',backend_factory=FakeBackend)
+    folder=Path(cfg.output)/'actors/nn/train'/e['id']
+    assert (folder/'states/initial.pickle').is_file()
+    monkeypatch.setattr(FakeRuntime,'advance',original_advance)
+    collection.collect_episode(cfg,e,'nn','test-science',backend_factory=FakeBackend)
+    assert calls==['choose']

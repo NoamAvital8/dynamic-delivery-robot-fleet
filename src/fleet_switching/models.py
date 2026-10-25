@@ -7,6 +7,28 @@ from pathlib import Path
 
 from . import LABEL_VERSION
 from .config import POLICIES, guard_city, identity, read, sha
+from .provenance import validate_row
+
+
+def nn_loss_gradients(x, y, weights, biases, sample_weights):
+    """Weighted batch objective/derivatives, independently testable without fitting."""
+    import numpy as np
+    activations = [x]
+    for w, b in zip(weights[:2], biases[:2]):
+        activations.append(np.maximum(0, activations[-1] @ w + b))
+    prediction = activations[-1] @ weights[2] + biases[2]
+    error = prediction - y
+    denominator = len(x) * y.shape[1]
+    loss = float((error**2 * sample_weights[:, None]).sum() / denominator
+                 + .5e-4 * sum((w**2).sum() for w in weights))
+    derivative = 2 * error * sample_weights[:, None] / denominator
+    gradients = [None] * 6
+    for layer in (2, 1, 0):
+        gradients[2*layer] = activations[layer].T @ derivative + 1e-4 * weights[layer]
+        gradients[2*layer+1] = derivative.sum(axis=0)
+        if layer:
+            derivative = (derivative @ weights[layer].T) * (activations[layer] > 0)
+    return loss, gradients
 
 
 def check_rows(rows):
@@ -27,6 +49,7 @@ def check_rows(rows):
             raise ValueError("Incomplete feature/action schema")
         if any(word in key.lower() for key in names for word in ("seed", "future", "scenario_id", "city_id")):
             raise ValueError("Forbidden hidden-input feature")
+        validate_row(row)
     return names
 
 
@@ -55,7 +78,7 @@ def fit(rows, family, threads=4):
               "training_episodes": sorted(counts), "training_states": len(rows),
               "training_scenario_hashes": sorted({r["scenario_sha256"] for r in rows}),
               "training_seeds": sorted({r["seed"] for r in rows}),
-              "training_records_sha256": identity(sorted(r["id"] for r in rows)),
+              "training_records_sha256": identity(sorted((r["id"], r["content_sha256"]) for r in rows)),
               "target": "per_robot_cost_minus_state_portfolio_mean"}
     if family == "xgboost":
         import xgboost as xgb
@@ -83,17 +106,7 @@ def fit(rows, family, threads=4):
         order = rng.permutation(len(x))
         for start in range(0, len(x), 512):
             ii = order[start:start+512]
-            activations = [x[ii]]
-            for w, b in zip(weights[:2], biases[:2]):
-                activations.append(np.maximum(0, activations[-1] @ w + b))
-            prediction = activations[-1] @ weights[2] + biases[2]
-            derivative = 2 * (prediction - y[ii]) * (weight[ii] * len(weight))[:, None] / (len(ii) * len(POLICIES))
-            gradients = [None] * 6
-            for layer in (2, 1, 0):
-                gradients[2*layer] = activations[layer].T @ derivative + 1e-4 * weights[layer]
-                gradients[2*layer+1] = derivative.sum(axis=0)
-                if layer:
-                    derivative = (derivative @ weights[layer].T) * (activations[layer] > 0)
+            _, gradients = nn_loss_gradients(x[ii], y[ii], weights, biases, weight[ii] * len(weight))
             tick += 1
             for j, (p, gradient) in enumerate(zip(params, gradients)):
                 gradient = np.clip(gradient, -10., 10.)
@@ -111,6 +124,10 @@ class Predictor:
         if payload.get("label_version") != LABEL_VERSION or tuple(payload["policies"]) != POLICIES:
             raise ValueError("Model/collector scientific identity mismatch")
         self.heads = []
+        if payload["kind"] == "nn":
+            import numpy as np
+            self.weights = [np.asarray(w, dtype=float) for w in payload["weights"]]
+            self.biases = [np.asarray(b, dtype=float) for b in payload["biases"]]
         if payload["kind"] == "xgboost":
             import xgboost as xgb
             for value in payload["boosters"]:
@@ -139,8 +156,8 @@ class Predictor:
         if p["kind"] == "xgboost":
             costs = np.array([head.inplace_predict(x)[0] for head in self.heads])
         elif p["kind"] == "nn":
-            for i, (w, b) in enumerate(zip(p["weights"], p["biases"])):
-                x = x @ np.asarray(w) + np.asarray(b)
+            for i, (w, b) in enumerate(zip(self.weights, self.biases)):
+                x = x @ w + b
                 if i < 2:
                     x = np.maximum(0, x)
             costs = x[0] * p["target_scale"] + p["target_mean"]

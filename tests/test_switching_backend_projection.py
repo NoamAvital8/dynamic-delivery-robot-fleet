@@ -2,6 +2,8 @@
 from dataclasses import dataclass
 from types import SimpleNamespace as NS
 
+import pytest
+
 from fleet_switching.backend import completion_projection
 
 
@@ -94,3 +96,51 @@ def test_service_lock_uses_only_remaining_handling_time():
     ns['idle_service_finish_min']={1:10.25}
     result,_=completion_projection(ns)
     assert result.completed[1]==10.25
+
+
+def test_independent_released_order_conservation_detects_lost_work():
+    ns=namespace([robot(1,0)])
+    ns.update(_meta_observed=[order(9,1,2)],delivered=0)
+    with pytest.raises(ValueError,match='conservation'):
+        completion_projection(ns)
+
+
+def test_stale_prepared_leg_is_rebuilt_from_current_node_and_battery():
+    ns=namespace([robot(1,0)])
+    stop=Stop(9,'dropoff',2)
+    ns['schedules'][1]=NS(orders={9:NS(order=order(9,0,2),deadline_min=100.)},stops=[stop],version=0,
+        prepared_steps=[NS(stop=stop,start_node=999,start_battery_wh=0.,phases=[])])
+    result,info=completion_projection(ns)
+    assert result.completed[9]==3.
+    assert info['reconstructed_route_legs']==1
+
+
+def test_adapter_preserves_saved_incoming_event_order():
+    r1,r2=robot(1,0,90,True),robot(2,0,90,True)
+    r1.next_node=r2.next_node=7
+    r1.next_node_arrival_time_min=r2.next_node_arrival_time_min=1.
+    ns=namespace([r1,r2])
+    ns['station_state']={7:NS(active={},queue=[])}
+    ns['events']=[(1.,1,20,'delivery_node_arrival',NS(robot_id=1,node_id=7,time_min=1.)),
+                  (1.,1,10,'delivery_node_arrival',NS(robot_id=2,node_id=7,time_min=1.))]
+    ns['event_counter']=NS(next_value=21)
+    ns['decision_snapshot']=lambda r,now:NS(node_id=7,time_min=1.,battery_wh=90.)
+    for rid,energy in ((1,10.),(2,1.)):
+        stop=Stop(rid,'dropoff',7)
+        ns['schedules'][rid]=NS(orders={rid:NS(order=order(rid,0,7),deadline_min=100.)},
+            stops=[stop],prepared_steps=[],version=0)
+        ns['phase_version'][rid]=0
+        ns['active_phases'][rid]=[NS(kind='charge',target_node=7,energy_wh=energy)]
+    result,_=completion_projection(ns)
+    assert result.completed=={2:3.,1:13.}
+
+
+def test_undirected_pending_shortlist_uses_one_pickup_row(tmp_path):
+    ns=namespace([robot(rid,rid) for rid in range(80)])
+    ns['graph']=NS(is_directed=lambda:False)
+    ns['pending']=[order(9,2,3)]
+    sources=[]
+    ns['distance_row']=lambda oracle,source:(sources.append(source) or source)
+    result,_=completion_projection(ns)
+    assert result.completed[9]==3.
+    assert len(sources)<20  # Full eligible-fleet ranking no longer needs 80 rows.

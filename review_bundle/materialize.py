@@ -34,14 +34,16 @@ def verify():
         path = (ROOT / name).resolve()
         if not path.is_relative_to(BUNDLE.resolve()) or sha(path) != expected:
             raise ValueError("Export checksum mismatch: " + name)
-    sources = read(BUNDLE / "evidence/build/BUILD_SOURCES.json")
+    current = BUNDLE / "CURRENT_BUILD_SOURCES.json"
+    sources = read(current if current.is_file() else BUNDLE / "evidence/build/BUILD_SOURCES.json")
     overrides = {"config.json":"configs/small_city_switching_v2.json",
                  "README.md":"docs/small_city_switching_v2.md",
                  "requirements.txt":"requirements-switching.txt"}
     for name, expected in sources["files"].items():
-        relative = name.removeprefix("code/") if name.startswith("code/") else overrides.get(name,name)
+        relative = (name if sources.get("format") == "repository_paths_v1" else
+                    name.removeprefix("code/") if name.startswith("code/") else overrides.get(name,name))
         if sha(ROOT / relative) != expected:
-            raise ValueError("New implementation differs from the staged VM build: " + relative)
+            raise ValueError("Current implementation source checksum mismatch: " + relative)
     metadata = read(BUNDLE / "data/map_manifest.json")
     return {"status":"verified","backend_commit":provenance["backend_commit"],
             "exported_files_verified":len(provenance["source_files"]),

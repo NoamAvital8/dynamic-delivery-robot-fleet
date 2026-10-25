@@ -1,7 +1,7 @@
 {
   "backend_root": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet-meta-policy",
   "map_manifest": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_maps_v1_20261025/map_manifest.json",
-  "output": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v2_20261025",
+  "output": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v3_review_fixes_20261025",
   "spatial_model": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_multicity_v2_precision/training/spatial/reservation_fcnn.npz",
   "paper_model": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_multicity_v2_precision/training/paper/reservation_fcnn.npz",
   "dependency_dir": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_static_policy_nn_v1_20261024/dependencies",
@@ -15,5 +15,8 @@
   "fit_threads": 4,
   "memory_reserve_gib": 64.0,
   "worker_memory_gib": 1.5,
+  "trainer_memory_gib": 8.0,
+  "cancellation_grace_seconds": 15.0,
+  "fit_timeout_seconds": 3600.0,
   "update_every_states": 2000
 }

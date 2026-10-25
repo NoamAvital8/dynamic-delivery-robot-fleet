@@ -1,6 +1,8 @@
 # Delivery robot fleet and new switching meta-model: AI review handoff
 
-Status: **25 October 2026; implementation built, new experiment not run.**
+Status: **25 October 2026; review fixes implemented, new experiment not run.**
+
+**Current revision:** both reviews of `2ffd002` have been addressed; read [the review-fix addendum](docs/switching_review_fixes_20261025.md) for the change list and remaining verification limits. Label version is `projected_completion_fifo_v2_event_order`. Original receipts under `review_bundle/evidence/build/` remain historical; the current receipts are `review_bundle/CURRENT_BUILD_SOURCES.json` and `CURRENT_BUILD_VERIFICATION.json`.
 
 This document gives a reviewer enough context and source/data access to audit the proposed training. It describes the intended behavior and the implementation; it does **not** certify that the implementation is correct. The owner has asked for code review before running anything. Do not interpret this handoff, historical documents, or launch examples as permission to generate new scenarios, fit models, start delivery simulations, resume services, or change VM jobs.
 
@@ -95,8 +97,8 @@ The new dataset plan is:
 
 - Eight development cities × 100 training = **800 training scenario inputs**.
 - Eight development cities × 25 validation = **200 validation scenario inputs**.
-- Both learners use the same scenario inputs for fair matching, but run their own model-chosen paths: **1,600 training actor episodes + 400 frozen validation episodes**.
-- Four final-test cities × 50 = **200 future test inputs**, to be created only after development models are frozen. Evaluating both selectors then needs 400 selector episodes, plus a separate fixed-benchmark campaign.
+- Both learners use the same scenario inputs for fair matching, but run their own model-chosen paths: **1,600 training actor episodes + 400 frozen-selector validation episodes**. All ten fixed policies also run on the same 200 validation inputs, adding **2,000 fixed-policy episodes**, so complete development validation contains 2,400 matched outcomes.
+- Four final-test cities × 50 = **200 future test inputs**, to be created only after development models are frozen. Evaluating both selectors and all ten fixed policies needs **2,400 matched episodes**; the current `evaluate` command includes all of them.
 
 All **new** scenarios, labels, and learned switching weights are currently absent because generation/training has not been launched. The prepared maps already exist. Development generation must not open test graphs or create test inputs. Test-city metadata and maps are packaged for audit and later evaluation; they are not model-training examples.
 
@@ -132,7 +134,7 @@ The teacher's argmin and `C_chosen - min(C)` can diagnose local decision quality
 
 The terminal projection starts at the 15-minute boundary. It introduces **no future arrivals** and does not run the dispatch/event engine to the end of the day.
 
-For assigned work, it freezes the remaining committed edge, handling time, stop sequence, remaining travel/charging phases, active charging sessions, FIFO waiters, and known incoming background charging. A joint event calendar schedules robots and charger ports together. A wait at one station shifts downstream arrivals at other stations, so queue effects propagate between robots and visits.
+For assigned work, it freezes the remaining committed edge, handling time, stop sequence, remaining travel/charging phases, active charging sessions, FIFO waiters, and known incoming background charging. A joint event calendar schedules robots and charger ports together. Current movement/service/charge events retain saved physical IDs. Handling/charging completions have priority zero, movement priority one, and travel paths are represented edge by edge. Synthesized continuation events use a counter starting at the saved boundary counter. A wait at one station shifts downstream arrivals at other stations, so queue effects propagate between robots and visits.
 
 It must count every released unfinished order exactly once. Pending, unassigned orders are included through a common deterministic terminal completion rule: process them by release time/id and append pickup/dropoff after a feasible robot's frozen commitments. Robots are ordered by estimated readiness plus pickup travel; the rule considers up to five feasible candidates, expanding the search when candidates are infeasible, and chooses the earliest estimated **no-new-queue** finish. After appending all pending work, the code jointly projects all plans again, so newly introduced charging can delay previously committed deliveries.
 
@@ -148,7 +150,7 @@ The controller refits each family after roughly **2,000 additional labeled state
 
 XGBoost and NN have separate replay/actor directories. They share inputs, not the chosen next states or the teacher-best trajectory. Validation/test use one explicitly frozen model for the whole episode and do not collect counterfactual training labels.
 
-Action intents, boundary snapshots, row hashes, checkpoints, per-job locks, and atomic file replacement support interruption/resume. A saved intent must retain its original action if a newer model is published during interruption. The adapter restores the selected pre-projection snapshot to prevent scoring cache writes from contaminating subsequent physical states. Async publication timing can change trajectories between clean runs even with fixed random seeds; per-decision model hashes are therefore essential provenance.
+Action intents, full row-content hashes, per-job locks, fsynced atomic replacement, a persisted initial snapshot, and retained current/previous checkpoint pairs support interruption/resume. A saved intent must retain its original action if a newer model is published during interruption. The adapter restores the selected pre-projection snapshot to prevent scoring cache writes from contaminating subsequent physical states. A lost committed boundary is accepted only if exact serialized bytes can be reproduced from a retained state and original intent; otherwise recovery fails closed. Production snapshot reproduction and storage-failure behavior remain untested. Async publication timing can change trajectories between clean runs even with fixed random seeds; per-decision model hashes are therefore essential provenance.
 
 ## 6. Models and input features
 
@@ -163,7 +165,7 @@ Each episode has equal total fitting weight: a row gets weight inversely proport
 
 New model serialization is JSON, including feature schema/scalers, candidate order, label version, training-record identity, cities, episodes, and model-specific parameters. New live simulator state snapshots use pickle internally for resume; these are different artifacts from model JSON.
 
-Feature extraction is inherited from [`review_bundle/backend/src/delivery_fleet/meta_policy/features.py`](review_bundle/backend/src/delivery_fleet/meta_policy/features.py), called by new `Backend.features()`. It includes map node/edge counts and geometry, fleet composition/availability and battery summaries, current policy and its age, pending/active work and deadline slack, recent observed arrival rates and demand posterior uncertainty, charging occupancy/waits, and recent realized loss. Read the function for the exact feature schema; the examples here are not an exhaustive specification.
+Base feature extraction is inherited from [`review_bundle/backend/src/delivery_fleet/meta_policy/features.py`](review_bundle/backend/src/delivery_fleet/meta_policy/features.py), called by new `Backend.features()`. It includes map node/edge counts and geometry, fleet composition/availability and battery summaries, current policy and its age, pending/active work and deadline slack, recent observed arrival rates and demand posterior uncertainty, charging occupancy/waits, and recent realized loss. Read the function for the exact feature schema; the examples here are not an exhaustive specification.
 
 The simulator necessarily contains future scenario orders so it can release them later. **The actor's feature extractor and demand estimator must only use released observations and configured public priors.** No future arrival list/count, seed, scenario ID, city-name ID, terminal teacher cost, or final outcome may be an input. The name-based feature checks are only one guard; inspect the actual data flow. Public prior rates are configured expectations, not rates inferred from the realized test scenario.
 
@@ -208,7 +210,14 @@ Paths below are relative to this branch, so they work in a clone or on GitHub.
 | [`src/fleet_switching/collection.py`](src/fleet_switching/collection.py) | `collect_episode`; choose-before-label, identical branch starts, actor-state adoption, transactional checkpoint/resume |
 | [`src/fleet_switching/models.py`](src/fleet_switching/models.py) | `check_rows`, `fit`, `Predictor`; weighting/scalers, both regressors, JSON inference |
 | [`src/fleet_switching/workflow.py`](src/fleet_switching/workflow.py) | `_pool`, `_publish`, `train`, `evaluate`, `estimate`; worker budget, refits, frozen validation/test |
-| [`src/fleet_switching/__init__.py`](src/fleet_switching/__init__.py) | Target identifier `projected_completion_fifo_v1` |
+| [`src/fleet_switching/__init__.py`](src/fleet_switching/__init__.py) | Target identifier `projected_completion_fifo_v2_event_order` |
+| [`src/fleet_switching/provenance.py`](src/fleet_switching/provenance.py) | Campaign, learner, input, content and freeze identities |
+| [`src/fleet_switching/replay.py`](src/fleet_switching/replay.py) | Append-only SQLite replay, fixed fit watermarks, content/membership guards and coverage/regret summaries |
+| [`src/fleet_switching/execution.py`](src/fleet_switching/execution.py) | Fresh process per episode/fit, async fitting, memory accounting and bounded owned-process shutdown |
+| [`src/fleet_switching/backend_lifecycle.py`](src/fleet_switching/backend_lifecycle.py) | Idempotent legacy hooks and runtime-owned cache cleanup |
+| [`src/fleet_switching/features.py`](src/fleet_switching/features.py) | Additional observable route-work, queue and spatial supply/demand features |
+| [`src/fleet_switching/reporting.py`](src/fleet_switching/reporting.py) | Matched 12-participant comparisons, development-selected fixed baseline and paired intervals |
+| [`docs/switching_review_fixes_20261025.md`](docs/switching_review_fixes_20261025.md) | Current fix list, estimates and verification limits |
 | [`docs/small_city_switching_v2.md`](docs/small_city_switching_v2.md) | Original build notes, VM staging details, future launch commands and estimate |
 | [`requirements-switching.txt`](requirements-switching.txt) | New learner dependencies; not a complete simulator environment lock |
 | [`review_bundle/requirements-review.txt`](review_bundle/requirements-review.txt) | Broader packages for local source/test review; prepared graphs do not need a new OSM download |
@@ -236,7 +245,7 @@ The snapshot includes backend `src`, `scripts`, `operations`, `configs`, `docs`,
 
 ## 9. Data and evidence included in Git
 
-[`review_bundle/PROVENANCE.json`](review_bundle/PROVENANCE.json) records the backend revision, clean snapshot status, original export checksums, and omissions. The verifier checks 177 exported files plus the 18 staged new-build files against recorded hashes. Additional handoff/helper/environment files are versioned normally. `.gitattributes` preserves the bundle's exact bytes across Windows/Linux checkouts.
+[`review_bundle/PROVENANCE.json`](review_bundle/PROVENANCE.json) records the backend revision, clean snapshot status, original export checksums, and omissions. The verifier checks 177 original exported files plus the current source manifest. The original 18-file receipt is historical and is not the checksum specification for revised code. Additional handoff/helper/environment files are versioned normally. `.gitattributes` preserves the bundle's exact bytes across Windows/Linux checkouts.
 
 | Bundled material | Size/count and purpose |
 |---|---|
@@ -304,12 +313,12 @@ The source checkout's VM config has absolute VM paths; do not use it directly on
 If desired, install review dependencies in your own isolated environment from `review_bundle/requirements-review.txt`. There is no need to run a training command to inspect the logic. To run only the already scoped synthetic tests, set `PYTHONPATH=src` and use:
 
 ```bash
-python -B -m pytest -q -p no:cacheprovider tests/test_switching_projection.py tests/test_switching_backend_projection.py tests/test_switching_guards.py tests/test_switching_collector.py
+python -B -m pytest -q -p no:cacheprovider tests/test_switching_projection.py tests/test_switching_backend_projection.py tests/test_switching_guards.py tests/test_switching_collector.py tests/test_switching_hardening.py tests/test_switching_execution.py
 ```
 
-On PowerShell use `$env:PYTHONPATH = 'src'`. These tests exercise synthetic arithmetic, backend-shaped fixtures, a stub collector, and fixed-weight inference/serialization. They do not instantiate the production FleetRuntime, optimize models, generate scenarios, or advance a real delivery simulation. Avoid running every historical operational script simply because it is included in the bundle.
+On PowerShell use `$env:PYTHONPATH = 'src'`. These tests exercise synthetic arithmetic, backend-shaped fixtures, a stub collector, and fixed-weight inference/serialization and derivative arithmetic, content-tampering cases, stubbed publication, and child-process control stubs. They do not instantiate the production FleetRuntime, optimize models, generate scenarios, or advance a real delivery simulation. Avoid running every historical operational script simply because it is included in the bundle.
 
-The future operational flow is `prepare` → `train` → frozen models → `prepare-test` → `evaluate`, each requiring explicit `--execute`. `prepare` creates only development inputs. `train` performs both model-driven collections, periodic refits, final fits and frozen validation. `evaluate` runs the two frozen selectors only; it does not run all fixed benchmarks. These commands are described for review, **not authorized to be launched by this handoff**.
+The future operational flow is `prepare` → `train` → frozen models → `prepare-test` → `evaluate`, each requiring explicit `--execute`. `prepare` creates only development inputs. `train` performs model-driven collection, bounded asynchronous refits, final fits and matched validation for both selectors plus all ten fixed policies. It freezes models and the development-selected fixed baseline. `evaluate` runs all 12 participants on held-out inputs. Opening final test blocks subsequent development in the same campaign. These commands are described for review, **not authorized to be launched by this handoff**.
 
 ## 11. VM layout, if access is available
 
@@ -320,42 +329,33 @@ The owner originally provided SSH access as `ssh gal.pinto@132.68.161.40`. This 
 | `/data/workspace/robot_delivery/dynamic-delivery-robot-fleet` | Main VM project and venv |
 | `/data/workspace/robot_delivery/dynamic-delivery-robot-fleet-meta-policy` | Preserved simulator checkout at the pinned backend commit |
 | Main project `runs/icaps_small_city_maps_v1_20261025` | Prepared small-city manifest and new maps |
-| Main project `runs/icaps_small_city_switching_v2_20261025` | Source-only new build: `code/src/`, `operations/`, `config.json`, tests and build receipts |
+| Main project `runs/icaps_small_city_switching_v3_review_fixes_20261025` | Target for revised source-only build: `src/`, `operations/`, `configs/small_city_switching_v2.json`, tests and build receipts; check current verification receipt for staging status |
 | Main project `.venv/bin/python` | Existing VM interpreter |
 | Main project `runs/icaps_static_policy_nn_v1_20261024/dependencies` | Existing isolated CPU-XGBoost dependency directory referenced by VM config |
 
-Older campaigns, paused workers, existing maps and legacy models are preserved. Do not thaw/resume them or overwrite their outputs. A real new campaign should use its own output directory and a single controller. The Git review package and staged VM build are tied by `BUILD_SOURCES.json`; the materializer verifies the 18 new-build source hashes.
+Older campaigns, paused workers, existing maps and legacy models are preserved. Do not thaw/resume them or overwrite their outputs. A real new campaign should use its own output directory and a single controller. The revised Git/VM sources are tied by `review_bundle/CURRENT_BUILD_SOURCES.json`. The original 18-file staging receipt remains historical; the materializer verifies current source hashes.
 
 ## 12. Parallelism and expected training time
 
-The VM reports **72 logical CPUs / 36 physical core IDs**. Default new collection admission is up to **64 episode worker processes**, reserving eight logical CPUs for fitting/coordinator/other work. Numerical libraries in each worker are limited to one thread. XGBoost/NN fitting uses four threads; candidate benchmark branches are sequential within a worker, avoiding ten nested worker pools. Resource limits are configuration choices, not a guarantee that all 72 CPUs stay fully occupied.
+The VM reports **72 logical CPUs / 36 physical core IDs**. Admission allows up to **64 simultaneous episode processes**, each with one numerical thread. Every episode gets a fresh process. One separately budgeted asynchronous fitter uses four threads; branches remain sequential inside an episode.
 
-The controller preserves a **64 GiB available-memory reserve** and budgets **1.5 GiB prospective RAM per worker**. It checks available memory before admitting more work. Actual RSS can exceed that estimate; admission checks are not a hard cgroup limit or a guarantee against memory pressure. Shared cache initialization, oversubscription, existing VM work, refit latency, and large graph routes need measurement.
+Admission retains a **64 GiB available-memory reserve**, budgets **1.5 GiB per prospective episode**, accounts for submitted workers whose allocation is not yet visible, and separately reserves **8 GiB for fitting**. Crossing the reserve triggers cooperative shutdown and bounded termination of unresponsive owned processes. This is monitored admission, not a hard cgroup limit or protection against unrelated VM allocations. Actual startup, RSS and throughput remain unmeasured.
 
-Planning arithmetic for both families:
+Both learners need approximately **800,000 training branches**. Complete development validation adds approximately **120,000 windows**: 400 selector episodes and 2,000 fixed-policy episodes. Applying the unmeasured 0.7–2.5 seconds/window band to 920,000 windows gives 179–639 worker-hours. At 36 effective workers plus an assumed 2–6 hours of overhead, the arithmetic is **about 7–24 elapsed hours**.
 
-```text
-1,600 training episodes × ~50 decisions/episode × 10 policies
-    ≈ 800,000 counterfactual 15-minute branches
-
-Assumed 0.7–2.5 seconds/branch including the new terminal projection
-    ≈ 156–556 worker-hours
-
-At ~36 effective workers, plus 2–6 hours for startup/refits/validation:
-    ≈ 6–22 elapsed hours for both learners and development validation
-```
-
-Budget **24–36 hours for a first full campaign** until actual measurements exist. This is a conditional estimate, not a measured completion promise. It excludes the final four-city selector/fixed-benchmark comparison campaign. Historical means for the old 15-minute branch windows, excluding their old long scoring tails, were New Delhi 0.0863 s, Haifa 0.2774 s, Tel Aviv 0.4054 s and Manhattan 2.026 s. The new 10-policy scorer, new maps, heavy profiles, projected queues, cache startup and repeated full-data NN refits are unbenchmarked. Small maps alone do not ensure cheap overloaded scenarios.
+Budget **24–48 hours for the first full development campaign**, pending measurements of the corrected edge-level scorer, fresh-process startup, refits, replay and workload drains. Final-test comparison is additional. These are conditional estimates, not measured completion promises. Historical old-window timings in the planner are context, not corrected-scorer benchmarks.
 
 ## 13. What has and has not been verified
 
-**31 synthetic tests passed locally and on the VM** at build time. Source hashes matched the staged build. The read-only planner passed. The portable handoff helper verifies all exported checksums and has inflated all 12 maps with exact raw-hash matches on the local machine. No new scenario generation, production event simulation, model optimization, training controller, or final-test evaluation has been run.
+The original build had 31 synthetic tests passing locally and on the VM. Current scoped test counts and hashes are recorded in [CURRENT_BUILD_VERIFICATION.json](review_bundle/CURRENT_BUILD_VERIFICATION.json) and [CURRENT_BUILD_SOURCES.json](review_bundle/CURRENT_BUILD_SOURCES.json). The revised suite exercises pure queue/event arithmetic, backend-shaped fixtures, stub collector transitions, content tampering, checkpoint fallback, native-thread limits with a stubbed publisher, process failure/cleanup and fixed-weight NN derivatives. No actual optimizer or production event engine is used.
 
-This means that arithmetic fixtures and intended transaction invariants have evidence, but **production integration, fixed-policy equivalence, terminal projection accuracy, peak memory, real fitting compatibility and throughput remain unverified**. Importing backend definitions or inspecting function signatures is not an integration test. The build receipts explicitly record this distinction.
+The portable helper verifies all 177 original export hashes and current-source hashes; the 12 prepared maps remain unchanged. **No new scenario generation, production delivery simulation, model fitting, training campaign, final-test evaluation or pilot has been run.**
 
-There is currently no basis to claim that either new selector beats a fixed benchmark. A switching policy can in principle outperform every fixed policy on an episode because it can combine their strengths, but local 15-minute projected labels can miss long-term effects. Performance should be measured against fixed-policy runs with matching graphs, scenarios, fleets, initial batteries, base weights and physical semantics.
+Production fixed-policy parity, adapter/projector integration, cold fitting/serialization, cross-process snapshot reproduction, power-loss behavior, real memory and throughput still need a separately authorized bounded development pilot. Synthetic tests are not production certification.
 
-For eventual evaluation, report per-city results, raw total loss, equal-city/per-robot summaries, paired episode differences, uncertainty, and failures/incomplete coverage. Distinguish the best **single fixed policy overall** from the **hindsight best fixed policy per scenario**; the latter is a stronger diagnostic baseline unavailable to an online selector. Do not compare mismatched scenario subsets or use old benchmark totals as though they came from the new workload distribution.
+The 15-minute actor-chosen transition rule, 12-hour arrival horizon and four held-out cities are unchanged. The terminal score still omits future demand and future fleet value. Longer lookahead, explicit exploration and a learned terminal value remain research proposals. New observable route-work and spatial supply/demand features reduce some input aliasing without supplying future arrivals.
+
+There is no new-selector performance result. Matched reporting now covers both selectors and all ten fixed policies, a fixed baseline selected on development data, and hindsight best fixed per scenario as a separate diagnostic. Incomplete/mismatched comparisons are rejected. Paired intervals are conditional on the observed cities; four final cities do not establish universal geographic generalization.
 
 ## 14. Specific questions for the reviewing AI
 
@@ -367,9 +367,9 @@ Please audit code and scientific assumptions, not just whether files import. Use
 4. **Terminal approximation:** Does the pending shortlist/no-new-queue selection bias comparisons? Could freezing background charging or omitting future coverage/battery value systematically favor a benchmark? What later small, explicitly authorized production pilot would quantify projection error and decision-ranking usefulness?
 5. **Information separation:** Inspect feature and demand-prior data flow, not just feature names. Can future scenario information, realized order counts, city/test identities, validation labels, test outcomes or incompatible historical data enter fitting/scaling or policy choice?
 6. **Learning correctness:** Check weighted centering/scaling, per-episode weights, ten-head XGBoost fitting/inference, NN backpropagation/Adam/regularization and serialization. Is the cost-regression target appropriate for regret and rare high-priority failures? How limiting is deterministic Reactive Insertion bootstrap with no explicit exploration? Old model-version replay and asynchronous update schedules also deserve scrutiny.
-7. **Identity and resume:** Does experiment identity cover every dependency that changes outcomes? In particular, `science_id()` currently hashes backend `src` and top-level `scripts`, and the new adapter/projector, but does not hash every configuration, new workflow/model file, base weight, or backend `operations` dependency. Other guards cover some of these separately; verify that their combined coverage is sufficient. Review duplicate handling, frozen artifact enforcement, row validation and crash ordering; atomic rename is not an `fsync` durability guarantee.
+7. **Identity and resume:** Audit combined scientific/campaign/learner/content identities, including backend operations, fixed weights, all new source, dependency versions and actor intents. Confirm worker-limit changes remain operational. Check SQLite fit-watermark consistency, active-manifest membership, immutable dataset/freeze receipts, the final-test barrier, durable writes and retained state pairs. Regeneration that changes committed snapshot bytes must fail closed.
 8. **Resources and speed:** Audit process/thread limits, import order for thread limits, shared cache locks/index initialization, 1.5-GiB admission assumptions, memory behavior of collecting/re-reading replay and repeated full refits, pool failure/exit behavior, and coexistence with existing VM work. The VM has 72 logical CPUs, not 72 independent physical cores.
-9. **Validation/evaluation completeness:** Frozen validation must run full episodes without teacher-label feedback. The current new `evaluate()` covers selectors, not the matched fixed-benchmark campaign or complete statistical comparison. Identify missing evaluation tooling and metrics before anyone claims a win.
+9. **Validation/evaluation completeness:** Frozen validation must run full episodes without teacher-label feedback. The current `evaluate()` covers selectors and all ten fixed policies. Verify complete input matching, the frozen development-selected baseline, paired reporting, failures and uncertainty before anyone claims a win.
 10. **Portability:** Verify the pinned dependency is actually used, all source/data paths resolve after materialization, exact source/model/map identities survive a fresh checkout, and the minimum requirements are compatible. Do not assume synthetic tests establish XGBoost fitting or real event-loop compatibility.
 
 Suggested review output: a prioritized findings list with source locations and evidence; any missing safeguards or evaluation components; a short statement of what is supported versus untested; and the smallest targeted validation plan to run **after separate launch authorization**. If a premise in this document disagrees with the code, report the disagreement explicitly.

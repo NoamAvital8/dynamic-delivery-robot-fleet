@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+import tempfile
 from pathlib import Path
 
 DEVELOPMENT = frozenset(("tel_aviv", "haifa", "manhattan", "new_delhi", "delft", "leuven", "oxford", "palo_alto"))
@@ -32,11 +33,42 @@ def read(path):
 
 
 def atomic(path, value):
+    durable_bytes(path, (json.dumps(value, sort_keys=True, allow_nan=False) + "\n").encode())
+
+
+def sync_directory(path):
+    """Persist a rename on POSIX. Windows fsyncs the file before replacement."""
+    if os.name != "nt":
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+
+def durable_bytes(path, data):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(path.name + f".{os.getpid()}.tmp")
-    temp.write_text(json.dumps(value, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
-    temp.replace(path)
+    descriptor, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    temp = Path(name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temp.replace(path)
+        sync_directory(path.parent)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def immutable(path, value):
+    path = Path(path)
+    if path.exists():
+        if read(path) != value:
+            raise ValueError("Refusing to replace immutable artifact: " + str(path))
+    else:
+        atomic(path, value)
 
 
 @contextmanager
@@ -92,6 +124,9 @@ class Config:
     fit_threads: int = 4
     memory_reserve_gib: float = 64.
     worker_memory_gib: float = 1.5
+    trainer_memory_gib: float = 8.
+    cancellation_grace_seconds: float = 15.
+    fit_timeout_seconds: float = 3600.
     update_every_states: int = 2000
     bootstrap_policy: str = "reactive_insertion"
     max_post_horizon_minutes: int = 10080
@@ -107,8 +142,11 @@ class Config:
         if isinstance(self.reserved_cpus, bool) or not isinstance(self.reserved_cpus, int) or self.reserved_cpus < self.fit_threads + 1:
             raise ValueError("Reserve CPU capacity for the trainer and coordinator")
         if (not math.isfinite(self.worker_memory_gib) or self.worker_memory_gib <= 0
-                or not math.isfinite(self.memory_reserve_gib) or self.memory_reserve_gib < 64):
+                or not math.isfinite(self.memory_reserve_gib) or self.memory_reserve_gib < 64
+                or not math.isfinite(self.trainer_memory_gib) or self.trainer_memory_gib <= 0):
             raise ValueError("Invalid memory budget; retain at least 64 GiB reserve")
+        if any(not math.isfinite(v) or v <= 0 for v in (self.cancellation_grace_seconds, self.fit_timeout_seconds)):
+            raise ValueError("Shutdown and fitting time limits must be positive")
         if tuple(self.policies) != POLICIES or self.bootstrap_policy not in POLICIES:
             raise ValueError("The frozen candidate portfolio contains all ten benchmarks")
 
@@ -148,5 +186,5 @@ def workers(config, cpus=None, memory_gib=None):
     cpus = cpus if cpus is not None else (len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count() or 1)
     memory_gib = available_gib() if memory_gib is None else memory_gib
     cpu_slots = max(0, cpus - config.reserved_cpus)
-    memory_slots = max(0, int((memory_gib - config.memory_reserve_gib) // config.worker_memory_gib))
+    memory_slots = max(0, int((memory_gib - config.memory_reserve_gib - config.trainer_memory_gib) // config.worker_memory_gib))
     return min(config.worker_limit, cpu_slots, memory_slots)

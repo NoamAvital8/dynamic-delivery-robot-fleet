@@ -1,0 +1,11 @@
+# Observed direct dependency versions from the preserved VM inventory.
+# Target interpreter: CPython 3.14.4, Linux x86_64. Install only when authorized.
+# This pins direct packages; it is not a complete transitive/native environment lock.
+numpy==2.5.3
+scipy==1.18.1
+networkx==3.7
+scikit-learn==1.9.1
+xgboost-cpu==3.4.1
+threadpoolctl==3.7.0
+requests==2.34.2
+pytest==9.1.1

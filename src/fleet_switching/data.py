@@ -7,23 +7,36 @@ from pathlib import Path
 
 from . import LABEL_VERSION
 from .backend import activate
-from .config import DEVELOPMENT, HELD_OUT, POLICIES, atomic, guard_city, identity, read, sha
+from .config import DEVELOPMENT, HELD_OUT, POLICIES, atomic, guard_city, identity, immutable, locked, read, sha
+from .provenance import ensure_campaign, freeze_receipt, require_development_open, science_id
 
 PROFILES = ("ordinary", "surge", "spatial_shift", "priority_shift", "charging_pressure")
 
 
-def science_id(config):
-    backend = Path(config.backend_root)
-    paths = sorted((backend / "src/delivery_fleet").rglob("*.py")) + sorted((backend / "scripts").glob("*.py"))
-    if not paths:
-        raise ValueError("The preserved simulator backend is missing")
-    own = Path(__file__).parent
-    return identity({"backend": {str(p.relative_to(backend)): sha(p) for p in paths},
-        "adapter": sha(own / "backend.py"), "projection": sha(own / "projection.py"),
-        "label": LABEL_VERSION, "decision_minutes": 15, "policies": POLICIES})
-
-
 def prepare(config, test=False):
+    with locked(Path(config.output) / ".campaign.lock"):
+        if not test:
+            require_development_open(config)
+        campaign = ensure_campaign(config, create=not test)
+        frozen = freeze_receipt(config) if test else None
+        if test:
+            immutable(Path(config.output) / "test_opened.json", {
+                "campaign_id": campaign["campaign_id"], "freeze_id": frozen["freeze_id"]})
+        manifest = Path(config.output) / "datasets" / ("test_manifest.json" if test else "development_manifest.json")
+        if manifest.exists():
+            data = _load_dataset(config, test, require_receipt=False)
+            immutable(manifest.with_name(manifest.stem.replace("_manifest", "_receipt") + ".json"),
+                      dataset_receipt(data, manifest))
+            return data
+        return _prepare(config, test, campaign, frozen)
+
+
+def dataset_receipt(data, path):
+    return {"campaign_id":data["campaign_id"], "freeze_id":data.get("freeze_id"),
+            "manifest_sha256":sha(path)}
+
+
+def _prepare(config, test, campaign, frozen):
     """Only an explicit CLI command calls this; never executes a delivery policy."""
     import numpy as np
     activate(config)
@@ -32,16 +45,8 @@ def prepare(config, test=False):
     from delivery_fleet.scenario_creator import ImportanceDistribution, NodeDemandProfile, ScenarioCreator
     from delivery_fleet.meta_policy.separation import workload_identity
     root = Path(config.output)
-    if test and not (root / "frozen_models.json").is_file():
-        raise ValueError("Freeze development models before preparing the held-out test set")
-    if test:
-        frozen = read(root / "frozen_models.json")
-        if any(sha(v["path"]) != v["sha256"] for v in frozen["models"].values()):
-            raise ValueError("A frozen development model changed")
     splits = ("test",) if test else ("train", "validation")
     manifest_path = root / "datasets" / ("test_manifest.json" if test else "development_manifest.json")
-    if manifest_path.exists():
-        raise ValueError("Dataset manifest already exists; use it rather than regenerate scenarios")
     episodes, seen_workloads, seen_seeds = [], set(), set()
     for row in config.maps("test" if test else "train"):
         graph = Path(row["path"])
@@ -98,22 +103,33 @@ def prepare(config, test=False):
                     "initial_battery_fraction":float(rng.uniform(.4,.75)) if profile == "charging_pressure" else 1.,
                     # Configured public historical expectation, never test realizations.
                     "prior_rates_per_hour":{str(k):fleet*.30*p for k,p in [(1,.8),(2,.15),(5,.05)]}})
-    result = {"label_version":LABEL_VERSION,"science_id":science_id(config),
+    result = {"label_version":LABEL_VERSION,"science_id":campaign["science_id"],
+              "campaign_id":campaign["campaign_id"], "freeze_id":frozen["freeze_id"] if test else None,
               "config":asdict(config),"episodes":episodes,"role":"test" if test else "development"}
-    atomic(manifest_path, result)
+    immutable(manifest_path, result)
+    immutable(manifest_path.with_name("test_receipt.json" if test else "development_receipt.json"),
+              dataset_receipt(result, manifest_path))
     return result
 
 
 def load_dataset(config, test=False):
+    return _load_dataset(config, test, require_receipt=True)
+
+
+def _load_dataset(config, test, require_receipt):
     path = Path(config.output) / "datasets" / ("test_manifest.json" if test else "development_manifest.json")
     data = read(path)
-    if data["label_version"] != LABEL_VERSION or data["science_id"] != science_id(config):
+    campaign = ensure_campaign(config)
+    if (data["label_version"] != LABEL_VERSION or data["science_id"] != campaign["science_id"]
+            or data.get("campaign_id") != campaign["campaign_id"]):
         raise ValueError("Simulator/projection identity changed; do not reuse incompatible labels")
+    if test and data.get("freeze_id") != freeze_receipt(config)["freeze_id"]:
+        raise ValueError("Test inputs belong to another model freeze")
     for key in ("base_seed","duration_hours","decision_minutes","train_per_city","validation_per_city","test_per_city"):
         if data["config"][key] != getattr(config,key):
             raise ValueError("Dataset preparation settings changed")
     maps = {r["key"]:r for r in config.maps("test" if test else "train")}
-    seen_ids, seeds, workloads = set(), {}, {}
+    seen_ids, seeds, workloads, counts = set(), set(), set(), {}
     for e in data["episodes"]:
         guard_city(e["city"], e["split"])
         if (test and e["split"] != "test") or (not test and e["split"] == "test"):
@@ -121,12 +137,28 @@ def load_dataset(config, test=False):
         if e["id"] in seen_ids:
             raise ValueError("Duplicate episode identity")
         seen_ids.add(e["id"])
+        pair = e["city"], e["split"]
+        counts[pair] = counts.get(pair, 0) + 1
         if e["city"] not in maps or str(Path(e["graph"])) != str(Path(maps[e["city"]]["path"])) or e["graph_sha256"] != maps[e["city"]]["sha256"]:
             raise ValueError("Scenario graph/city role mismatch")
         if sha(e["scenario"]) != e["scenario_sha256"]:
             raise ValueError("Scenario bytes changed")
         for key, seen in (("seed",seeds),("workload_sha256",workloads)):
-            previous = seen.setdefault(e[key], e["split"])
-            if previous != e["split"]:
-                raise ValueError("Training/validation overlap")
+            if e[key] in seen:
+                raise ValueError("Duplicate workload or scenario seed, including training/validation overlap")
+            seen.add(e[key])
+    expected = {(city, split): getattr(config, {"train":"train_per_city", "validation":"validation_per_city", "test":"test_per_city"}[split])
+                for city in maps for split in (("test",) if test else ("train", "validation"))}
+    if counts != expected:
+        raise ValueError("Dataset city/split cardinalities are incomplete or changed")
+    if test:
+        development = load_dataset(config)
+        prior_seeds = {e["seed"] for e in development["episodes"]}
+        prior_workloads = {e["workload_sha256"] for e in development["episodes"]}
+        if seeds & prior_seeds or workloads & prior_workloads:
+            raise ValueError("Final-test workloads overlap development inputs")
+    if require_receipt:
+        receipt = path.with_name("test_receipt.json" if test else "development_receipt.json")
+        if not receipt.is_file() or read(receipt) != dataset_receipt(data, path):
+            raise ValueError("Dataset receipt is missing or its manifest changed")
     return data

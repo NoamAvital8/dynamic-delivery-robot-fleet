@@ -1,138 +1,100 @@
-# Small-city switching: build-only handoff
+# Small-city switching: current build guide
 
-This implementation is staged for review. No scenario preparation, delivery
-simulation, model fitting, or training service is launched by importing it or
-by running `plan`. Every other command requires an explicit `--execute` flag.
+Read [the project handoff](../PROJECT_AND_SWITCHING_META_REVIEW_2026-10-25.md) and
+[review-fix addendum](switching_review_fixes_20261025.md) before reviewing or
+launching this code. The original 2ffd002 build receipts are historical; current
+sources are described by review_bundle/CURRENT_BUILD_SOURCES.json.
 
 ## Experiment
 
 - Eight development cities: Tel Aviv, Haifa, Manhattan, New Delhi, Delft,
   Leuven, Oxford and Palo Alto.
-- Four final-test cities: Cambridge (UK), Ghent, Salamanca and Lucca.
-  Their names are a hard-coded exclusion from training and validation, checked
-  again at map selection, dataset loading, collection and model fitting.
-- One hundred training and 25 validation scenarios per development city.
-  There are 800 training + 200 validation inputs. Both learners use those same
-  inputs, but collect their own trajectories: **1,600 training runs and 400
-  frozen validation runs** in total.
-- Twelve-hour arrival scenarios, **15-minute decisions**, and all ten supported
-  benchmark policies as candidate actions. Continue decisions after the arrival
-  horizon if deliveries remain; incomplete work is never accepted as a result.
-- Balanced ordinary, surge, spatial-shift, priority-shift and charging-pressure
-  profiles. Fleet size and initial battery vary within declared bounds. Public
-  demand priors are configured expectations, never actual test arrival counts.
-- XGBoost: ten cost-difference regressors, 200 depth-four trees each.
-- Small NN: shared ReLU layers of 64 and 32 units, ten linear outputs, weighted
-  Adam optimization in NumPy. Both models predict per-robot cost differences
-  from the state-wise portfolio mean. Episode weights prevent long trajectories
-  from dominating merely because they supply more decision windows.
+- Four final-only cities: Cambridge UK, Ghent, Salamanca and Lucca.
+- Per development city: 100 training and 25 disjoint validation scenarios.
+  Each model collects its own actor-chosen trajectories: 1,600 training episodes.
+- Full development validation: 200 inputs times two frozen selectors and ten
+  fixed benchmarks = 2,400 matched episodes. Final test later uses 200 new inputs
+  times the same 12 participants = another 2,400 episodes.
+- Twelve-hour arrivals; 15-minute decisions through completion of all deliveries.
+- XGBoost: ten depth-four, 200-tree regressors. NN: ReLU 64/32, ten outputs.
+- Both predict centered per-robot costs. All scalers and fitting weights use
+  training only; old six-action rollout labels are incompatible.
 
-The initial selector is a documented constant Reactive Insertion initializer.
-After 2,000 new states per family, the controller fits and publishes a learned
-checkpoint. Workers adopt updates at decision boundaries. No actor chooses its
-action using the teacher branch scores. Every decision records the exact model
-hash that made it. Validation uses one frozen final checkpoint per family and
-never contributes labels or scalers to fitting.
+## Collection, projection and model updates
 
-## Completion score
+The actor records its action before teacher labels. Every candidate starts from
+the same complete snapshot. Its label is the actual full delivery loss added in
+the next window plus projected full loss for all released unfinished work.
+Only the actor-selected pre-projection boundary becomes the next physical state.
 
-For each benchmark, restore the same complete simulator snapshot, run exactly
-the next 15 minutes, and save its boundary snapshot **before** terminal scoring.
-The label is completed-delivery loss added during that window plus projected
-full request-to-delivery loss for every released unfinished order.
+The joint FIFO projector preserves saved current event IDs and physical event
+priorities, projects travel edge by edge, and includes current/known incoming
+charging, handling and pending orders. Pending assignments use the common bounded
+earliest-feasible completion rule and are jointly reprojected. Missing or stale
+legs are reconstructed with start-state/feasibility guards. Independent order,
+stop and capacity checks reject incomplete labels.
 
-The read-only projector preserves the remaining committed edge, current handling
-time, subsequent stop order, charging energy/duration, active charging sessions,
-existing FIFO waiters and known incoming background charging. Its joint event
-calendar propagates charger delays between robots and across subsequent stations.
-It does not simulate new arrivals or run the dispatch engine beyond the boundary.
+This is a frozen completion approximation without new future demand or terminal
+fleet value. It does not establish long-run action optimality.
 
-Unassigned pending orders are not free. A common terminal rule appends them in
-release order to a feasible robot after its frozen commitments. It chooses the
-earliest no-new-queue completion among a bounded shortlist of feasible robots,
-then recomputes **all** itineraries jointly, including any delays the added
-charging requests cause to previously committed missions. Missing cached legs
-are rebuilt battery-feasibly without changing the service-stop sequence and are
-counted in diagnostics. Any incomplete/infeasible projection invalidates the label.
+Each family begins with Reactive Insertion. A bounded asynchronous fitter refits
+after roughly 2,000 new compatible states from that family's own trajectories.
+It reads an immutable SQLite replay prefix; the coordinator keeps processing
+workers and failures. Model adoption happens only between decisions. Frozen
+validation/test does not collect teacher labels or update weights.
 
-This is a fast terminal approximation. It does not estimate demand arriving
-after the decision window, or the future value of an empty robot's location.
-Background charging is frozen rather than interrupted by the terminal pending
-assignment rule. A later authorized pilot should check projection quality and
-full-episode policy performance before relying on these labels at scale.
+## Safety and resources
 
-Only the actor-selected **15-minute** boundary becomes the next actual state.
-Atomic action intents, teacher rows and state hashes preserve that choice across
-interruption, even if a newer model is published before resumption. Finished
-results and model artifacts are immutable and reused on resume.
+Every episode and fit uses a fresh owned process. Legacy graph hooks are
+idempotent and runtime-owned registry entries are released. Up to 64 episode
+processes, one numerical thread each, coexist with one four-thread fitter.
+Admission reserves 64 GiB available RAM, 8 GiB for the trainer, and 1.5 GiB per
+prospective episode, including not-yet-visible startup allocations. Reserve
+crossings/failures request checkpoint-safe stop, then terminate unresponsive
+owned children after a bounded grace period. These are admission estimates,
+not a hard system memory limit.
 
-Old collection labels are **not** merged: they used six actions, sampled 25% of
-decisions and had a different continuation target. All existing artifacts stay
-preserved. The new implementation reads the preserved VM backend as a dependency
-and never edits it or the original campaign sources.
+Campaign, dataset, model/freeze and row-content identities prevent incompatible
+reuse. Initial state and current/previous checkpoint pairs are retained with
+durable file writes and POSIX directory fsync. Exact-byte recovery is required
+for missing committed boundaries; mismatches fail closed. Opening final test
+prevents further development in the same campaign. Windows/storage limitations
+and remaining production verification are described in the addendum.
 
-## Parallel execution
+## Source-only VM build
 
-The VM reports 72 logical CPUs and 36 physical core IDs. Default admission is up
-to 64 episode workers, four fitting threads, and remaining capacity for the
-coordinator and existing work. Each simulation worker uses one numerical thread;
-there is no nested pool multiplying workers by ten candidate benchmarks. The old
-60-process cap is not used. Worker count also respects a 64 GiB available-memory
-reserve and a configurable 1.5 GiB prospective worker allowance. Admission pauses
-if the reserve is threatened; actual peak memory and throughput still need a pilot.
+Target directory (see review_bundle/CURRENT_BUILD_VERIFICATION.json for actual
+staging status; SSH may be unavailable):
 
-## Build verification and runtime estimate
+/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v3_review_fixes_20261025
 
-Verification uses only synthetic arithmetic fixtures, deterministic collector
-test doubles, serialization/inference checks and a read-only planning command.
-It does not construct the production FleetRuntime, generate scenarios, advance
-delivery events or optimize either model. Production integration and timings are
-therefore intentionally unbenchmarked at this handoff.
+Launcher: operations/switching_meta.py.
+Config: configs/small_city_switching_v2.json.
+Old v2 build and all historical campaigns are preserved.
 
-Historical mean 15-minute branch-window costs, excluding old scoring tails:
+The only read-only operational command is:
 
-| Existing city | Seconds per branch |
-|---|---:|
-| New Delhi | 0.0863 |
-| Haifa | 0.2774 |
-| Tel Aviv | 0.4054 |
-| Manhattan | 2.0260 |
+    python -B operations/switching_meta.py plan --config configs/small_city_switching_v2.json
 
-The new design has about **800,000 training branches**: 1,600 actor episodes x
-approximately 50 decisions including drain x ten actions. Assuming 0.7-2.5 seconds
-per branch including projection gives 156-556 worker-hours. At a conservative
-36 effective workers plus 2-6 hours for preparation, refits, validation and
-overhead, the planning range is **about 6-22 elapsed hours for both learners**.
-Allow **24-36 hours for the first full campaign** until new maps, heavy profiles,
-projection overhead, cache warm-up and memory-limited concurrency are measured.
-This estimate excludes the separate held-out four-city benchmark campaign.
+For a future explicitly authorized launch, the command sequence is prepare,
+train, prepare-test, evaluate, each requiring --execute. Train now includes
+matched development baselines. Evaluate includes both frozen selectors and all
+ten matched fixed benchmarks, complete reporting and a development-selected
+fixed baseline. Do not run a second controller against the same output.
 
-## Commands for a later explicit launch
+A Git-only reviewer can run review_bundle/materialize.py to verify hashes.
+Its optional --execute only inflates the bundled maps and writes portable paths.
+It never creates scenarios or runs a simulator. Production collection targets
+Linux; portable source inspection and the scoped synthetic suite work on Windows.
 
-On the VM the build is under:
+## Conditional estimate and verification
 
-`/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v2_20261025`
+Approximately 800,000 training branches plus 120,000 validation windows give
+about 7–24 elapsed hours under the unmeasured planning assumptions. Budget
+24–48 hours for the first full development campaign until actual corrected
+projection/startup/refit/RAM measurements exist. Final test is additional.
 
-The readable launcher is `operations/switching_meta.py`; configuration is
-`config.json`. Replace the placeholders below with those absolute paths.
-
-```text
-python -B operations/switching_meta.py plan --config config.json
-python -B operations/switching_meta.py prepare --config config.json --execute
-python -B operations/switching_meta.py train --config config.json --execute
-```
-
-The first command is read-only. The second prepares development inputs only.
-The third is the **explicit training launch**, and is not executed during build.
-Do not run a second controller for the same output directory.
-
-Only after models have been frozen by development training:
-
-```text
-python -B operations/switching_meta.py prepare-test --config config.json --execute
-python -B operations/switching_meta.py evaluate --config config.json --execute
-```
-
-Neither command updates a model. `evaluate` runs the two frozen selectors; an
-additional fixed-benchmark evaluation campaign is separate future work. No test
-scenario is generated by the development preparation command.
+Current scoped counts are in review_bundle/CURRENT_BUILD_VERIFICATION.json.
+Only pure fixtures, stub transitions/publication, child-process controls and
+fixed-weight arithmetic are exercised. No production FleetRuntime, scenario
+generation, actual model optimization, delivery simulation or pilot is launched.

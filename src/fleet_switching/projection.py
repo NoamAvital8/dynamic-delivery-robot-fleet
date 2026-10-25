@@ -20,6 +20,7 @@ class Step:
     minutes: float
     station: int | None = None
     dropoff: int | None = None
+    event_order: int | None = None
 
     def __post_init__(self):
         if self.kind not in ("travel", "service", "charge") or not math.isfinite(self.minutes) or self.minutes < 0:
@@ -28,6 +29,8 @@ class Step:
             raise ValueError("Charge step requires a station")
         if self.dropoff is not None and self.kind != "service":
             raise ValueError("Only service completion may deliver an order")
+        if self.event_order is not None and (not isinstance(self.event_order, int) or self.event_order < 0):
+            raise ValueError("Invalid saved physical event order")
 
 
 @dataclass(frozen=True)
@@ -35,10 +38,13 @@ class Session:
     robot: int
     station: int
     finish: float
+    event_order: int | None = None
 
     def __post_init__(self):
         if not math.isfinite(self.finish) or self.finish < 0:
             raise ValueError("Invalid active-charge finish time")
+        if self.event_order is not None and (not isinstance(self.event_order, int) or self.event_order < 0):
+            raise ValueError("Invalid saved charge event order")
 
 
 @dataclass(frozen=True)
@@ -79,22 +85,29 @@ class Result:
     queue_wait_minutes: float
 
 
-def project(now, plans, ports, orders, active=(), waiting=()):
+def project(now, plans, ports, orders, active=(), waiting=(), *, sequence_start=0):
     """Compute each remaining dropoff once; never mutate any supplied object."""
     if not math.isfinite(now) or now < 0 or any(int(p) != p or p < 1 for p in ports.values()):
         raise ValueError("Invalid projection clock or station ports")
+    if not isinstance(sequence_start, int) or sequence_start < 0:
+        raise ValueError("Invalid boundary event counter")
     plans = {rid: tuple(steps) for rid, steps in plans.items()}
     positions = dict.fromkeys(plans, 0)
     busy = {station: set() for station in ports}
     queues = {station: deque() for station in ports}
     blocked, completed, ready = set(), {}, {}
-    events, sequence = [], itertools.count()
+    active, waiting = tuple(active), tuple(waiting)
+    saved = [step.event_order for steps in plans.values() for step in steps if step.event_order is not None]
+    saved += [session.event_order for session in active if session.event_order is not None]
+    if len(saved) != len(set(saved)):
+        raise ValueError("Duplicate saved physical event order")
+    events, sequence = [], itertools.count(max([sequence_start, *(v + 1 for v in saved)]))
     queue_wait = 0.
 
-    def event(time, priority, kind, rid, station=None, dropoff=None):
+    def event(time, priority, kind, rid, station=None, dropoff=None, order=None):
         if not math.isfinite(time) or time < now - 1e-8:
             raise ValueError("Invalid projected event time")
-        heapq.heappush(events, (time, priority, next(sequence), kind, rid, station, dropoff))
+        heapq.heappush(events, (time, priority, next(sequence) if order is None else order, kind, rid, station, dropoff))
 
     def fill(station, time):
         nonlocal queue_wait
@@ -109,7 +122,7 @@ def project(now, plans, ports, orders, active=(), waiting=()):
             raise ValueError("Invalid/duplicate active charging session")
         busy[session.station].add(session.robot)
         blocked.add(session.robot)
-        event(max(now, session.finish), 0, "charged", session.robot, session.station)
+        event(max(now, session.finish), 0, "charged", session.robot, session.station, order=session.event_order)
     if any(len(busy[s]) > ports[s] for s in ports):
         raise ValueError("Active charging sessions exceed physical ports")
     for request in waiting:
@@ -120,9 +133,11 @@ def project(now, plans, ports, orders, active=(), waiting=()):
         queues[request.station].append((request.robot, request.minutes, now))
     for station in ports:
         fill(station, now)
-    for rid in sorted(plans):
+    for index, rid in enumerate(sorted(plans)):
         if rid not in blocked:
-            event(now, 1, "advance", rid)
+            # Setup consumes no physical event IDs. Current commitments retain
+            # their original IDs; subsequent events use the boundary counter.
+            event(now, -1, "advance", rid, order=-len(plans) + index)
     processed = 0
     while events:
         time, _, _, kind, rid, station, dropoff = heapq.heappop(events)
@@ -148,7 +163,8 @@ def project(now, plans, ports, orders, active=(), waiting=()):
             queues[step.station].append((rid, step.minutes, time))
             fill(step.station, time)
         else:
-            event(time + step.minutes, 1, "advance", rid, dropoff=step.dropoff)
+            event(time + step.minutes, 0 if step.kind == "service" else 1,
+                  "advance", rid, dropoff=step.dropoff, order=step.event_order)
     if set(completed) != set(orders) or set(ready) != set(plans):
         raise ValueError("Incomplete projected work must never receive a low-loss label")
     loss = sum(orders[key].loss(finish) for key, finish in completed.items())

@@ -1,4 +1,6 @@
 data/graphs/*.graphml filter=lfs diff=lfs merge=lfs -text
+.gitattributes text eol=lf
+pytest.ini text eol=lf
 
 # The review bundle contains compressed maps; no new Git LFS objects are needed.
 review_bundle/** -text
@@ -7,5 +9,8 @@ src/fleet_switching/*.py text eol=lf
 operations/switching_meta.py text eol=lf
 configs/small_city_switching_v2.json text eol=lf
 docs/small_city_switching_v2.md text eol=lf
+docs/switching_review_fixes_20261025.md text eol=lf
+PROJECT_AND_SWITCHING_META_REVIEW_2026-10-25.md text eol=lf
 tests/test_switching_*.py text eol=lf
 requirements-switching.txt text eol=lf
+requirements-switching-vm-pins.txt text eol=lf
