@@ -1,0 +1,66 @@
+{
+  "label_version": "projected_completion_fifo_v2_event_order",
+  "development_cities": [
+    "delft",
+    "haifa",
+    "leuven",
+    "manhattan",
+    "new_delhi",
+    "oxford",
+    "palo_alto",
+    "tel_aviv"
+  ],
+  "reserved_test_cities": [
+    "cambridge_uk",
+    "ghent",
+    "lucca",
+    "salamanca"
+  ],
+  "families": [
+    "xgboost",
+    "nn"
+  ],
+  "training_episodes_total": 1600,
+  "validation_episodes_total": 400,
+  "validation_fixed_benchmark_episodes_total": 2000,
+  "future_test_scenarios": 200,
+  "future_test_selector_and_fixed_episodes": 2400,
+  "decision_minutes": 15,
+  "scenario_hours": 12,
+  "benchmarks_per_training_state": 10,
+  "training_branches_approx": 800000,
+  "validation_branches_approx": 120000,
+  "admitted_worker_slots": 64,
+  "cpu_budget": 72,
+  "fit_threads": 4,
+  "memory_reserve_gib": 64.0,
+  "trainer_memory_gib": 8.0,
+  "episode_process_lifetime": "one episode",
+  "old_label_rows_reused": 0,
+  "historical_window_seconds_by_city": {
+    "new_delhi": 0.0863,
+    "haifa": 0.2774,
+    "tel_aviv": 0.4054,
+    "manhattan": 2.026
+  },
+  "assumed_seconds_per_branch_including_projection_range": [
+    0.7,
+    2.5
+  ],
+  "estimated_collection_and_validation_worker_hours_range": [
+    178.88888888888889,
+    638.8888888888889
+  ],
+  "estimated_training_plus_validation_elapsed_hours_range": [
+    6.969135802469136,
+    23.746913580246915
+  ],
+  "first_campaign_budget_hours_range": [
+    24,
+    48
+  ],
+  "estimate_status": "Unbenchmarked corrected scorer, fresh-process startup and refits; conditional arithmetic only",
+  "scope_note": "Both learners plus selectors and all ten fixed policies on development validation; final test excluded",
+  "launches_training": false,
+  "launches_simulations": false
+}

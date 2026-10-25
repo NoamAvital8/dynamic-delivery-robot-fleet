@@ -1,0 +1,14 @@
+{
+  "status": "copied_and_hash_verified",
+  "git_source_commit": "406e65f61f2eeab35f4fa51690321304dc9ca2f2",
+  "target": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v3_review_fixes_20261025",
+  "source_files_verified": 34,
+  "preserved_backend_commit": "5e76f5384aec98e9d5a538b27dae205df301fa28",
+  "preserved_backend_files_verified": 123,
+  "prepared_maps_verified": 12,
+  "base_weights_verified": 2,
+  "scenario_generation_started": false,
+  "delivery_simulations_started": 0,
+  "model_fit_started": false,
+  "training_controller_started": false
+}
