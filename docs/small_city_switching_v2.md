@@ -101,4 +101,11 @@ The synthetic suite uses pure fixtures, stub transitions/publication,
 child-process controls and fixed-weight arithmetic. A separate bounded pilot
 has exercised the production runtime, queue projection, actual fitting,
 serialization, interruption/resume and matched development comparisons. Its
-evidence and immutable source snapshot are bundled. The final test remains unopened. The full development campaign has now started in the verified v4 output; see [the launch record](FULL_DEVELOPMENT_LAUNCH_2026-10-25.md). Do not start a duplicate controller.
+evidence and immutable source snapshot are bundled. The full development campaign completed, and the separately authorized [final test](FINAL_TEST_LAUNCH_2026-10-26.md) is now running with frozen models. Do not start a duplicate controller.
+
+## Authorized final-test launch
+
+Development training and validation completed on 26 October. The owner then
+authorized [the frozen-model final test](FINAL_TEST_LAUNCH_2026-10-26.md).
+Use `test_run_status.json` for that phase; do not start a duplicate controller
+or resume development after `test_opened.json`.

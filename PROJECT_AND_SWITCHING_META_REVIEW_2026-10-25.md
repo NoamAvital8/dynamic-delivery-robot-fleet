@@ -1,12 +1,16 @@
 # Delivery robot fleet and new switching meta-model: AI review handoff
 
-Status: **25 October 2026; full development training for XGBoost and NN started at 22:45 Israel time; final test remains unopened.**
+Status: **26 October 2026; both models trained, development validation complete, authorized final test started at 12:57 Israel time.**
+
+Read [the final-test launch record](docs/FINAL_TEST_LAUNCH_2026-10-26.md) for the frozen-model protocol, 200 test inputs, 2,400 outcomes and live status paths.
+
+Completed development validation found XGBoost 1.16% and NN 2.26% higher on the declared equal-city loss-per-robot metric than the best fixed policy, Full MLE Reservation. Those are development results; final-test outcomes have not yet been summarized.
 
 Read [the full-training launch record](docs/FULL_DEVELOPMENT_LAUNCH_2026-10-25.md) for the 800/200 development split, 64-worker resource setup, logs and immutable launch evidence. The earlier build and pilot receipts describe their pre-launch verification times.
 
 **Current revision:** both reviews of `2ffd002` have been addressed; read [the review-fix addendum](docs/switching_review_fixes_20261025.md) and [the production pilot and audit report](docs/SWITCHING_PILOT_RESULTS_2026-10-25.md). The pilot found and fixed a finished-episode projection bug. Campaign identity also now guards online refit cadence. Label version is `projected_completion_fifo_v2_event_order`; source identities distinguish the corrected scorer from earlier artifacts. Original receipts under `review_bundle/evidence/build/` remain historical; current receipts are `review_bundle/CURRENT_BUILD_SOURCES.json` and `CURRENT_BUILD_VERIFICATION.json`.
 
-This document gives a reviewer enough context and source/data access to audit the proposed training. It describes the intended behavior and the implementation; it does **not** certify that the implementation is correct. The owner separately authorized the bounded pilot and then full development training. The final test remains unauthorized. Reviewers should inspect its saved evidence. Do not interpret this handoff, historical documents, or launch examples as permission to generate new scenarios, fit models, start delivery simulations, resume services, or change VM jobs.
+This document gives a reviewer enough context and source/data access to audit the proposed training. It describes the intended behavior and the implementation; it does **not** certify that the implementation is correct. The owner separately authorized the bounded pilot and then full development training. The owner subsequently authorized final-test evaluation after model freezing; no further training is authorized in this campaign. Reviewers should inspect its saved evidence. Do not interpret this handoff, historical documents, or launch examples as permission to generate new scenarios, fit models, start delivery simulations, resume services, or change VM jobs.
 
 ## 1. Repository and which version to review
 
@@ -203,6 +207,7 @@ Paths below are relative to this branch, so they work in a clone or on GitHub.
 | File | Responsibility / review entry point |
 |---|---|
 | [`operations/switching_meta.py`](operations/switching_meta.py) | Standalone readable launcher; resolves local `src/` or VM staged `code/src/` |
+| [`operations/run_switching_final_test.py`](operations/run_switching_final_test.py) | Frozen-model final-test supervisor, protected development artifacts, automatic recovery and no fitting path |
 | [`operations/run_switching_development.py`](operations/run_switching_development.py) | Detached full-development supervisor: verifies source/scope, prepares 800/200 inputs, trains both families and validates; no final-test command |
 | [`operations/switching_pilot.py`](operations/switching_pilot.py) | Explicit capped pilot: 16 training inputs, two development validation inputs, at most eight episode workers and shared two-hour guard |
 | [`operations/switching_pilot_validation.py`](operations/switching_pilot_validation.py) | Twenty controlled candidate continuations on two existing development inputs; no fitting or final test |
@@ -348,13 +353,13 @@ The VM reports **72 logical CPUs / 36 physical core IDs**. Admission allows up t
 
 Admission retains a **64 GiB available-memory reserve**, budgets **1.5 GiB per prospective episode**, accounts for submitted workers whose allocation is not yet visible, and separately reserves **8 GiB for fitting**. Crossing the reserve triggers cooperative shutdown and bounded termination of unresponsive owned processes. This is monitored admission, not a hard cgroup limit or protection against unrelated VM allocations. Startup, RSS and eight-worker throughput are now measured in the pilot report; 64-worker scaling remains an estimate.
 
-Both learners need approximately **800,000 training branches**. Complete development validation adds approximately **120,000 windows**: 400 selector episodes and 2,000 fixed-policy episodes. Read [the measured pilot report](docs/SWITCHING_PILOT_RESULTS_2026-10-25.md) and `review_bundle/evidence/switching_pilot_20261025/TRAINING_TIME_ESTIMATE.json` for the current estimate and its assumptions. The old unmeasured 7–24-hour arithmetic / 24–48-hour precautionary budget is superseded. Final-test time is additional and remains unmeasured; its cities were not simulated for timing.
+Both learners need approximately **800,000 training branches**. Complete development validation adds approximately **120,000 windows**: 400 selector episodes and 2,000 fixed-policy episodes. Read [the measured pilot report](docs/SWITCHING_PILOT_RESULTS_2026-10-25.md) and `review_bundle/evidence/switching_pilot_20261025/TRAINING_TIME_ESTIMATE.json` for the current estimate and its assumptions. The old unmeasured 7–24-hour arithmetic / 24–48-hour precautionary budget is superseded. The final-test phase is separate; its authorized launch and live status are described in the final-test launch record.
 
 ## 13. What has and has not been verified
 
 The original build had 31 synthetic tests passing locally and on the VM. Current scoped test counts and hashes are recorded in [CURRENT_BUILD_VERIFICATION.json](review_bundle/CURRENT_BUILD_VERIFICATION.json) and [CURRENT_BUILD_SOURCES.json](review_bundle/CURRENT_BUILD_SOURCES.json). The revised suite exercises pure queue/event arithmetic, backend-shaped fixtures, stub collector transitions, content tampering, checkpoint fallback, native-thread limits with a stubbed publisher, process failure/cleanup and fixed-weight NN derivatives. No actual optimizer or production event engine is used.
 
-The portable helper verifies all 177 original export hashes and current-source hashes; the 12 prepared maps remain unchanged. A bounded pilot now supplies actual scenario generation, learner optimization, queue projection, branch-order, fitting/serialization, interruption/resume, memory, runtime and matched outcome evidence. Full development training subsequently started as documented in the launch record; final test remains unopened. The reservation-model provenance audit reconstructed both 100-row historical training archives and found no held-out-city overlap; its historical-immutability qualification is recorded in the report.
+The portable helper verifies all 177 original export hashes and current-source hashes; the 12 prepared maps remain unchanged. A bounded pilot now supplies actual scenario generation, learner optimization, queue projection, branch-order, fitting/serialization, interruption/resume, memory, runtime and matched outcome evidence. Full development training and all 2,400 validation outcomes subsequently completed; the owner then authorized the final test, now running with frozen models. The reservation-model provenance audit reconstructed both 100-row historical training archives and found no held-out-city overlap; its historical-immutability qualification is recorded in the report.
 
 Power-loss behavior and arbitrary storage failures remain untested. The pilot's eight-worker throughput does not establish 64-worker throughput, and two validation inputs do not establish geographic generalization.
 

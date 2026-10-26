@@ -1,0 +1,1 @@
+{"city_counts": {"cambridge_uk": 50, "ghent": 50, "lucca": 50, "salamanca": 50}, "development_seed_and_workload_overlap": false, "freeze_id": "f59e0d0d82873acbec1293f0ef189f09e126d99519f6c8dfadf29b33a814b7d5", "inputs": 200, "seeds": 200, "test_manifest_sha256": "df2f2d115dffa6e05e08b31f0c911843a3d85bd4187a42132963a8d7d889b58d", "workloads": 200}

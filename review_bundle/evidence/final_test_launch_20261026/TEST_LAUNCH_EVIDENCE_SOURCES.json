@@ -1,0 +1,32 @@
+{
+  "format": "repository_paths_v1",
+  "files": {
+    "review_bundle/evidence/final_test_launch_20261026/fixed/full.json": "947e702d4d6913af30f1a8227e8bb6ded40da6905e6e75934efbcba3e0fd1303",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/full_coordinated_idle.json": "7d398097642ac1e755454977b20aadf9bf56c9337c4844854ba5ad0648caa3ab",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/full_mle_reservation.json": "cbfbdc6da508d2aae902e6b0fae36ca388c4af55b87d7f33764c914eacc77bd9",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/full_no_idle.json": "ed6442e50ffed25c25b9ec147e6633c1b65c8f76e8556d63a6df52ef4268ec16",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/full_no_nn.json": "8a6bef4d4940d6c27ef622dae506616a22ca55d1193ecb97870afd46233138ca",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/full_queue_aware.json": "3bcfaa289cc47014f9a680c3b7415fa471ff33ba1c65a8d5c0918a0fc629e82c",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/myopic_ab.json": "addd3bd7bd6426f6ad9abdb01afca2a5ae28f94ffc7c40ad4575eedf887fa2e8",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/paper_sa_adapted.json": "247dcea4786e4865da9d4e5715ae1f832037d99785e010536e84566339d9fbb2",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/queue_mle_reservation.json": "96c3d6cad9cda567bec49969f7dae0a23285429f92ab2e9f66cb9689e71af52b",
+    "review_bundle/evidence/final_test_launch_20261026/fixed/reactive_insertion.json": "08449590beff68f9d067c44e02d2a045e078205810adb44f864a153e0ac0d72c",
+    "review_bundle/evidence/final_test_launch_20261026/frozen_models.json": "df928637a11de0528d2a40414f77f3f41112ce18253d309db130ee9531bf33b9",
+    "review_bundle/evidence/final_test_launch_20261026/FULL_DEVELOPMENT_COMPLETE.json": "86ecd19335334b680ebdb4f807e2d782670c4e3412d30a02577910db351c24b7",
+    "review_bundle/evidence/final_test_launch_20261026/FULL_TEST_LAUNCH.json": "1344537442c9cdb974566ca95c57c4b8f6da2139f34f8c405508fd656bc69909",
+    "review_bundle/evidence/final_test_launch_20261026/PROTECTED_DEVELOPMENT_FILES.json": "6268a49a4526daa236ac8ddce4c0a853d17db2a0314260be644ce4feedae8617",
+    "review_bundle/evidence/final_test_launch_20261026/README.md": "337b55a54948a0dc674342e87553bf68c4694fd918bd43a96178504e4b938cf3",
+    "review_bundle/evidence/final_test_launch_20261026/run_switching_final_test.py": "7069795fbc48b1f1c3db86f1492d6bb53e35019f821dbd8196872fa15dd70142",
+    "review_bundle/evidence/final_test_launch_20261026/SOURCE_MANIFEST_BEFORE_TEST.json": "277e3742aedd3347362613bdb104fa439b379d230048aeffe3e41c6e3d78b92b",
+    "review_bundle/evidence/final_test_launch_20261026/SOURCE_VERIFICATION_BEFORE_TEST.json": "afa683f00f3dd983f16a41405072f42ed134143b4dcb01b8be47629bff2ce960",
+    "review_bundle/evidence/final_test_launch_20261026/STARTUP_AUDIT.json": "ca38b540626a3b26e8d538cd354d68dbc76eb3ac348dfafc6e4744631625b689",
+    "review_bundle/evidence/final_test_launch_20261026/TEST_DATA_VERIFIED.json": "67e569011771324f117a54ff8370b3248745d2aad7d4750faf72a3b10af54fbb",
+    "review_bundle/evidence/final_test_launch_20261026/test_manifest.json": "df2f2d115dffa6e05e08b31f0c911843a3d85bd4187a42132963a8d7d889b58d",
+    "review_bundle/evidence/final_test_launch_20261026/test_opened.json": "28b5c6d83caf9bf565fe728a9cd7354ce63e1fb6a70e29828029e1d2f03ddf3b",
+    "review_bundle/evidence/final_test_launch_20261026/TEST_SCENARIOS.jsonl.gz": "1330020ec7130ab4c0dda8f6d804e427c21b744b98b8764c2759a9bf1005b539",
+    "review_bundle/evidence/final_test_launch_20261026/validation_summary.json": "3619eb2243303eecc254b22bcef92076a8ebc1b53341aa8dd8c690afc3b2daf0"
+  },
+  "final_test_opened": true,
+  "models_retrained": false,
+  "scope": "Immutable final-test launch evidence; evaluations running"
+}

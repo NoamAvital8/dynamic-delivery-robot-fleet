@@ -1,0 +1,32 @@
+{
+  "checked_utc": "2026-10-26T11:00:33.343340+00:00",
+  "checked_israel_time": "2026-10-26T13:00:33.343384+02:00",
+  "status": {
+    "available_gib": 150.0709114074707,
+    "child_pid": 1874214,
+    "completed_outcomes": 173,
+    "expected_outcomes": 2400,
+    "load_average": [
+      67.12939453125,
+      29.77978515625,
+      28.52294921875
+    ],
+    "models_retrained": false,
+    "stage": "final_test_evaluation",
+    "supervisor_pid": 1874206,
+    "test_cities": [
+      "cambridge_uk",
+      "ghent",
+      "lucca",
+      "salamanca"
+    ],
+    "updated_utc": "2026-10-26T11:00:23.616646+00:00",
+    "worker_limit": 67
+  },
+  "actual_completed_outcomes": 181,
+  "active_episode_workers": 66,
+  "host_cpu_busy_percent": 93.44700025032681,
+  "host_iowait_percent": 0.013907045309153617,
+  "development_artifacts_and_training_replay_unchanged": true,
+  "models_retrained": false
+}

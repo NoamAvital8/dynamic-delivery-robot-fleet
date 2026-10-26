@@ -1,0 +1,69 @@
+{
+  "launched_utc": "2026-10-26T10:57:40.667548+00:00",
+  "service": "robot-switching-final-test-20261026.service",
+  "service_state_at_launch": "ActiveState=active\nRestart=on-failure\nRuntimeMaxUSec=infinity\nMainPID=1874206\n",
+  "command": [
+    "systemd-run",
+    "--user",
+    "--unit=robot-switching-final-test-20261026",
+    "--property=Type=exec",
+    "--property=Restart=on-failure",
+    "--property=RestartSec=30s",
+    "--property=StartLimitIntervalSec=0",
+    "--property=RuntimeMaxSec=infinity",
+    "--property=WorkingDirectory=/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025",
+    "--setenv=PYTHONDONTWRITEBYTECODE=1",
+    "--setenv=PYTHONUNBUFFERED=1",
+    "--setenv=OMP_NUM_THREADS=1",
+    "--setenv=OPENBLAS_NUM_THREADS=1",
+    "--setenv=MKL_NUM_THREADS=1",
+    "--setenv=NUMEXPR_NUM_THREADS=1",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python",
+    "-B",
+    "-u",
+    "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/operations/run_switching_final_test.py",
+    "--execute",
+    "--expected-freeze-sha256",
+    "df928637a11de0528d2a40414f77f3f41112ce18253d309db130ee9531bf33b9"
+  ],
+  "supervisor_sha256": "7069795fbc48b1f1c3db86f1492d6bb53e35019f821dbd8196872fa15dd70142",
+  "frozen_receipt_sha256": "df928637a11de0528d2a40414f77f3f41112ce18253d309db130ee9531bf33b9",
+  "freeze_id": "f59e0d0d82873acbec1293f0ef189f09e126d99519f6c8dfadf29b33a814b7d5",
+  "campaign_id": "a54865fbefbd86217a12b59c4eac2dc2d8153d66617bd3c5fcb7d04dae0eb68e",
+  "science_id": "83b76cbdab4d5e9ad8bfc7ccd8052f8a9b64d4b96e9c555427e7c9dfb713318b",
+  "models": {
+    "nn": {
+      "learner_id": "68d088d75ee8323823757e36d20cf327b69a2aa09dc1de47d690bc0a4aaaa74a",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/models/nn/5d3fa0cd7dbc859bba22523ef1871ec008cbd7fcd2f22f37cbeb5eaba058ca4d.json",
+      "science_id": "83b76cbdab4d5e9ad8bfc7ccd8052f8a9b64d4b96e9c555427e7c9dfb713318b",
+      "sha256": "b8751b3ba6f9299b679dae50633267d859349994890ba7ed4b5f618c303ce576",
+      "training_states": 40852
+    },
+    "xgboost": {
+      "learner_id": "dea9d58e1456329e019824657778fb6c93fa58b1f061b9e99c95171aa3ce56db",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/models/xgboost/2d916e38d3e2597cf34b446bad051f3b527b7a5cd63e6b89ba1c5c7801a1162a.json",
+      "science_id": "83b76cbdab4d5e9ad8bfc7ccd8052f8a9b64d4b96e9c555427e7c9dfb713318b",
+      "sha256": "e6b8598d308206554428603db7e84a30164f6a13989ff2b0dd79f299076e0cdf",
+      "training_states": 40743
+    }
+  },
+  "baseline_selected_on_development": "full_mle_reservation",
+  "test_cities": [
+    "cambridge_uk",
+    "ghent",
+    "lucca",
+    "salamanca"
+  ],
+  "scenarios_per_city": 50,
+  "test_inputs": 200,
+  "participants_per_input": 12,
+  "expected_evaluation_outcomes": 2400,
+  "models_retrained": false,
+  "worker_limit": 67,
+  "memory_reserve_gib": 64,
+  "restart_on_failure": true,
+  "restart_delay_seconds": 30,
+  "runtime_limit": "none",
+  "ssh_disconnect_safe": true,
+  "execution_override_sha256": "20cd1498fce964794fd293747c0773019be1f776b14d217ec7386e9ce5e2b956"
+}
