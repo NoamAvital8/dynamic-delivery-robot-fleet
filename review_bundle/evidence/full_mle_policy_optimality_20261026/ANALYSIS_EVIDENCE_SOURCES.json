@@ -1,0 +1,13 @@
+{
+  "files": {
+    "review_bundle/evidence/full_mle_policy_optimality_20261026/analyze_switching_policy_optimality.py": "252bab894d696d3a4a3baffc278452c346c8f8dad94283e94427a9398dcca626",
+    "review_bundle/evidence/full_mle_policy_optimality_20261026/POLICY_OPTIMALITY.json": "4373816ad603c00cb422ff5e4ad0dfb10d13a3fa23bd28cbf59148e2760bed80",
+    "review_bundle/evidence/full_mle_policy_optimality_20261026/POLICY_OPTIMALITY.md": "fdec7ff481b9ef91311ca528fd64dee64b94a9e1c4fc4c5b1b146582deacf6b0"
+  },
+  "training_states_checked": 81595,
+  "content_hashes_verified": true,
+  "final_fit_record_hashes_verified": true,
+  "simulations_started": 0,
+  "models_fitted": 0,
+  "test_data_used": false
+}
