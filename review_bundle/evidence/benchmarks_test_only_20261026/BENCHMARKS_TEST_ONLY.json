@@ -1,0 +1,298 @@
+{
+  "created_utc": "2026-10-26T14:50:07.186707+00:00",
+  "analysis_source_sha256": "7325f680ff42d3252c6e3b524377e323f8bb41fa158670ebd075b8e5ad560f72",
+  "input_report_sha256": "08929b1b96b90ea85243098615548a21e0bb546d1e924ef38e6ab381f291cb64",
+  "input_manifest_sha256": "df2f2d115dffa6e05e08b31f0c911843a3d85bd4187a42132963a8d7d889b58d",
+  "scope": "Fixed benchmarks, final test only; no meta-model outcome used",
+  "test_scenarios": 200,
+  "matched_benchmark_outcomes": 2000,
+  "scenarios_per_city": 50,
+  "metric": "Equal-city mean of scenario loss per robot; lower is better",
+  "development_selected_reference_policy": "full_mle_reservation",
+  "best_observed_fixed_test_policy": "full_mle_reservation",
+  "ranking": [
+    "full_mle_reservation",
+    "full_coordinated_idle",
+    "queue_mle_reservation",
+    "full_no_nn",
+    "full_queue_aware",
+    "full",
+    "reactive_insertion",
+    "full_no_idle",
+    "paper_sa_adapted",
+    "myopic_ab"
+  ],
+  "per_city_winners": {
+    "cambridge_uk": "full_mle_reservation",
+    "ghent": "full_mle_reservation",
+    "lucca": "full_mle_reservation",
+    "salamanca": "full_mle_reservation"
+  },
+  "benchmarks": {
+    "myopic_ab": {
+      "name": "Myopic AB",
+      "episodes": 200,
+      "primary_loss": 597.7309880774925,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 634.0929777639387,
+        "ghent": 552.8739174118376,
+        "lucca": 500.9949553349918,
+        "salamanca": 702.9621017992017
+      },
+      "total_loss": 3480939.9634078788,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 23174,
+      "on_time_percent": 88.21469356680625,
+      "scenario_best_including_ties": 0,
+      "scenario_unique_best": 0,
+      "wins_vs_development_selected_reference": 0,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 200,
+      "paired_primary_difference_vs_reference": 441.8185866637531,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        361.43627019880506,
+        534.5048032271857
+      ],
+      "percent_higher_loss_vs_best_test": 283.37616678182906
+    },
+    "reactive_insertion": {
+      "name": "Reactive Insertion",
+      "episodes": 200,
+      "primary_loss": 164.95050891701823,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 187.99709125857748,
+        "ghent": 170.42738993961495,
+        "lucca": 166.11190032928062,
+        "salamanca": 135.2656541405998
+      },
+      "total_loss": 866523.3468036264,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26268,
+      "on_time_percent": 99.99238675295014,
+      "scenario_best_including_ties": 22,
+      "scenario_unique_best": 15,
+      "wins_vs_development_selected_reference": 39,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 161,
+      "paired_primary_difference_vs_reference": 9.03810750327878,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        7.706460209320841,
+        10.347266495612228
+      ],
+      "percent_higher_loss_vs_best_test": 5.796913793467051
+    },
+    "paper_sa_adapted": {
+      "name": "Paper SA Adapted",
+      "episodes": 200,
+      "primary_loss": 179.67950997410037,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 196.63899829491973,
+        "ghent": 185.04297005700005,
+        "lucca": 200.1085825850944,
+        "salamanca": 136.92748895938735
+      },
+      "total_loss": 928455.6003872328,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26069,
+      "on_time_percent": 99.23486867148839,
+      "scenario_best_including_ties": 15,
+      "scenario_unique_best": 14,
+      "wins_vs_development_selected_reference": 32,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 168,
+      "paired_primary_difference_vs_reference": 23.767108560360924,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        15.669792482480197,
+        33.767202025924114
+      ],
+      "percent_higher_loss_vs_best_test": 15.2438858903154
+    },
+    "full_no_nn": {
+      "name": "Full without NN",
+      "episodes": 200,
+      "primary_loss": 157.67521153509244,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 178.5480788703441,
+        "ghent": 162.9019651906321,
+        "lucca": 151.89520289572073,
+        "salamanca": 137.35559918367287
+      },
+      "total_loss": 840734.8593264103,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26251,
+      "on_time_percent": 99.92767415302626,
+      "scenario_best_including_ties": 38,
+      "scenario_unique_best": 0,
+      "wins_vs_development_selected_reference": 65,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 135,
+      "paired_primary_difference_vs_reference": 1.7628101213529987,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        1.0385504388572968,
+        2.7624537927084294
+      ],
+      "percent_higher_loss_vs_best_test": 1.1306413764194945
+    },
+    "full_no_idle": {
+      "name": "Full without Idle",
+      "episodes": 200,
+      "primary_loss": 165.04377326951942,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 187.9842077281497,
+        "ghent": 170.66663837121985,
+        "lucca": 166.33481921460782,
+        "salamanca": 135.18942776410034
+      },
+      "total_loss": 866761.8521908844,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26266,
+      "on_time_percent": 99.98477350590026,
+      "scenario_best_including_ties": 14,
+      "scenario_unique_best": 7,
+      "wins_vs_development_selected_reference": 36,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 164,
+      "paired_primary_difference_vs_reference": 9.131371855779975,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        7.8878198208684225,
+        10.348117617187565
+      ],
+      "percent_higher_loss_vs_best_test": 5.8567322246216635
+    },
+    "full": {
+      "name": "Full",
+      "episodes": 200,
+      "primary_loss": 158.70892281211405,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 180.19349194457024,
+        "ghent": 165.0938909012148,
+        "lucca": 153.366643365899,
+        "salamanca": 136.1816650367722
+      },
+      "total_loss": 843378.9272508312,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26266,
+      "on_time_percent": 99.98477350590026,
+      "scenario_best_including_ties": 23,
+      "scenario_unique_best": 1,
+      "wins_vs_development_selected_reference": 50,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 150,
+      "paired_primary_difference_vs_reference": 2.7965213983746082,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        2.248303010184622,
+        3.3544172636827576
+      ],
+      "percent_higher_loss_vs_best_test": 1.7936491087412465
+    },
+    "full_queue_aware": {
+      "name": "Full Queue Aware",
+      "episodes": 200,
+      "primary_loss": 158.620018751322,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 180.1985079618223,
+        "ghent": 165.0446374994101,
+        "lucca": 153.366643365899,
+        "salamanca": 135.8702861781566
+      },
+      "total_loss": 842652.5509334517,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26264,
+      "on_time_percent": 99.9771602588504,
+      "scenario_best_including_ties": 22,
+      "scenario_unique_best": 0,
+      "wins_vs_development_selected_reference": 48,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 152,
+      "paired_primary_difference_vs_reference": 2.7076173375825476,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        2.168217275939312,
+        3.2415121775831155
+      ],
+      "percent_higher_loss_vs_best_test": 1.736627306764027
+    },
+    "full_coordinated_idle": {
+      "name": "Full Coordinated Idle",
+      "episodes": 200,
+      "primary_loss": 157.17277414839933,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 178.6384116464129,
+        "ghent": 162.99291310418945,
+        "lucca": 152.8241506409344,
+        "salamanca": 134.23562120206057
+      },
+      "total_loss": 833870.3160170943,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26268,
+      "on_time_percent": 99.99238675295014,
+      "scenario_best_including_ties": 43,
+      "scenario_unique_best": 26,
+      "wins_vs_development_selected_reference": 48,
+      "ties_vs_development_selected_reference": 39,
+      "losses_vs_development_selected_reference": 113,
+      "paired_primary_difference_vs_reference": 1.2603727346598816,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        0.7382066922350519,
+        1.7432683108439895
+      ],
+      "percent_higher_loss_vs_best_test": 0.8083851722065827
+    },
+    "queue_mle_reservation": {
+      "name": "Queue MLE Reservation",
+      "episodes": 200,
+      "primary_loss": 157.32095897884713,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 178.54971394460946,
+        "ghent": 162.85719791954668,
+        "lucca": 151.89520289572073,
+        "salamanca": 135.98172115551168
+      },
+      "total_loss": 837136.9664701602,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26257,
+      "on_time_percent": 99.95051389417587,
+      "scenario_best_including_ties": 38,
+      "scenario_unique_best": 0,
+      "wins_vs_development_selected_reference": 66,
+      "ties_vs_development_selected_reference": 0,
+      "losses_vs_development_selected_reference": 134,
+      "paired_primary_difference_vs_reference": 1.4085575651076851,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        0.943613677600232,
+        1.9027847585515487
+      ],
+      "percent_higher_loss_vs_best_test": 0.9034288179359473
+    },
+    "full_mle_reservation": {
+      "name": "Full MLE Reservation",
+      "episodes": 200,
+      "primary_loss": 155.91240141373945,
+      "per_city_loss_per_robot": {
+        "cambridge_uk": 177.01072031893884,
+        "ghent": 161.20804886590378,
+        "lucca": 151.4741487680463,
+        "salamanca": 133.9566877020689
+      },
+      "total_loss": 828147.2914096559,
+      "delivered_orders": 26270,
+      "on_time_deliveries": 26265,
+      "on_time_percent": 99.98096688237533,
+      "scenario_best_including_ties": 79,
+      "scenario_unique_best": 62,
+      "wins_vs_development_selected_reference": 0,
+      "ties_vs_development_selected_reference": 200,
+      "losses_vs_development_selected_reference": 0,
+      "paired_primary_difference_vs_reference": 0.0,
+      "conditional_stratified_episode_bootstrap_95pct_difference_interval": [
+        0.0,
+        0.0
+      ],
+      "percent_higher_loss_vs_best_test": 0.0
+    }
+  },
+  "tie_tolerance_raw_loss": 1e-07,
+  "bootstrap_draws": 5000,
+  "interval_scope": "Episode resampling within each of the four observed cities, conditional on those cities; unadjusted for multiple comparisons",
+  "simulations_started": 0,
+  "models_fitted": 0
+}

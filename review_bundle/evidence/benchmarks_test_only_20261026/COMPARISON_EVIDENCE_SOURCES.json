@@ -1,0 +1,12 @@
+{
+  "files": {
+    "review_bundle/evidence/benchmarks_test_only_20261026/BENCHMARKS_TEST_ONLY.json": "50cc27bf321e3d3430d326f6f575f20e922e56e55a3fae7f9de6ac98c1d5bf13",
+    "review_bundle/evidence/benchmarks_test_only_20261026/BENCHMARKS_TEST_ONLY.md": "efa1cc39bca9178220033f74215d39cd5bdb492426596212f5c4e6133570458f",
+    "review_bundle/evidence/benchmarks_test_only_20261026/compare_fixed_test_benchmarks.py": "7325f680ff42d3252c6e3b524377e323f8bb41fa158670ebd075b8e5ad560f72"
+  },
+  "scope": "fixed benchmarks, final test only",
+  "test_scenarios": 200,
+  "matched_fixed_outcomes": 2000,
+  "simulations_started": 0,
+  "models_fitted": 0
+}
