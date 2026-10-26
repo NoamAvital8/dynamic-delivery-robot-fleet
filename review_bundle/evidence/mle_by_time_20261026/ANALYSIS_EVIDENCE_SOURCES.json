@@ -1,0 +1,13 @@
+{
+  "files": {
+    "review_bundle/evidence/mle_by_time_20261026/analyze_mle_by_time.py": "9ffc06f96428be0f700c62bc825a215999b793e9484adaddd74181bc3d20636a",
+    "review_bundle/evidence/mle_by_time_20261026/analyze_switching_policy_optimality.py": "252bab894d696d3a4a3baffc278452c346c8f8dad94283e94427a9398dcca626",
+    "review_bundle/evidence/mle_by_time_20261026/MLE_BY_TIME.json": "b8e9824b068dab3ebbe9dbcd21535e72cd89b3478706fb7bc7342b6633f8f1b9",
+    "review_bundle/evidence/mle_by_time_20261026/MLE_BY_TIME.md": "e8b68386d76f333b9bb52bb72ceaf79d5d82223420132d27bc4c1da4b03b2225"
+  },
+  "training_states_checked": 81595,
+  "development_fixed_mle_episodes_checked": 200,
+  "test_outcomes_used": false,
+  "simulations_started": 0,
+  "models_fitted": 0
+}
