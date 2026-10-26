@@ -1,0 +1,25 @@
+{
+  "updated_utc": "2026-10-26T07:24:24.465590+00:00",
+  "before": {
+    "ActiveState": "active",
+    "Restart": "no",
+    "RestartUSec": "100ms",
+    "RuntimeMaxUSec": "infinity",
+    "MainPID": "1841893",
+    "ExecStart": "{ path=/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python ; argv[]=/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python -B -u /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/recovery/20261026/resume_training.py --execute ; ignore_errors=no ; start_time=[Mon 2026-10-26 09:16:31 IST] ; stop_time=[n/a] ; pid=1841893 ; code=(null) ; status=0/0 }"
+  },
+  "after": {
+    "ActiveState": "active",
+    "Restart": "on-failure",
+    "RestartUSec": "30s",
+    "RuntimeMaxUSec": "infinity",
+    "MainPID": "1841893",
+    "ExecStart": "{ path=/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python ; argv[]=/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python -B -u /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/recovery/20261026/resume_training_v2.py --execute ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }"
+  },
+  "dropin": "/home/gal.pinto/.config/systemd/user/robot-switching-training-recovery-20261026.service.d/automatic-recovery.conf",
+  "dropin_sha256": "326d162743cee442c745e09caae35d5b22f1fb61591870bcc3df0d603ae0ecd3",
+  "healthy_training_restarted": false,
+  "restart_delay_seconds": 30,
+  "resume_completed_episodes": true,
+  "unrelated_jobs_unchanged": true
+}

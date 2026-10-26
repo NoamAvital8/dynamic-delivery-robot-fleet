@@ -1,0 +1,22 @@
+{
+  "format": "repository_paths_v1",
+  "files": {
+    "review_bundle/evidence/full_development_status_20261026/models/nn.json": "b8751b3ba6f9299b679dae50633267d859349994890ba7ed4b5f618c303ce576",
+    "review_bundle/evidence/full_development_status_20261026/models/xgboost.json": "e6b8598d308206554428603db7e84a30164f6a13989ff2b0dd79f299076e0cdf",
+    "review_bundle/evidence/full_development_status_20261026/README.md": "d0837e80f6e9cfabfa3cf9c03d7fc047e7e74223161c096cd06859dc8d52c076",
+    "review_bundle/evidence/full_development_status_20261026/recovery/automatic_recovery_enabled.json": "f682cc258f2ca7848842ecf4a7b03bf14c49c90c76f64ee8b6896c7a249d7da3",
+    "review_bundle/evidence/full_development_status_20261026/recovery/execution_override_active.json": "a48f1abfc0fdd32fc5195578a54281748a7c4332709b60edb23b1b46686841f8",
+    "review_bundle/evidence/full_development_status_20261026/recovery/execution_recovery.py": "20cd1498fce964794fd293747c0773019be1f776b14d217ec7386e9ce5e2b956",
+    "review_bundle/evidence/full_development_status_20261026/recovery/RECOVERY_LAUNCH.json": "f1471e04265d704353c237bfbf3aa23331b69d18afaba1bab2f2d2defff35fab",
+    "review_bundle/evidence/full_development_status_20261026/recovery/RECOVERY_NOTES.md": "274f062249e5454f30650190da0d8052d81d5491b8c351bcda0621b75027b92a",
+    "review_bundle/evidence/full_development_status_20261026/recovery/resume_training.py": "3f744cf0c372786faf5fa45395579c15a350f505b8e803440abad1a640d9c121",
+    "review_bundle/evidence/full_development_status_20261026/recovery/resume_training_v2.py": "4ebe6479fecc0636ab0f63341872efae82f22d1591dc400e021da43898bbac50",
+    "review_bundle/evidence/full_development_status_20261026/recovery/test_automatic_recovery.py": "36fb4f6c9f795a727fbd416803e4c97bb12f182be7a49bd51577a6487ff34f97",
+    "review_bundle/evidence/full_development_status_20261026/recovery/test_execution_recovery.py": "a0a136b669bad7f59de922951bdab359e3b40bb84889d42bb86f29c8715444e4",
+    "review_bundle/evidence/full_development_status_20261026/STATUS_AUDIT.json": "ff4fa6506fb5c8ac79909a50557eb6a41f27ad4964a887fd8d74571d0f24e6ec"
+  },
+  "snapshot_utc": "2026-10-26T09:27:23.589305+00:00",
+  "training_complete": true,
+  "validation_in_progress": true,
+  "final_test_opened": false
+}

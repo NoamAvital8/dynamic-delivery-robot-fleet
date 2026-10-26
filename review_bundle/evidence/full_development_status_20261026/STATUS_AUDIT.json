@@ -1,0 +1,96 @@
+{
+  "checked_utc": "2026-10-26T09:27:23.589305+00:00",
+  "training_completed_by_family": {
+    "xgboost": 800,
+    "nn": 800
+  },
+  "final_models": {
+    "xgboost": {
+      "learner_id": "dea9d58e1456329e019824657778fb6c93fa58b1f061b9e99c95171aa3ce56db",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/models/xgboost/2d916e38d3e2597cf34b446bad051f3b527b7a5cd63e6b89ba1c5c7801a1162a.json",
+      "science_id": "83b76cbdab4d5e9ad8bfc7ccd8052f8a9b64d4b96e9c555427e7c9dfb713318b",
+      "sha256": "e6b8598d308206554428603db7e84a30164f6a13989ff2b0dd79f299076e0cdf",
+      "training_states": 40743,
+      "training_cities": [
+        "delft",
+        "haifa",
+        "leuven",
+        "manhattan",
+        "new_delhi",
+        "oxford",
+        "palo_alto",
+        "tel_aviv"
+      ],
+      "weights_hash_verified": true
+    },
+    "nn": {
+      "learner_id": "68d088d75ee8323823757e36d20cf327b69a2aa09dc1de47d690bc0a4aaaa74a",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_v4_pilot_fixes_20261025/models/nn/5d3fa0cd7dbc859bba22523ef1871ec008cbd7fcd2f22f37cbeb5eaba058ca4d.json",
+      "science_id": "83b76cbdab4d5e9ad8bfc7ccd8052f8a9b64d4b96e9c555427e7c9dfb713318b",
+      "sha256": "b8751b3ba6f9299b679dae50633267d859349994890ba7ed4b5f618c303ce576",
+      "training_states": 40852,
+      "training_cities": [
+        "delft",
+        "haifa",
+        "leuven",
+        "manhattan",
+        "new_delhi",
+        "oxford",
+        "palo_alto",
+        "tel_aviv"
+      ],
+      "weights_hash_verified": true
+    }
+  },
+  "validation_completed": 109,
+  "validation_expected": 2400,
+  "validation_completed_by_city": {
+    "tel_aviv": 48,
+    "new_delhi": 12,
+    "haifa": 49
+  },
+  "validation_completed_by_participant": {
+    "nn": 54,
+    "xgboost": 55
+  },
+  "validation_elapsed_minutes": 4.58034927447637,
+  "sum_completed_validation_worker_seconds": 11739.97066047811,
+  "resources": {
+    "sample_seconds": 5.119512875797227,
+    "process_tree_cpu_core_equivalents": 62.63291211081627,
+    "host_cpu_busy_percent": 93.31558790776,
+    "iowait_percent": 0.00814840970203982,
+    "active_worker_descendants": 67,
+    "available_gib": 135.89182662963867,
+    "worker_limit": 67,
+    "fit_threads": 4
+  },
+  "held_out_checks": {
+    "cities": [
+      "cambridge_uk",
+      "ghent",
+      "lucca",
+      "salamanca"
+    ],
+    "development_inputs": 1000,
+    "training_inputs": 800,
+    "validation_inputs": 200,
+    "held_out_input_overlap": [],
+    "models_have_no_held_out_training_cities": true,
+    "test_opened": false,
+    "test_manifest_exists": false,
+    "test_actor_outputs_exist": false
+  },
+  "current_supervisor_stage": "development_validation",
+  "old_failure": {
+    "stopped_israel_time": "2026-10-25T23:48:20+02:00",
+    "resumed_israel_time": "2026-10-26T09:16:32+02:00",
+    "cause": "Successful child result rejected while waiting only one second for process exit; execution-only recovery now active"
+  },
+  "estimated_remaining_hours": [
+    1,
+    2
+  ],
+  "planning_allowance_hours": 3,
+  "estimate_note": "Validation only remains. Based on measured training-window proxy and pilot calibration; fixed-policy trajectory and hard-city tails create uncertainty."
+}
