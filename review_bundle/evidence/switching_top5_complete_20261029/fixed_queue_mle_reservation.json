@@ -1,0 +1,1 @@
+{"kind": "bootstrap", "label_version": "projected_completion_fifo_v2_event_order", "policies": ["full_no_nn", "full", "full_queue_aware", "full_coordinated_idle", "queue_mle_reservation"], "policy": "queue_mle_reservation", "science_id": "d3610b4838d2d51c8cb03567f8f5729c3cf1765615b82322d676e1e334f356dc"}

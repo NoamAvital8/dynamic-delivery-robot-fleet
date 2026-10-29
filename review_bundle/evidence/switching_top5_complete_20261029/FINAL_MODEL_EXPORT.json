@@ -1,0 +1,28 @@
+{
+  "nn": {
+    "file": "nn_final_model.json.gz",
+    "uncompressed_sha256": "cd0a49c30d8c0dadb90f7c52ae25a65f4929cefafb08efaa60e87e34741880ec",
+    "training_states": 40668,
+    "final": true,
+    "policies": [
+      "full_no_nn",
+      "full",
+      "full_queue_aware",
+      "full_coordinated_idle",
+      "queue_mle_reservation"
+    ]
+  },
+  "xgboost": {
+    "file": "xgboost_final_model.json.gz",
+    "uncompressed_sha256": "cc54008cc8cbc6737a25ec31b5c59ba60f8a1266e3631bbf48b71aee59a277ce",
+    "training_states": 40661,
+    "final": true,
+    "policies": [
+      "full_no_nn",
+      "full",
+      "full_queue_aware",
+      "full_coordinated_idle",
+      "queue_mle_reservation"
+    ]
+  }
+}

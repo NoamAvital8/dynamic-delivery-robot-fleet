@@ -1,0 +1,22 @@
+{
+  "format": "repository_paths_v1",
+  "scientific_source_commit": "dc2f75788210fda4ce9887bba1c68a7e97d9c822",
+  "freeze_id": "a4716cea96802b7a3c1369c86e9e72eb04149dd5953da45521713a45ff311b9f",
+  "files": {
+    "review_bundle/evidence/switching_top5_complete_20261029/campaign.json": "38b7cbf1b010ce9268eaf205ead0775e27381cf0c6d4ee83c8863d93a1303d72",
+    "review_bundle/evidence/switching_top5_complete_20261029/COMPLETION_AUDIT.json": "e03103fb77a2523203194bf7dbc2792fb98975c0bfd6d4ff25599212a594505c",
+    "review_bundle/evidence/switching_top5_complete_20261029/FINAL_MODEL_EXPORT.json": "7614b04a8678eb7d2cde1683059edb7a8adf93092f52c702ce1a101fe40ec0b3",
+    "review_bundle/evidence/switching_top5_complete_20261029/fixed_full.json": "825ea99459aba9d4061cbccc6e47fdc033e3daae38a41894cd999ba49020ef2e",
+    "review_bundle/evidence/switching_top5_complete_20261029/fixed_full_coordinated_idle.json": "d34171040febe8f80dd67dfdb567b06698cfe2296711a979aa8d94e09d1a13b6",
+    "review_bundle/evidence/switching_top5_complete_20261029/fixed_full_no_nn.json": "a3829cbade22fb8706b40ac5220e9bb2b0cf6de282c210eb2bd8e9d5ded9c10b",
+    "review_bundle/evidence/switching_top5_complete_20261029/fixed_full_queue_aware.json": "6d934c0db5cd091839517ad71289e3612f0ba61fcdcec4c5fd566e7a346d5a6b",
+    "review_bundle/evidence/switching_top5_complete_20261029/fixed_queue_mle_reservation.json": "fb9e6506ed6a051aefd56ed8e1a1dd71ec937a10aa18fea2e510feaa7e5a4b19",
+    "review_bundle/evidence/switching_top5_complete_20261029/frozen_models.json": "10784ab166a77b02b4f05c163936a6fe16940b66f07ca54a389aab97714e7255",
+    "review_bundle/evidence/switching_top5_complete_20261029/FULL_DEVELOPMENT_COMPLETE.json": "3b3971ded619f3841587f82b1adaec8f20fca9869434499955a2c3dc37681df6",
+    "review_bundle/evidence/switching_top5_complete_20261029/full_run_status.json": "7e444f872bbc52a17282f6e25929a98936b5ab0f2a46a60b32e193dd180c30de",
+    "review_bundle/evidence/switching_top5_complete_20261029/nn_final_model.json.gz": "c425d59500dd39b5323105c363ccc4dadc177c47ab4fc94cf72210166cead68e",
+    "review_bundle/evidence/switching_top5_complete_20261029/README.md": "6a2b2285e616cea93e5c00909c9b57b66e20e6f472c5a4a58cec105021475e09",
+    "review_bundle/evidence/switching_top5_complete_20261029/validation_summary.json.gz": "37140bfd278ab46716e671a2e053f45916b158c27854fbc8f5813d04ef94d9f0",
+    "review_bundle/evidence/switching_top5_complete_20261029/xgboost_final_model.json.gz": "bff105e5a903233e955dc8f2163ef2a7f6e3327d2f38f8f719cd8e5fffc4ef09"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "audited_utc": "2026-10-29T14:44:33.907760+00:00",
+  "completed_utc": "2026-10-29T14:32:11.151257+00:00",
+  "training_episodes": 1600,
+  "validation_outcomes": 1400,
+  "missing": 0,
+  "failed": 0,
+  "freeze_id": "a4716cea96802b7a3c1369c86e9e72eb04149dd5953da45521713a45ff311b9f",
+  "campaign_id": "859bd2239c8e8b4a6dccdcf8e1fbcabc7e8e005fe763516c85d87aefac084fcd",
+  "science_id": "d3610b4838d2d51c8cb03567f8f5729c3cf1765615b82322d676e1e334f356dc",
+  "metric": "equal_city_mean_loss_per_robot",
+  "scores": {
+    "fixed__full": 237.4149913364987,
+    "fixed__full_coordinated_idle": 230.78858790659615,
+    "fixed__full_no_nn": 233.3310457786301,
+    "fixed__full_queue_aware": 233.12464210976734,
+    "fixed__queue_mle_reservation": 231.5416249345445,
+    "nn": 232.02514255046083,
+    "xgboost": 231.45676468948696
+  },
+  "development_selected_fixed_policy": "full_coordinated_idle",
+  "selector_relative_loss_percent_vs_best_fixed": {
+    "xgboost": 0.2895189874644988,
+    "nn": 0.5357954026587786
+  },
+  "test_opened": false,
+  "held_out_cities": [
+    "cambridge_uk",
+    "ghent",
+    "lucca",
+    "salamanca"
+  ],
+  "source_manifest_sha256": "1bc632436a200bb661d41942d95ed029d8150c729576b72953f13c97de0847c4"
+}
