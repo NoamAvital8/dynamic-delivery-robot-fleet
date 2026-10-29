@@ -15,7 +15,7 @@ import time
 
 from . import LABEL_VERSION
 from .backend import Backend, activate
-from .config import POLICIES, atomic, durable_bytes, guard_city, identity, immutable, locked, read, sha, sync_directory
+from .config import atomic, durable_bytes, guard_city, identity, immutable, locked, read, sha, sync_directory
 from .models import Predictor
 from .provenance import base_weights, learner_id, row_digest, validate_row
 from . import replay
@@ -144,7 +144,7 @@ def collect_episode(config, episode, family, science, frozen=None, backend_facto
                 else:
                     published = frozen or read(root / "models" / family / "current.json")
                     if model_hash != published["sha256"]:
-                        model = Predictor.load(published["path"], published["sha256"])
+                        model = Predictor.load(published["path"], published["sha256"], config.policies)
                         model_hash = published["sha256"]
                     action = model.choose(features)  # Always before observing branch labels.
                     intent = {"chosen_policy":action,"model_sha256":model_hash,"model_path":published["path"],
@@ -152,7 +152,7 @@ def collect_episode(config, episode, family, science, frozen=None, backend_facto
                               "state_sha256":before_hash,"job_signature":job_signature,"time_min":t}
                     atomic(intent_path, intent)
                 chosen = intent["chosen_policy"]
-                if chosen not in POLICIES:
+                if chosen not in config.policies:
                     raise ValueError("Actor chose an unsupported benchmark")
                 end = min(t + 15., config.duration_hours * 60.) if t < config.duration_hours * 60 else t + 15.
                 if row_path.exists():
@@ -174,7 +174,7 @@ def collect_episode(config, episode, family, science, frozen=None, backend_facto
                     chosen_blob = boundary_path.read_bytes()
                 else:
                     costs, diagnostics, chosen_blob = {}, {}, None
-                    candidates = POLICIES if training else (chosen,)
+                    candidates = config.policies if training else (chosen,)
                     for candidate in candidates:
                         check_stop(stop_signal)
                         branch_started = time.monotonic()

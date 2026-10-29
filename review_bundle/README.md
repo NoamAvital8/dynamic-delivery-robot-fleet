@@ -22,3 +22,10 @@ The owner subsequently authorized final test on 26 October after model freezing.
 See [the final-test launch record](../docs/FINAL_TEST_LAUNCH_2026-10-26.md) and
 `evidence/final_test_launch_20261026/`. Test outcomes are evaluation-only; no
 training, tuning or fixed-baseline selection uses those outcomes.
+
+
+The current source manifest now describes the separate nine-action ablation
+authorized on 29 October. See [its protocol](../docs/SWITCHING_NO_FULL_MLE_2026-10-29.md)
+and `evidence/switching_no_full_mle_20261029/` for launch status. Full MLE is
+excluded from that portfolio, while Queue MLE and the four-city holdout remain.
+Original completed campaign sources and receipts are preserved.

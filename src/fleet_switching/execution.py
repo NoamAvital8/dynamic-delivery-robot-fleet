@@ -1,4 +1,9 @@
-"""Bounded, owned child processes. One fresh process per episode or model fit."""
+"""Owned child processes with retained results throughout interpreter cleanup.
+
+Keep the successful recovery behavior of the original completed campaign:
+no elapsed-time fit abort; retain RAM admission and real failure handling.
+One fresh process per episode/model fit.
+"""
 from __future__ import annotations
 
 import multiprocessing
@@ -89,7 +94,8 @@ def run_episodes(config, jobs, science, progress=None, *, entry=_episode_entry,
                     raise
                 child.close()
                 active[process.pid] = {"process":process, "pipe":parent, "ready":False,
-                    "episode":episode["id"], "family":family}
+                    "episode":episode["id"], "family":family,
+                    "result_received":False, "terminal_result":None}
                 next_job = next(pending, None)
                 admitted += 1
                 allowance += config.worker_memory_gib
@@ -98,26 +104,31 @@ def run_episodes(config, jobs, science, progress=None, *, entry=_episode_entry,
                 raise RuntimeError("Memory reserve prevents further admission; existing work remains resumable")
             for pid, job in list(active.items()):
                 process, pipe = job["process"], job["pipe"]
-                result = None
-                while readable(pipe):
+                while not job["result_received"] and readable(pipe):
                     try:
                         kind, payload = pipe.recv()
                     except EOFError:
-                        if result is None:
+                        if not job["result_received"]:
                             raise RuntimeError(f"Episode worker closed without a result: {job['episode']}")
                         break
                     if kind == "ready":
                         job["ready"] = True
                     elif kind == "result":
-                        result = payload
+                        job["result_received"] = True
+                        job["terminal_result"] = payload
                         break
                     else:
                         raise RuntimeError(f"Episode failed {job['episode']}/{job['family']}: {kind}\n{payload}")
-                if result is not None:
-                    process.join(timeout=1)
-                    if process.is_alive() or process.exitcode != 0:
+                if job["result_received"]:
+                    # A successful message can precede slow native-library or
+                    # interpreter cleanup. Retain it between polls and keep
+                    # this process charged against the worker budget.
+                    process.join(timeout=0)
+                    if process.is_alive():
+                        continue
+                    if process.exitcode != 0:
                         raise RuntimeError("Episode returned but its process did not exit successfully")
-                    results.append(result)
+                    results.append(job["terminal_result"])
                     pipe.close()
                     del active[pid]
                 elif not process.is_alive():
@@ -157,6 +168,8 @@ def _fit_entry(pipe, config, family, science, episodes, watermark):
 class FitTask:
     def __init__(self, config, family, science, episodes, watermark):
         self.config, self.family, self.started = config, family, time.monotonic()
+        self._result_received = False
+        self._terminal_result = None
         context = multiprocessing.get_context("spawn")
         self.pipe, child = context.Pipe(duplex=False)
         self.process = context.Process(target=_fit_entry, args=(child, config, family, science, episodes, watermark))
@@ -169,20 +182,30 @@ class FitTask:
         child.close()
 
     def poll(self):
-        if readable(self.pipe):
+        if not self._result_received and readable(self.pipe):
             try:
                 kind, payload = self.pipe.recv()
             except EOFError as exc:
                 raise RuntimeError("Fit process exited without a result") from exc
-            self.process.join(timeout=1)
-            if kind != "result" or self.process.is_alive() or self.process.exitcode != 0:
+            if kind != "result":
                 raise RuntimeError("Fit failed: " + str(payload))
+            self._result_received = True
+            self._terminal_result = payload
+        if self._result_received:
+            self.process.join(timeout=0)
+            if self.process.is_alive():
+                return None
+            if self.process.exitcode != 0:
+                raise RuntimeError("Fit returned a result but exited with code " + str(self.process.exitcode))
             self.pipe.close()
-            return payload
+            return self._terminal_result
         if not self.process.is_alive():
+            # The final message may arrive between the first poll and exit.
+            if readable(self.pipe):
+                return self.poll()
             raise RuntimeError("Fit process exited without a result")
-        if time.monotonic() - self.started > self.config.fit_timeout_seconds:
-            raise RuntimeError("Fit exceeded its wall-clock limit")
+        # No elapsed-time failure: retain the user's memory safeguards and
+        # explicit-stop/failure handling without aborting healthy long fits.
         return None
 
     def stop(self):

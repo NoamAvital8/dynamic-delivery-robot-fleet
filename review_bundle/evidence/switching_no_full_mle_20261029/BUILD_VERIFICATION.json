@@ -1,0 +1,25 @@
+{
+  "verified_utc": "2026-10-29T10:55:33.640401+00:00",
+  "source_manifest_sha256": "13302b725e2f45c09b92541fe9e20e284f9cd5b74f707865a3bc57e7467ee5db",
+  "source_files_verified_on_vm": 53,
+  "local_regression_suite": {
+    "passed": 83,
+    "seconds": 31.46
+  },
+  "vm_regression_suite": {
+    "passed": 83,
+    "seconds": 9.25
+  },
+  "real_tiny_fit_roundtrips": [
+    "xgboost_9_heads",
+    "nn_9_outputs",
+    "xgboost_10_heads_compatibility",
+    "nn_10_outputs_compatibility"
+  ],
+  "backend_commit": "5e76f5384aec98e9d5a538b27dae205df301fa28",
+  "backend_clean": true,
+  "preflight_admitted_workers": 67,
+  "fit_threads": 4,
+  "vm_launch_performed_at_this_receipt": false,
+  "held_out_test_opened": false
+}

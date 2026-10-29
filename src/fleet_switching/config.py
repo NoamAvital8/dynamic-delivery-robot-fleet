@@ -14,6 +14,15 @@ DEVELOPMENT = frozenset(("tel_aviv", "haifa", "manhattan", "new_delhi", "delft",
 HELD_OUT = frozenset(("cambridge_uk", "ghent", "salamanca", "lucca"))
 POLICIES = ("myopic_ab", "reactive_insertion", "paper_sa_adapted", "full_no_nn", "full_no_idle",
             "full", "full_queue_aware", "full_coordinated_idle", "queue_mle_reservation", "full_mle_reservation")
+NO_FULL_MLE_POLICIES = tuple(p for p in POLICIES if p != "full_mle_reservation")
+
+
+def validate_policies(policies):
+    """Preserve the original experiment and the explicit nine-action ablation."""
+    policies = tuple(policies)
+    if policies not in (POLICIES, NO_FULL_MLE_POLICIES):
+        raise ValueError("Unsupported candidate portfolio or action ordering")
+    return policies
 
 
 def sha(path):
@@ -126,7 +135,7 @@ class Config:
     worker_memory_gib: float = 1.5
     trainer_memory_gib: float = 8.
     cancellation_grace_seconds: float = 15.
-    fit_timeout_seconds: float = 3600.
+    fit_timeout_seconds: float = 3600.  # Historical config field; no elapsed-time fit abort.
     update_every_states: int = 2000
     bootstrap_policy: str = "reactive_insertion"
     max_post_horizon_minutes: int = 10080
@@ -147,8 +156,9 @@ class Config:
             raise ValueError("Invalid memory budget; retain at least 64 GiB reserve")
         if any(not math.isfinite(v) or v <= 0 for v in (self.cancellation_grace_seconds, self.fit_timeout_seconds)):
             raise ValueError("Shutdown and fitting time limits must be positive")
-        if tuple(self.policies) != POLICIES or self.bootstrap_policy not in POLICIES:
-            raise ValueError("The frozen candidate portfolio contains all ten benchmarks")
+        validate_policies(self.policies)
+        if self.bootstrap_policy not in self.policies:
+            raise ValueError("Bootstrap policy must belong to the candidate portfolio")
 
     @classmethod
     def load(cls, path):

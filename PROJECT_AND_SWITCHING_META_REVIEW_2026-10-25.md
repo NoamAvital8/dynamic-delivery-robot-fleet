@@ -383,3 +383,12 @@ Please audit code and scientific assumptions, not just whether files import. Use
 10. **Portability:** Verify the pinned dependency is actually used, all source/data paths resolve after materialization, exact source/model/map identities survive a fresh checkout, and the minimum requirements are compatible. Do not assume synthetic tests establish XGBoost fitting or real event-loop compatibility.
 
 Suggested review output: a prioritized findings list with source locations and evidence; any missing safeguards or evaluation components; a short statement of what is supported versus untested; and the smallest targeted validation plan to run **after separate launch authorization**. If a premise in this document disagrees with the code, report the disagreement explicitly.
+
+
+## New nine-action ablation (29 October 2026)
+
+The owner authorized a separate XGBoost and NN training campaign with only
+`full_mle_reservation` removed from the action portfolio. Queue MLE remains.
+See [the ablation protocol](docs/SWITCHING_NO_FULL_MLE_2026-10-29.md).
+The new campaign retains 15-minute decisions and excludes all four test cities.
+Dated records above describe the original completed ten-action campaign.

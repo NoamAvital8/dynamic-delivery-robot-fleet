@@ -58,7 +58,7 @@ def test_memory_reserve_prevents_any_child_start(tmp_path):
 def test_publisher_limits_loaded_libraries_with_fit_stub(tmp_path,monkeypatch):
     for key in ('OMP_NUM_THREADS','OPENBLAS_NUM_THREADS','MKL_NUM_THREADS','NUMEXPR_NUM_THREADS'):
         monkeypatch.setenv(key,os.environ.get(key,'1'))
-    def no_optimization(rows,family,threads):
+    def no_optimization(rows,family,threads,policies):
         from threadpoolctl import threadpool_info
         assert all(item['num_threads']<=threads for item in threadpool_info())
         return {'kind':'test_only_fixed_payload','training_records_sha256':'synthetic'}

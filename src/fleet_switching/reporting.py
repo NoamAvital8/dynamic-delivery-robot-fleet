@@ -5,7 +5,7 @@ from collections import defaultdict
 import random
 import math
 
-from .config import POLICIES, identity
+from .config import POLICIES, identity, validate_policies
 from .features import quantile
 
 FIXED_PREFIX = "fixed__"
@@ -43,13 +43,14 @@ def _interval(rows, draws=500):
     return [quantile(samples, .025), quantile(samples, .975)]
 
 
-def compare(results, episodes, best_fixed=None, *, expected_science=None):
+def compare(results, episodes, best_fixed=None, *, expected_science=None, policies=POLICIES):
+    policies = validate_policies(policies)
     expected_episodes = {row["id"]:row for row in episodes}
     if not episodes or len(expected_episodes) != len(episodes):
         raise ValueError("Comparison needs unique, nonempty input episodes")
     if best_fixed is None and any(row["split"] == "test" for row in episodes):
         raise ValueError("Select the deployable fixed baseline on development data, not test outcomes")
-    families = ("xgboost", "nn", *(FIXED_PREFIX + policy for policy in POLICIES))
+    families = ("xgboost", "nn", *(FIXED_PREFIX + policy for policy in policies))
     indexed = {}
     for row in results:
         key = row["episode"], row["family"]
@@ -71,20 +72,20 @@ def compare(results, episodes, best_fixed=None, *, expected_science=None):
         indexed[key] = row
     expected = {(episode, family) for episode in expected_episodes for family in families}
     if set(indexed) != expected:
-        raise ValueError("All selector and ten fixed-policy outcomes are required for comparison")
+        raise ValueError("All selector and configured fixed-policy outcomes are required for comparison")
     scores = summarize(results)
     if best_fixed is None:
-        best_fixed = min(POLICIES, key=lambda p:scores[FIXED_PREFIX+p]["equal_city_mean_loss_per_robot"])
-    if best_fixed not in POLICIES:
+        best_fixed = min(policies, key=lambda p:scores[FIXED_PREFIX+p]["equal_city_mean_loss_per_robot"])
+    if best_fixed not in policies:
         raise ValueError("Unknown development-selected fixed baseline")
     paired = {}
     for family in ("xgboost", "nn"):
         paired[family] = {}
-        for policy in (*POLICIES, "hindsight_best_fixed_per_scenario"):
+        for policy in (*policies, "hindsight_best_fixed_per_scenario"):
             differences, raw, wins, ties = [], [], 0, 0
             for episode, source in expected_episodes.items():
                 actor = indexed[episode, family]
-                baseline = (min(indexed[episode,FIXED_PREFIX+p]["loss"] for p in POLICIES)
+                baseline = (min(indexed[episode,FIXED_PREFIX+p]["loss"] for p in policies)
                             if policy == "hindsight_best_fixed_per_scenario" else indexed[episode,FIXED_PREFIX+policy]["loss"])
                 delta = actor["loss"] - baseline
                 raw.append(delta)
@@ -98,7 +99,7 @@ def compare(results, episodes, best_fixed=None, *, expected_science=None):
                 "equal_city_mean_loss_per_robot_difference":mean([mean(v) for v in cities.values()]),
                 "stratified_episode_bootstrap_95pct_interval":_interval(differences),
                 "wins":wins,"ties":ties,"losses":len(raw)-wins-ties}
-    return {"scores":scores,"paired":paired,"development_selected_fixed_policy":best_fixed,
+    return {"scores":scores,"paired":paired,"policies":list(policies),"development_selected_fixed_policy":best_fixed,
         "selection_metric":"equal_city_mean_loss_per_robot", "completed_results":len(results),
         "missing_results":0,"failed_results":0,
         "interval_scope":"Episode resampling within the observed cities; not population-level geographic certainty",

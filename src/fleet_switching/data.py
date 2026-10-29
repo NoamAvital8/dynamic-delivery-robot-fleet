@@ -7,7 +7,7 @@ from pathlib import Path
 
 from . import LABEL_VERSION
 from .backend import activate
-from .config import DEVELOPMENT, HELD_OUT, POLICIES, atomic, guard_city, identity, immutable, locked, read, sha
+from .config import DEVELOPMENT, HELD_OUT, atomic, guard_city, identity, immutable, locked, read, sha
 from .provenance import ensure_campaign, freeze_receipt, require_development_open, science_id
 
 PROFILES = ("ordinary", "surge", "spatial_shift", "priority_shift", "charging_pressure")

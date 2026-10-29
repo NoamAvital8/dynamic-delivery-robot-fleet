@@ -6,11 +6,11 @@ import platform
 from pathlib import Path
 
 from . import LABEL_VERSION
-from .config import DEVELOPMENT, HELD_OUT, POLICIES, identity, immutable, read, sha
+from .config import DEVELOPMENT, HELD_OUT, identity, immutable, read, sha
 
 SCIENTIFIC_SETTINGS = ("decision_minutes", "duration_hours", "base_seed", "train_per_city",
     "validation_per_city", "test_per_city", "bootstrap_policy", "max_post_horizon_minutes",
-    "update_every_states")
+    "update_every_states", "policies")
 
 
 def package_versions(config):
@@ -47,21 +47,22 @@ def science_id(config):
     return identity({"backend": {p.relative_to(backend).as_posix(): sha(p) for p in paths},
         "label_sources": {name: sha(own / name) for name in sources},
         "base_weights": base_weights(config), "versions": package_versions(config),
-        "label": LABEL_VERSION, "decision_minutes": config.decision_minutes, "policies": POLICIES})
+        "label": LABEL_VERSION, "decision_minutes": config.decision_minutes, "policies": config.policies})
 
 
 def learner_id(config, family):
     own = Path(__file__).parent
     return identity({"family": family, "models": sha(own / "models.py"),
         "workflow": sha(own / "workflow.py"), "versions": package_versions(config),
-        "label": LABEL_VERSION, "policies": POLICIES})
+        "label": LABEL_VERSION, "policies": config.policies})
 
 
 def ensure_campaign(config, create=False):
     maps = read(config.map_manifest)["maps"]
     config.maps("train")
     value = {"science_id": science_id(config), "label_version": LABEL_VERSION,
-        "settings": {key: getattr(config, key) for key in SCIENTIFIC_SETTINGS},
+        "settings": {key: list(config.policies) if key == "policies" else getattr(config, key)
+                     for key in SCIENTIFIC_SETTINGS},
         "maps": sorted(({"city": row["key"], "role": row["role"], "sha256": row["sha256"]}
                          for row in maps), key=lambda row: row["city"]),
         "base_weights": base_weights(config), "development": sorted(DEVELOPMENT),

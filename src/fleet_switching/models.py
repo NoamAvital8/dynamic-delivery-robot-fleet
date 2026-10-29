@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from . import LABEL_VERSION
-from .config import POLICIES, guard_city, identity, read, sha
+from .config import POLICIES, guard_city, identity, read, sha, validate_policies
 from .provenance import validate_row
 
 
@@ -31,7 +31,8 @@ def nn_loss_gradients(x, y, weights, biases, sample_weights):
     return loss, gradients
 
 
-def check_rows(rows):
+def check_rows(rows, policies=POLICIES):
+    policies = validate_policies(policies)
     if not rows:
         raise ValueError("No training states")
     names = sorted(rows[0]["features"])
@@ -45,7 +46,7 @@ def check_rows(rows):
         if row["id"] in seen:
             raise ValueError("Duplicate training state")
         seen.add(row["id"])
-        if sorted(row["features"]) != names or set(row["costs"]) != set(POLICIES) or row["robots"] < 1:
+        if sorted(row["features"]) != names or set(row["costs"]) != set(policies) or row["robots"] < 1:
             raise ValueError("Incomplete feature/action schema")
         if any(word in key.lower() for key in names for word in ("seed", "future", "scenario_id", "city_id")):
             raise ValueError("Forbidden hidden-input feature")
@@ -53,15 +54,16 @@ def check_rows(rows):
     return names
 
 
-def fit(rows, family, threads=4):
+def fit(rows, family, threads=4, policies=POLICIES):
     import numpy as np
-    names = check_rows(rows)
+    policies = validate_policies(policies)
+    names = check_rows(rows, policies)
     if family not in ("xgboost", "nn"):
         raise ValueError("Unsupported model family")
     if any(r["family"] != family for r in rows):
         raise ValueError("A learner must use its own model-driven trajectory labels")
     x = np.array([[r["features"][k] for k in names] for r in rows], dtype=float)
-    loss = np.array([[r["costs"][p] / r["robots"] for p in POLICIES] for r in rows], dtype=float)
+    loss = np.array([[r["costs"][p] / r["robots"] for p in policies] for r in rows], dtype=float)
     if not np.isfinite(x).all() or not np.isfinite(loss).all() or (loss < 0).any():
         raise ValueError("Non-finite features or invalid costs")
     counts = Counter(r["episode"] for r in rows)
@@ -72,7 +74,7 @@ def fit(rows, family, threads=4):
     scale = np.where(scale > 1e-8, scale, 1.)
     x = (x - mean) / scale
     target = loss - loss.mean(axis=1, keepdims=True)
-    common = {"kind": family, "label_version": LABEL_VERSION, "policies": list(POLICIES),
+    common = {"kind": family, "label_version": LABEL_VERSION, "policies": list(policies),
               "feature_names": names, "feature_mean": mean.tolist(), "feature_scale": scale.tolist(),
               "training_cities": sorted({r["city"] for r in rows}),
               "training_episodes": sorted(counts), "training_states": len(rows),
@@ -83,7 +85,7 @@ def fit(rows, family, threads=4):
     if family == "xgboost":
         import xgboost as xgb
         heads = []
-        for index in range(len(POLICIES)):
+        for index in range(len(policies)):
             model = xgb.XGBRegressor(n_estimators=200, max_depth=4, learning_rate=.04,
                 min_child_weight=8, reg_lambda=10., subsample=1., colsample_bytree=1.,
                 objective="reg:squarederror", tree_method="hist", n_jobs=threads, random_state=710 + index)
@@ -92,11 +94,11 @@ def fit(rows, family, threads=4):
             heads.append(model.get_booster().save_raw(raw_format="json").decode())
         return {**common, "boosters": heads, "library_version": xgb.__version__}
     rng = np.random.default_rng(71)
-    widths = (x.shape[1], 64, 32, len(POLICIES))
+    widths = (x.shape[1], 64, 32, len(policies))
     weights = [rng.normal(0, np.sqrt(2 / widths[i]), (widths[i], widths[i+1])) for i in range(3)]
     biases = [np.zeros(widths[i+1]) for i in range(3)]
     ymean = (target * weight[:, None]).sum(axis=0)
-    yscale = max(1e-6, float(np.sqrt(((target - ymean)**2 * weight[:, None]).sum() / len(POLICIES))))
+    yscale = max(1e-6, float(np.sqrt(((target - ymean)**2 * weight[:, None]).sum() / len(policies))))
     y = (target - ymean) / yscale
     params = [item for pair in zip(weights, biases) for item in pair]
     first = [np.zeros_like(p) for p in params]
@@ -119,16 +121,27 @@ def fit(rows, family, threads=4):
 
 
 class Predictor:
-    def __init__(self, payload):
+    def __init__(self, payload, expected_policies=None):
         self.payload = payload
-        if payload.get("label_version") != LABEL_VERSION or tuple(payload["policies"]) != POLICIES:
+        self.policies = validate_policies(payload["policies"])
+        if (payload.get("label_version") != LABEL_VERSION
+                or (expected_policies is not None and self.policies != tuple(expected_policies))):
             raise ValueError("Model/collector scientific identity mismatch")
+        if payload["kind"] == "bootstrap" and payload["policy"] not in self.policies:
+            raise ValueError("Bootstrap action is outside the model portfolio")
         self.heads = []
         if payload["kind"] == "nn":
             import numpy as np
             self.weights = [np.asarray(w, dtype=float) for w in payload["weights"]]
             self.biases = [np.asarray(b, dtype=float) for b in payload["biases"]]
+            if (len(self.weights) != 3 or len(self.biases) != 3
+                    or self.weights[-1].shape[-1] != len(self.policies)
+                    or self.biases[-1].shape != (len(self.policies),)
+                    or len(payload["target_mean"]) != len(self.policies)):
+                raise ValueError("Neural output schema does not match the action portfolio")
         if payload["kind"] == "xgboost":
+            if len(payload["boosters"]) != len(self.policies):
+                raise ValueError("Tree output schema does not match the action portfolio")
             import xgboost as xgb
             for value in payload["boosters"]:
                 head = xgb.Booster(params={"nthread": 1})
@@ -137,10 +150,10 @@ class Predictor:
                 self.heads.append(head)
 
     @classmethod
-    def load(cls, path, expected_hash=None):
+    def load(cls, path, expected_hash=None, expected_policies=None):
         if expected_hash is not None and sha(path) != expected_hash:
             raise ValueError("Published model hash changed")
-        return cls(read(path))
+        return cls(read(path), expected_policies)
 
     def choose(self, features):
         if self.payload["kind"] == "bootstrap":
@@ -165,4 +178,4 @@ class Predictor:
             raise ValueError("Unknown serialized predictor")
         if not np.isfinite(costs).all():
             raise ValueError("Non-finite predicted costs")
-        return POLICIES[int(np.argmin(costs))]
+        return self.policies[int(np.argmin(costs))]

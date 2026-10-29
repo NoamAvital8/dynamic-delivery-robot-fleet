@@ -8,7 +8,7 @@ import sys
 import time
 
 from . import LABEL_VERSION
-from .config import DEVELOPMENT, HELD_OUT, POLICIES, atomic, available_gib, identity, immutable, locked, read, sha, workers
+from .config import DEVELOPMENT, HELD_OUT, atomic, available_gib, identity, immutable, locked, read, sha, workers
 from .data import load_dataset
 from .execution import FitTask, numeric_environment, run_episodes
 from .models import fit
@@ -23,9 +23,9 @@ def estimate(config, cpus=72, memory_gib=171.):
     slots = workers(config, cpus, memory_gib)
     train = len(DEVELOPMENT) * config.train_per_city * len(FAMILIES)
     validation = len(DEVELOPMENT) * config.validation_per_city * len(FAMILIES)
-    fixed_validation = len(DEVELOPMENT) * config.validation_per_city * len(POLICIES)
+    fixed_validation = len(DEVELOPMENT) * config.validation_per_city * len(config.policies)
     decisions = 50
-    branches = train * decisions * len(POLICIES)
+    branches = train * decisions * len(config.policies)
     validation_branches = (validation + fixed_validation) * decisions
     worker_hours = [(branches + validation_branches) * seconds / 3600 for seconds in (.7, 2.5)]
     effective = max(1., min(36., slots * .65))
@@ -35,8 +35,8 @@ def estimate(config, cpus=72, memory_gib=171.):
         "training_episodes_total":train,"validation_episodes_total":validation,
         "validation_fixed_benchmark_episodes_total":fixed_validation,
         "future_test_scenarios":len(HELD_OUT)*config.test_per_city,
-        "future_test_selector_and_fixed_episodes":len(HELD_OUT)*config.test_per_city*(len(FAMILIES)+len(POLICIES)),
-        "decision_minutes":15,"scenario_hours":12,"benchmarks_per_training_state":len(POLICIES),
+        "future_test_selector_and_fixed_episodes":len(HELD_OUT)*config.test_per_city*(len(FAMILIES)+len(config.policies)),
+        "decision_minutes":15,"scenario_hours":12,"benchmarks_per_training_state":len(config.policies),
         "training_branches_approx":branches,"validation_branches_approx":validation_branches,
         "admitted_worker_slots":slots,"cpu_budget":cpus,"fit_threads":config.fit_threads,
         "memory_reserve_gib":config.memory_reserve_gib,"trainer_memory_gib":config.trainer_memory_gib,
@@ -49,7 +49,7 @@ def estimate(config, cpus=72, memory_gib=171.):
         "estimate_status":"Legacy unmeasured arithmetic; consult the measured development-pilot report for the default full-campaign estimate",
         "measured_pilot_report":"docs/SWITCHING_PILOT_RESULTS_2026-10-25.md",
         "measured_pilot_estimate":"review_bundle/evidence/switching_pilot_20261025/TRAINING_TIME_ESTIMATE.json",
-        "scope_note":"Both learners plus selectors and all ten fixed policies on development validation; final test excluded",
+        "scope_note":"Both learners plus selectors and all configured fixed policies on development validation; final test excluded",
         "launches_training":False,"launches_simulations":False}
 
 
@@ -63,7 +63,7 @@ def _publish(config, family, rows, science):
         import xgboost
     from threadpoolctl import threadpool_info, threadpool_limits
     with threadpool_limits(limits=config.fit_threads):
-        payload = fit(rows, family, config.fit_threads)
+        payload = fit(rows, family, config.fit_threads, policies=config.policies)
         effective_threads = threadpool_info()
     payload["science_id"] = science
     payload["learner_id"] = learner_id(config, family)
@@ -84,9 +84,9 @@ def _pool(config, jobs, science, progress=None):
 
 def _fixed_models(config, science):
     result = {}
-    for policy in POLICIES:
+    for policy in config.policies:
         path = Path(config.output) / "models/fixed" / (policy + ".json")
-        immutable(path, {"kind":"bootstrap","policy":policy,"policies":list(POLICIES),
+        immutable(path, {"kind":"bootstrap","policy":policy,"policies":list(config.policies),
             "label_version":LABEL_VERSION,"science_id":science})
         result[policy] = {"path":str(path),"sha256":sha(path),"science_id":science}
     return result
@@ -122,7 +122,7 @@ def train(config):
             registry = path.parent / "current.json"
             if not registry.exists():
                 immutable(path, {"kind":"bootstrap","family":family,"policy":config.bootstrap_policy,
-                    "policies":list(POLICIES),"label_version":LABEL_VERSION,"science_id":science})
+                    "policies":list(config.policies),"label_version":LABEL_VERSION,"science_id":science})
                 atomic(registry, {"path":str(path),"sha256":sha(path),"training_states":0,"science_id":science,
                                   "learner_id":learner_id(config, family)})
             pointer = read(registry)
@@ -170,9 +170,9 @@ def train(config):
         baselines = _fixed_models(config, science)
         validation = [e for e in data["episodes"] if e["split"] == "validation"]
         jobs = [(e,f,final[f]) for e in validation for f in FAMILIES]
-        jobs += [(e,FIXED_PREFIX+p,baselines[p]) for e in validation for p in POLICIES]
+        jobs += [(e,FIXED_PREFIX+p,baselines[p]) for e in validation for p in config.policies]
         results = _pool(config, jobs, science)
-        report = compare(results, validation, expected_science=science)
+        report = compare(results, validation, expected_science=science, policies=config.policies)
         atomic(root / "validation_summary.json", {"models":final, **report})
         atomic(root / "training_summary.json", {"science_id":science,"results":training_results,"models":final})
         frozen = {"models":final,"baselines":baselines,"science_id":science,"campaign_id":campaign["campaign_id"],
@@ -195,8 +195,8 @@ def evaluate(config):
         if opened["freeze_id"] != frozen["freeze_id"]:
             raise ValueError("Final-test opening receipt changed")
         jobs = [(e,f,frozen["models"][f]) for e in data["episodes"] for f in FAMILIES]
-        jobs += [(e,FIXED_PREFIX+p,frozen["baselines"][p]) for e in data["episodes"] for p in POLICIES]
+        jobs += [(e,FIXED_PREFIX+p,frozen["baselines"][p]) for e in data["episodes"] for p in config.policies]
         results = _pool(config, jobs, data["science_id"])
-        report = compare(results, data["episodes"], frozen["development_selected_fixed_policy"], expected_science=data["science_id"])
+        report = compare(results, data["episodes"], frozen["development_selected_fixed_policy"], expected_science=data["science_id"], policies=config.policies)
         atomic(root / "test_summary.json", {"freeze_id":frozen["freeze_id"], **report})
         return {"complete":len(results),"missing":0,"summary":str(root / "test_summary.json")}
