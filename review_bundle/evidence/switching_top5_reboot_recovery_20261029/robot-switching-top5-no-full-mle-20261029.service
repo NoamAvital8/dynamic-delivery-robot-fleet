@@ -1,0 +1,21 @@
+[Unit]
+Description=Five-action switching XGBoost and NN (persistent recovery)
+StartLimitIntervalSec=0
+ConditionPathExists=!/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_top5_no_full_mle_v1_20261029/FULL_DEVELOPMENT_COMPLETE.json
+ConditionPathExists=!/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_top5_no_full_mle_v1_20261029/test_opened.json
+
+[Service]
+Type=simple
+WorkingDirectory=/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_top5_no_full_mle_v1_20261029
+ExecStart=/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/.venv/bin/python -B -u /data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_top5_no_full_mle_v1_20261029/operations/run_switching_top5_no_full_mle.py --execute --expected-source-sha256 1bc632436a200bb661d41942d95ed029d8150c729576b72953f13c97de0847c4
+Restart=on-failure
+RestartSec=30s
+RuntimeMaxSec=infinity
+TimeoutStopSec=45s
+KillMode=control-group
+MemoryAccounting=yes
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

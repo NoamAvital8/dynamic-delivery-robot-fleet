@@ -1,0 +1,7 @@
+2026-10-29T14:34:41+02:00 cogrob-srv1 systemd[451263]: Stopping robot-switching-top5-no-full-mle-20261029.service - Five-action switching XGBoost and NN...
+2026-10-29T14:34:43+02:00 cogrob-srv1 systemd[451263]: Stopped robot-switching-top5-no-full-mle-20261029.service - Five-action switching XGBoost and NN.
+2026-10-29T14:34:43+02:00 cogrob-srv1 systemd[451263]: robot-switching-top5-no-full-mle-20261029.service: Consumed 3d 19h 9min 34.647s CPU time over 1h 22min 53.830s wall clock time, 39.4G memory peak.
+-- Boot 68277e7d2f904ce8ae0d709b5052cadc --
+2026-10-29T15:02:50+02:00 cogrob-srv1 systemd[4366]: Started robot-switching-top5-no-full-mle-20261029.service - Five-action switching XGBoost and NN (persistent recovery).
+2026-10-29T15:02:50+02:00 cogrob-srv1 python[9594]: 2026-10-29T13:02:50.720133+00:00 preparing_development_data started 9598
+2026-10-29T15:03:00+02:00 cogrob-srv1 python[9594]: 2026-10-29T13:03:00.983621+00:00 training_and_validation started 9612

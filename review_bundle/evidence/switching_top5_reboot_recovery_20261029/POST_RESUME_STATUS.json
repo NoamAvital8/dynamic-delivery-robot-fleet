@@ -1,0 +1,115 @@
+{
+  "audited_utc": "2026-10-29T13:06:18.746403+00:00",
+  "service": {
+    "ActiveState": "active",
+    "FragmentPath": "/home/gal.pinto/.config/systemd/user/robot-switching-top5-no-full-mle-20261029.service",
+    "UnitFileState": "enabled",
+    "NRestarts": "0",
+    "ExecMainStartTimestamp": "Thu 2026-10-29 15:02:50 IST"
+  },
+  "training_status": {
+    "available_gib": 316.1655616760254,
+    "complete_episodes": 1281,
+    "expected": 1600,
+    "fit_family": null,
+    "fitted_states": {
+      "nn": 32604,
+      "xgboost": 32277
+    },
+    "replay": {
+      "nn": {
+        "bootstrap_states": 2150,
+        "city_states": {
+          "delft": 4236,
+          "haifa": 4301,
+          "leuven": 4151,
+          "manhattan": 4018,
+          "new_delhi": 4180,
+          "oxford": 4171,
+          "palo_alto": 4049,
+          "tel_aviv": 4158
+        },
+        "count": 33259,
+        "mean_teacher_margin": 1.1211102944478895,
+        "mean_teacher_regret": 2.502784217218101,
+        "policy_states": {
+          "full": 3343,
+          "full_coordinated_idle": 6212,
+          "full_no_nn": 12520,
+          "full_queue_aware": 1318,
+          "queue_mle_reservation": 9870
+        },
+        "profile_states": {
+          "charging_pressure": 6439,
+          "ordinary": 6754,
+          "priority_shift": 6648,
+          "spatial_shift": 6722,
+          "surge": 6702
+        },
+        "watermark": 66528
+      },
+      "xgboost": {
+        "bootstrap_states": 2116,
+        "city_states": {
+          "delft": 4233,
+          "haifa": 4302,
+          "leuven": 4159,
+          "manhattan": 4032,
+          "new_delhi": 4176,
+          "oxford": 4174,
+          "palo_alto": 4049,
+          "tel_aviv": 4150
+        },
+        "count": 33269,
+        "mean_teacher_margin": 1.2298801067156937,
+        "mean_teacher_regret": 1.8696746063508658,
+        "policy_states": {
+          "full": 794,
+          "full_coordinated_idle": 4154,
+          "full_no_nn": 14604,
+          "full_queue_aware": 423,
+          "queue_mle_reservation": 13300
+        },
+        "profile_states": {
+          "charging_pressure": 6435,
+          "ordinary": 6765,
+          "priority_shift": 6659,
+          "spatial_shift": 6715,
+          "surge": 6703
+        },
+        "watermark": 66526
+      }
+    },
+    "running": 67,
+    "stage": "model_driven_collection"
+  },
+  "actual_completed_training_episodes": 1281,
+  "validation_outcomes_completed": 0,
+  "original_systemd_stop_local": "2026-10-29T14:34:41+02:00",
+  "original_service_stopped_local": "2026-10-29T14:34:43+02:00",
+  "vm_boot_local": "2026-10-29 14:39:44",
+  "prior_unit_type": "transient; definition absent after reboot",
+  "new_unit_type": "persistent enabled user service with existing lingering",
+  "reboot_initiator": "not established",
+  "test_opened": false,
+  "test_manifest_exists": false,
+  "test_actor_count": 0,
+  "estimated_remaining_total_minutes": [
+    90,
+    130
+  ],
+  "estimated_remaining_training_minutes": [
+    30,
+    45
+  ],
+  "estimated_validation_minutes": [
+    55,
+    75
+  ],
+  "estimate_basis": "Current remaining city-weighted worker cost and prior matched validation cost; includes tail and fit allowance",
+  "cpu_observation": {
+    "observed_utc": "2026-10-29T13:04:08.589060+00:00",
+    "percent_of_72_logical_cpus": 92.370478514322,
+    "workers": 67
+  }
+}
