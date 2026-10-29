@@ -2,12 +2,13 @@
   "format": "repository_paths_v1",
   "scientific_source_manifest_sha256": "1bc632436a200bb661d41942d95ed029d8150c729576b72953f13c97de0847c4",
   "files": {
-    "operations/resume_switching_top5_after_reboot.py": "82ab06e73d7c63b7ff69a9d0a01164f2c09be8fd2f56d43c14d1d0dcbad8ba6b",
     "review_bundle/evidence/switching_top5_reboot_recovery_20261029/DIAGNOSTIC_JOURNAL.txt": "feed4ab580de99322edca46ba8633f4f34e848a12b4078dae8b1a7c47ea3fc45",
     "review_bundle/evidence/switching_top5_reboot_recovery_20261029/POST_RESUME_STATUS.json": "c3a974b80b84ddf19add781c566085550e7480eba2ebb98f037c207a4947de40",
     "review_bundle/evidence/switching_top5_reboot_recovery_20261029/PRE_RESUME_VERIFICATION.json": "0f04e86e342d0a2550739a815a526c7a8db387db2218ba268e69b4ec24594c9c",
     "review_bundle/evidence/switching_top5_reboot_recovery_20261029/README.md": "7ddc2633c2d442bbaf26733e4f1191293cf73c31ff90773784df0b96d2b51d93",
     "review_bundle/evidence/switching_top5_reboot_recovery_20261029/RESUMED.json": "14b3af1592688e4aad7c630e1c120f75415a3036ea38a29ee02d4af2a878ec20",
-    "review_bundle/evidence/switching_top5_reboot_recovery_20261029/robot-switching-top5-no-full-mle-20261029.service": "e4428bb8024863a3a6b6eca95b81150555cf495cee8f195abed6c92d736ab48d"
-  }
+    "review_bundle/evidence/switching_top5_reboot_recovery_20261029/robot-switching-top5-no-full-mle-20261029.service": "e4428bb8024863a3a6b6eca95b81150555cf495cee8f195abed6c92d736ab48d",
+    "review_bundle/evidence/switching_top5_reboot_recovery_20261029/resume_switching_top5_after_reboot.py": "82ab06e73d7c63b7ff69a9d0a01164f2c09be8fd2f56d43c14d1d0dcbad8ba6b"
+  },
+  "source_note": "The exact executed helper is archived under review_bundle to preserve source bytes across Windows line-ending conversion."
 }
