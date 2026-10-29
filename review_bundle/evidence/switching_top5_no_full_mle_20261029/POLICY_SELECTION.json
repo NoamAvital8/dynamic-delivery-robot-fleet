@@ -1,0 +1,108 @@
+{
+  "selection_basis": "Previous ten-action campaign development validation only; no final-test outcomes",
+  "source_validation_report": "review_bundle/evidence/final_test_launch_20261026/validation_summary.json",
+  "source_validation_report_sha256": "3619eb2243303eecc254b22bcef92076a8ebc1b53341aa8dd8c690afc3b2daf0",
+  "metric": "equal_city_mean_loss_per_robot",
+  "direction": "lower is better",
+  "excluded_before_ranking": [
+    "full_mle_reservation"
+  ],
+  "ranked_eligible_benchmarks": [
+    {
+      "policy": "full_coordinated_idle",
+      "equal_city_mean_loss_per_robot": 230.78858790659615,
+      "episodes": 200
+    },
+    {
+      "policy": "queue_mle_reservation",
+      "equal_city_mean_loss_per_robot": 231.5416249345445,
+      "episodes": 200
+    },
+    {
+      "policy": "full_queue_aware",
+      "equal_city_mean_loss_per_robot": 233.12464210976734,
+      "episodes": 200
+    },
+    {
+      "policy": "full_no_nn",
+      "equal_city_mean_loss_per_robot": 233.3310457786301,
+      "episodes": 200
+    },
+    {
+      "policy": "full",
+      "equal_city_mean_loss_per_robot": 237.4149913364987,
+      "episodes": 200
+    },
+    {
+      "policy": "reactive_insertion",
+      "equal_city_mean_loss_per_robot": 250.49266069461783,
+      "episodes": 200
+    },
+    {
+      "policy": "full_no_idle",
+      "equal_city_mean_loss_per_robot": 252.5956218322246,
+      "episodes": 200
+    },
+    {
+      "policy": "paper_sa_adapted",
+      "equal_city_mean_loss_per_robot": 282.42381816870477,
+      "episodes": 200
+    },
+    {
+      "policy": "myopic_ab",
+      "equal_city_mean_loss_per_robot": 1345.5799471984442,
+      "episodes": 200
+    }
+  ],
+  "selected_in_rank_order": [
+    {
+      "policy": "full_coordinated_idle",
+      "equal_city_mean_loss_per_robot": 230.78858790659615,
+      "episodes": 200
+    },
+    {
+      "policy": "queue_mle_reservation",
+      "equal_city_mean_loss_per_robot": 231.5416249345445,
+      "episodes": 200
+    },
+    {
+      "policy": "full_queue_aware",
+      "equal_city_mean_loss_per_robot": 233.12464210976734,
+      "episodes": 200
+    },
+    {
+      "policy": "full_no_nn",
+      "equal_city_mean_loss_per_robot": 233.3310457786301,
+      "episodes": 200
+    },
+    {
+      "policy": "full",
+      "equal_city_mean_loss_per_robot": 237.4149913364987,
+      "episodes": 200
+    }
+  ],
+  "selected_in_model_output_order": [
+    "full_no_nn",
+    "full",
+    "full_queue_aware",
+    "full_coordinated_idle",
+    "queue_mle_reservation"
+  ],
+  "bootstrap_policy": "full_coordinated_idle",
+  "selection_cities": [
+    "delft",
+    "haifa",
+    "leuven",
+    "manhattan",
+    "new_delhi",
+    "oxford",
+    "palo_alto",
+    "tel_aviv"
+  ],
+  "validation_inputs": 200,
+  "held_out_inputs_used": 0,
+  "prior_nine_action_service": "robot-switching-no-full-mle-20261029.service",
+  "prior_nine_action_service_stopped": true,
+  "prior_nine_action_artifacts_preserved": true,
+  "prior_model_weights_or_replay_reused": false
+}

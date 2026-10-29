@@ -392,3 +392,13 @@ The owner authorized a separate XGBoost and NN training campaign with only
 See [the ablation protocol](docs/SWITCHING_NO_FULL_MLE_2026-10-29.md).
 The new campaign retains 15-minute decisions and excludes all four test cities.
 Dated records above describe the original completed ten-action campaign.
+
+
+## Replacement five-benchmark campaign (29 October 2026)
+
+The owner subsequently requested the best five eligible policies from the
+original development-validation results. The nine-action service was stopped
+and its artifacts preserved. The replacement trains both models from scratch
+with Full Coordinated Idle, Queue MLE Reservation, Full Queue Aware, Full
+without NN, and Full. Full MLE stays excluded; all four test cities stay held
+out. See [the current five-benchmark protocol](docs/SWITCHING_TOP5_NO_FULL_MLE_2026-10-29.md).

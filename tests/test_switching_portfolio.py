@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from fleet_switching import collection
-from fleet_switching.config import NO_FULL_MLE_POLICIES, POLICIES, atomic, read, sha
+from fleet_switching.config import NO_FULL_MLE_POLICIES, TOP5_NO_FULL_MLE_POLICIES, POLICIES, atomic, read, sha
 from fleet_switching.models import Predictor, check_rows, fit
 from fleet_switching.provenance import ensure_campaign, learner_id, row_digest, science_id
 from fleet_switching.reporting import compare
@@ -73,14 +73,15 @@ def training_rows(family, policies):
     for i in range(32):
         row = row_fixture(i)
         row.update(family=family, features={'state.observed':float(i % 8)},
-                   costs={p:float(1 + (i % 8 - j)**2) for j,p in enumerate(policies)})
+                   costs={p:float(1 + (i % 8 - j)**2) for j,p in enumerate(policies)},
+                   intent={'chosen_policy':policies[0]})
         row['content_sha256'] = row_digest(row)
         rows.append(row)
     return rows
 
 
 @pytest.mark.parametrize('family', ['nn', 'xgboost'])
-@pytest.mark.parametrize('policies', [POLICIES, NO_FULL_MLE_POLICIES])
+@pytest.mark.parametrize('policies', [POLICIES, NO_FULL_MLE_POLICIES, TOP5_NO_FULL_MLE_POLICIES])
 def test_small_real_fit_exports_exactly_configured_heads(tmp_path, family, policies):
     payload = fit(training_rows(family, policies), family, threads=1, policies=policies)
     assert payload['policies'] == list(policies)

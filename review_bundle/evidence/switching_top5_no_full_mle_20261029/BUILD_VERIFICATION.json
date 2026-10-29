@@ -1,0 +1,18 @@
+{
+  "verified_utc": "2026-10-29T11:11:12.084393+00:00",
+  "source_manifest_sha256": "1bc632436a200bb661d41942d95ed029d8150c729576b72953f13c97de0847c4",
+  "source_files_verified_on_vm": 60,
+  "local_tests_passed": 90,
+  "local_test_seconds": 37.92,
+  "vm_tests_passed": 90,
+  "vm_test_seconds": 9.43,
+  "real_five_output_fit_roundtrips": [
+    "xgboost",
+    "nn"
+  ],
+  "legacy_nine_and_ten_output_compatibility": true,
+  "previous_nine_action_service": "inactive",
+  "previous_nine_action_remaining_processes": 0,
+  "new_campaign_started_at_this_receipt": false,
+  "test_opened": false
+}

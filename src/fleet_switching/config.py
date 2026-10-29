@@ -15,12 +15,14 @@ HELD_OUT = frozenset(("cambridge_uk", "ghent", "salamanca", "lucca"))
 POLICIES = ("myopic_ab", "reactive_insertion", "paper_sa_adapted", "full_no_nn", "full_no_idle",
             "full", "full_queue_aware", "full_coordinated_idle", "queue_mle_reservation", "full_mle_reservation")
 NO_FULL_MLE_POLICIES = tuple(p for p in POLICIES if p != "full_mle_reservation")
+TOP5_NO_FULL_MLE_POLICIES = tuple(p for p in POLICIES if p in (
+    "full_coordinated_idle", "queue_mle_reservation", "full_queue_aware", "full_no_nn", "full"))
 
 
 def validate_policies(policies):
-    """Preserve the original experiment and the explicit nine-action ablation."""
+    """Accept the original portfolio and the two explicitly frozen ablations."""
     policies = tuple(policies)
-    if policies not in (POLICIES, NO_FULL_MLE_POLICIES):
+    if policies not in (POLICIES, NO_FULL_MLE_POLICIES, TOP5_NO_FULL_MLE_POLICIES):
         raise ValueError("Unsupported candidate portfolio or action ordering")
     return policies
 

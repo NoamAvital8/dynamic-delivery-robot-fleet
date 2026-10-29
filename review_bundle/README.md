@@ -29,3 +29,11 @@ authorized on 29 October. See [its protocol](../docs/SWITCHING_NO_FULL_MLE_2026-
 and `evidence/switching_no_full_mle_20261029/` for launch status. Full MLE is
 excluded from that portfolio, while Queue MLE and the four-city holdout remain.
 Original completed campaign sources and receipts are preserved.
+
+
+The latest authorized campaign uses the **best five remaining benchmarks**,
+ranked on the original development-validation metric after excluding Full MLE.
+It replaces the stopped nine-action run. See
+[the five-benchmark protocol](../docs/SWITCHING_TOP5_NO_FULL_MLE_2026-10-29.md)
+and `evidence/switching_top5_no_full_mle_20261029/`. The current source manifest
+describes this replacement; previous source manifests and campaigns are preserved.
