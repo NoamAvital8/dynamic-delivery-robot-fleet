@@ -1,0 +1,26 @@
+{
+  "format": "repository_paths_v1",
+  "source_git_commit": "dc2f75788210fda4ce9887bba1c68a7e97d9c822",
+  "source_manifest_sha256": "1bc632436a200bb661d41942d95ed029d8150c729576b72953f13c97de0847c4",
+  "files": {
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/audit_live_campaign.py": "b5eeaaa0cffbcf1d5fbe83af60eaeb5338c1347fa842bf52c47866ce6434e11e",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/BUILD_VERIFICATION.json": "8c69141af565572dd8d88e00e254077af1ace822ca4d4d50188b2730a32fd596",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/campaign.json": "38b7cbf1b010ce9268eaf205ead0775e27381cf0c6d4ee83c8863d93a1303d72",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/development_manifest.json.gz": "e3d7656a273daf62af24470c13202f523341158d85a70190cd7721543a211522",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/execution_settings.json": "4c2edd2871f9e3ba52414d4a8d2ba2d9045f2db4991ab90db5e3cf0d617c6dfb",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/FULL_DEVELOPMENT_DATA_VERIFIED.json": "6eb9a85b680014090f3f6c567220e133374cb5c22b497128c291fece2790a90d",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/INITIAL_MODEL_EXPORT.json": "e3b32acccfc07b8e668d5ef32f19b5ab64a48461fe73004a679134d5d9cbd0b2",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/LAUNCH_AUDIT.json": "0e7562fd69bcec41ea5702e47ec20ca05d14ce5c710eeee82a835dbeb40db63d",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/LAUNCH_PREFLIGHT.json": "c3146405ccba52d0b5fdd39b2d6a108075f3febd70f31d46834446726c58ca90",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/LAUNCH_RECEIPT.json": "3e8e2dd9c155c16caa951419d96c8fda34b6229bdb8052c3aa8e823243c63925",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/nn_initial_model.json.gz": "6219ec283b169f8d906a4a36446bed86c340024f8b23343fd4f760973a115180",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/POLICY_SELECTION.json": "983dd1f664b443b1043e96325020bc385d43b296f7148bf2800a5a159e72af32",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/PREVIOUS_NINE_ACTION_BUILD_SOURCES.json": "13302b725e2f45c09b92541fe9e20e284f9cd5b74f707865a3bc57e7467ee5db",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/README.md": "f5f70815cce725cbd3ec6a1ae50d72977d362277c2961eadbb2f707beb1c3a12",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/runtime_plan.json": "ad430253ae1873ac5ffc2fdc523a5e8de50d16f44f5acf3740d7218d8c83781f",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/STARTUP_AUDIT.json": "3564a3924f97f398f37ec707facba17742cfedbc5e01a1cc539465a22e161ac9",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/SUPERSEDED_NINE_ACTION_STATUS.json": "89c584ec0e439b36a5b01187ffa75608cc2ad742b993c925c19b54d9523fda5d",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/VM_TEST_OUTPUT.txt": "00b8a38c2384d92e721fe4f56e4a5a4f006ab4fe1d8669b4e4ec462f5488da71",
+    "review_bundle/evidence/switching_top5_no_full_mle_20261029/xgboost_initial_model.json.gz": "a8dcdbee485cbb9335a8ed319d7d752d6f684443e5418981d625a0d03ad8ed8e"
+  }
+}

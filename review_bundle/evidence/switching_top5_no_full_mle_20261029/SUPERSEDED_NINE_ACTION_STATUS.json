@@ -1,0 +1,95 @@
+{
+  "service": {
+    "ActiveState": "inactive",
+    "SubState": "dead",
+    "InactiveEnterTimestamp": "",
+    "MainPID": "0",
+    "NRestarts": "0"
+  },
+  "last_training_status": {
+    "available_gib": 132.10829162597656,
+    "complete_episodes": 133,
+    "expected": 1600,
+    "fit_family": null,
+    "fitted_states": {
+      "nn": 2097,
+      "xgboost": 2015
+    },
+    "replay": {
+      "nn": {
+        "bootstrap_states": 2150,
+        "city_states": {
+          "delft": 590,
+          "haifa": 522,
+          "leuven": 566,
+          "manhattan": 163,
+          "new_delhi": 584,
+          "oxford": 603,
+          "palo_alto": 412,
+          "tel_aviv": 487
+        },
+        "count": 3926,
+        "mean_teacher_margin": 0.7523233608415931,
+        "mean_teacher_regret": 8.43848949724237,
+        "policy_states": {
+          "full": 155,
+          "full_coordinated_idle": 153,
+          "full_no_idle": 363,
+          "full_no_nn": 128,
+          "full_queue_aware": 124,
+          "myopic_ab": 180,
+          "paper_sa_adapted": 199,
+          "queue_mle_reservation": 159,
+          "reactive_insertion": 2466
+        },
+        "profile_states": {
+          "charging_pressure": 610,
+          "ordinary": 998,
+          "priority_shift": 692,
+          "spatial_shift": 746,
+          "surge": 881
+        },
+        "watermark": 7845
+      },
+      "xgboost": {
+        "bootstrap_states": 2127,
+        "city_states": {
+          "delft": 589,
+          "haifa": 527,
+          "leuven": 566,
+          "manhattan": 163,
+          "new_delhi": 585,
+          "oxford": 601,
+          "palo_alto": 406,
+          "tel_aviv": 485
+        },
+        "count": 3920,
+        "mean_teacher_margin": 0.6299162801659982,
+        "mean_teacher_regret": 3.7729793962880884,
+        "policy_states": {
+          "full": 81,
+          "full_coordinated_idle": 280,
+          "full_no_idle": 68,
+          "full_no_nn": 387,
+          "full_queue_aware": 88,
+          "myopic_ab": 39,
+          "paper_sa_adapted": 367,
+          "queue_mle_reservation": 235,
+          "reactive_insertion": 2376
+        },
+        "profile_states": {
+          "charging_pressure": 614,
+          "ordinary": 998,
+          "priority_shift": 690,
+          "spatial_shift": 741,
+          "surge": 880
+        },
+        "watermark": 7846
+      }
+    },
+    "running": 67,
+    "stage": "model_driven_collection"
+  },
+  "artifacts_preserved": true,
+  "reused_in_replacement": false
+}

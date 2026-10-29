@@ -1,0 +1,22 @@
+{
+  "source_git_commit": "dc2f75788210fda4ce9887bba1c68a7e97d9c822",
+  "started_vm_time": "Thu 2026-10-29 13:11:50 IST",
+  "audited_utc": "2026-10-29T11:16:26.712298+00:00",
+  "training_inputs": 800,
+  "training_episodes": 1600,
+  "validation_inputs": 200,
+  "validation_outcomes": 1400,
+  "policies": [
+    "full_no_nn",
+    "full",
+    "full_queue_aware",
+    "full_coordinated_idle",
+    "queue_mle_reservation"
+  ],
+  "bootstrap_policy": "full_coordinated_idle",
+  "selection": "Previous ten-action development validation; exclude Full MLE before ranking; choose five lowest equal-city losses per robot",
+  "new_test_opened": false,
+  "previous_nine_action_service_state": "inactive",
+  "old_labels_or_model_weights_reused": false,
+  "identical_original_scenarios_in_git": "review_bundle/evidence/full_development_launch_20261025/DEVELOPMENT_SCENARIOS.jsonl.gz"
+}
