@@ -1,0 +1,16 @@
+{
+  "xgboost": {
+    "file": "xgboost_initial_model.json.gz",
+    "uncompressed_sha256": "fedf21824792ca43da459f2c342b86904f0851fce00478fe33de21bc27864730",
+    "training_states": 2015,
+    "output_heads": 9,
+    "preliminary_not_final": true
+  },
+  "nn": {
+    "file": "nn_initial_model.json.gz",
+    "uncompressed_sha256": "3633da1501763619f4a8b6c8f6f9b7c295d71739647f1e110428dc5654ff34a4",
+    "training_states": 2097,
+    "output_heads": 9,
+    "preliminary_not_final": true
+  }
+}

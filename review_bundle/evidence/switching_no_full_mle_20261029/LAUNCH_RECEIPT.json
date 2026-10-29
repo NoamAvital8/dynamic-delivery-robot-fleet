@@ -1,0 +1,17 @@
+{
+  "source_git_commit": "7ec43896ceca8c9b8a19a43d500d444069d3027f",
+  "campaign_started_vm_time": "Thu 2026-10-29 12:56:30 IST",
+  "audited_utc": "2026-10-29T11:02:29.280261+00:00",
+  "estimate_hours_including_development_validation": [
+    4,
+    6
+  ],
+  "estimate_basis": "Previous measured full campaign and pilot; nine teacher branches instead of ten. Preliminary; trajectories and runtime can differ.",
+  "new_development_inputs": 1000,
+  "new_training_episodes": 1600,
+  "validation_outcomes": 2200,
+  "held_out_test_opened": false,
+  "old_label_rows_reused": 0,
+  "old_scenario_data_archive_in_git": "review_bundle/evidence/full_development_launch_20261025/DEVELOPMENT_SCENARIOS.jsonl.gz",
+  "scenario_payloads_identical_to_previous_campaign": true
+}

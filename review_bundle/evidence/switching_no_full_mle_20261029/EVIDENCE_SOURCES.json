@@ -1,0 +1,23 @@
+{
+  "format": "repository_paths_v1",
+  "source_git_commit": "7ec43896ceca8c9b8a19a43d500d444069d3027f",
+  "source_manifest_sha256": "13302b725e2f45c09b92541fe9e20e284f9cd5b74f707865a3bc57e7467ee5db",
+  "files": {
+    "review_bundle/evidence/switching_no_full_mle_20261029/audit_live_campaign.py": "1a05920655b6bb424b0f3c4c6ec363c5a67879d39305534e9d8f29a78b6b3dc4",
+    "review_bundle/evidence/switching_no_full_mle_20261029/BUILD_VERIFICATION.json": "b5ed329a88c4c326f04b43a5fa97d9d3bceaae27f4168ee94419b939e490c05a",
+    "review_bundle/evidence/switching_no_full_mle_20261029/campaign.json": "7ad23fec912e50e95b64521e1f39a7bf95c7f92c72b4c26f7f37ccb70f62d713",
+    "review_bundle/evidence/switching_no_full_mle_20261029/development_manifest.json.gz": "73283502bebf184f50f1288a1d6feca1e7d911f54f0cd22fa094814d10e94396",
+    "review_bundle/evidence/switching_no_full_mle_20261029/execution_settings.json": "86db465d8007b60714fd3f4c26df2f6909de90d6f5226e3fccfff45431e1bc1a",
+    "review_bundle/evidence/switching_no_full_mle_20261029/FULL_DEVELOPMENT_DATA_VERIFIED.json": "deb72601f92f4bf36463af93a9f3ef424e93107bf0532b7825b0994ee8573f65",
+    "review_bundle/evidence/switching_no_full_mle_20261029/INITIAL_MODEL_EXPORT.json": "a615c4afe1ab1755c610894150eefa6b3388cf04230b69d090a94c449079acb0",
+    "review_bundle/evidence/switching_no_full_mle_20261029/LAUNCH_AUDIT.json": "09f34f933019f750476b90b907f1ad1ae927aee4a95a543733f1171e69e86467",
+    "review_bundle/evidence/switching_no_full_mle_20261029/LAUNCH_PREFLIGHT.json": "f40eaebd2c971bcba085e4a27c902e6828b1e64ba78ddff51b987e86a97fdc95",
+    "review_bundle/evidence/switching_no_full_mle_20261029/LAUNCH_RECEIPT.json": "9be9629597d2e9e7681951398497af7caac952582bf7b65532600e546ab139c5",
+    "review_bundle/evidence/switching_no_full_mle_20261029/nn_initial_model.json.gz": "d8f0dc466440b9ee6564ac5ffe51481812115d1ecb6d26e9046d8d8c62170993",
+    "review_bundle/evidence/switching_no_full_mle_20261029/PREVIOUS_BUILD_SOURCES.json": "0bccb2bd5e8529b9a9045d79c88f13450d789b9c2be969bc44901003d42d5674",
+    "review_bundle/evidence/switching_no_full_mle_20261029/README.md": "caff74f4c54c09631fbe212b2a805b2fe25eef1f8738f53407757a8f1f5c904c",
+    "review_bundle/evidence/switching_no_full_mle_20261029/runtime_plan.json": "4da3dc9f0d4fe8bf116f03b18e1cca764d2b2a22e582f981a1e13975d90badfc",
+    "review_bundle/evidence/switching_no_full_mle_20261029/VM_TEST_OUTPUT.txt": "66247687fac1cde5ca6f579fe08f476044d569836e74f7a8bfc5a9df494f47f6",
+    "review_bundle/evidence/switching_no_full_mle_20261029/xgboost_initial_model.json.gz": "83c504066b0de299f0161d5be9a4e34198af66dbc28d5418b28d6ba3a5c8c65d"
+  }
+}

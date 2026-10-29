@@ -1,0 +1,257 @@
+{
+  "audited_utc": "2026-10-29T11:02:29.280261+00:00",
+  "source_git_commit": "7ec43896ceca8c9b8a19a43d500d444069d3027f",
+  "source_manifest_sha256": "13302b725e2f45c09b92541fe9e20e284f9cd5b74f707865a3bc57e7467ee5db",
+  "campaign_id": "5776497849032a86b624cde849a8e915739c3aea4e8806d29626f11b0b20f450",
+  "science_id": "8dc39c35474062b8e4a8d82e05a63fd5ad358648f56142d8f5e09f6985c3b4f7",
+  "service": {
+    "ActiveState": "active",
+    "SubState": "running",
+    "Restart": "on-failure",
+    "RuntimeMaxUSec": "infinity",
+    "MainPID": "2339798",
+    "NRestarts": "0",
+    "ExecMainStartTimestamp": "Thu 2026-10-29 12:56:30 IST",
+    "ControlGroup": "/user.slice/user-36506.slice/user@36506.service/app.slice/robot-switching-no-full-mle-20261029.service",
+    "MemoryCurrent": "32298729472",
+    "CPUUsageNSec": "21108361970000"
+  },
+  "average_cpu_cores_over_10_seconds": 66.50195428636766,
+  "percent_of_72_logical_cpus": 92.36382539773287,
+  "training_status": {
+    "available_gib": 134.09101486206055,
+    "complete_episodes": 74,
+    "expected": 1600,
+    "fit_family": null,
+    "fitted_states": {
+      "nn": 2097,
+      "xgboost": 2015
+    },
+    "replay": {
+      "nn": {
+        "bootstrap_states": 2150,
+        "city_states": {
+          "delft": 402,
+          "haifa": 317,
+          "leuven": 400,
+          "manhattan": 61,
+          "new_delhi": 432,
+          "oxford": 412,
+          "palo_alto": 241,
+          "tel_aviv": 222
+        },
+        "count": 2487,
+        "mean_teacher_margin": 0.6938382985084081,
+        "mean_teacher_regret": 2.810816069605781,
+        "policy_states": {
+          "full": 40,
+          "full_coordinated_idle": 39,
+          "full_no_idle": 73,
+          "full_no_nn": 21,
+          "full_queue_aware": 35,
+          "myopic_ab": 32,
+          "paper_sa_adapted": 23,
+          "queue_mle_reservation": 38,
+          "reactive_insertion": 2186
+        },
+        "profile_states": {
+          "charging_pressure": 278,
+          "ordinary": 642,
+          "priority_shift": 420,
+          "spatial_shift": 568,
+          "surge": 580
+        },
+        "watermark": 5008
+      },
+      "xgboost": {
+        "bootstrap_states": 2127,
+        "city_states": {
+          "delft": 406,
+          "haifa": 326,
+          "leuven": 409,
+          "manhattan": 62,
+          "new_delhi": 445,
+          "oxford": 411,
+          "palo_alto": 239,
+          "tel_aviv": 223
+        },
+        "count": 2521,
+        "mean_teacher_margin": 0.649766452328841,
+        "mean_teacher_regret": 2.1489155690589063,
+        "policy_states": {
+          "full": 15,
+          "full_coordinated_idle": 75,
+          "full_no_idle": 21,
+          "full_no_nn": 75,
+          "full_queue_aware": 26,
+          "myopic_ab": 6,
+          "paper_sa_adapted": 72,
+          "queue_mle_reservation": 49,
+          "reactive_insertion": 2182
+        },
+        "profile_states": {
+          "charging_pressure": 282,
+          "ordinary": 642,
+          "priority_shift": 441,
+          "spatial_shift": 574,
+          "surge": 582
+        },
+        "watermark": 5006
+      }
+    },
+    "running": 67,
+    "stage": "model_driven_collection"
+  },
+  "scenario_inputs": 1000,
+  "scenario_counts": {
+    "delft": {
+      "train": 100,
+      "validation": 25
+    },
+    "haifa": {
+      "train": 100,
+      "validation": 25
+    },
+    "leuven": {
+      "train": 100,
+      "validation": 25
+    },
+    "manhattan": {
+      "train": 100,
+      "validation": 25
+    },
+    "new_delhi": {
+      "train": 100,
+      "validation": 25
+    },
+    "oxford": {
+      "train": 100,
+      "validation": 25
+    },
+    "palo_alto": {
+      "train": 100,
+      "validation": 25
+    },
+    "tel_aviv": {
+      "train": 100,
+      "validation": 25
+    }
+  },
+  "original_workload_pairing": {
+    "fields": [
+      "seed",
+      "scenario_sha256",
+      "workload_sha256",
+      "graph_sha256",
+      "fleet_count"
+    ],
+    "mismatches": []
+  },
+  "development_manifest_sha256": "cd7942ff6430619ee39b2d1fcab8a86fb80807ff409d83870f3461268479e324",
+  "replay_rows_by_family": {
+    "nn": 2492,
+    "xgboost": 2528
+  },
+  "replay_cost_key_counts": {
+    "9": 5020
+  },
+  "replay_actor_kinds": {
+    "nn": {
+      "bootstrap": 2150,
+      "nn": 342
+    },
+    "xgboost": {
+      "bootstrap": 2127,
+      "xgboost": 401
+    }
+  },
+  "replay_choices": {
+    "nn": {
+      "reactive_insertion": 2186,
+      "full_queue_aware": 35,
+      "full_coordinated_idle": 39,
+      "myopic_ab": 33,
+      "queue_mle_reservation": 38,
+      "paper_sa_adapted": 26,
+      "full_no_nn": 21,
+      "full_no_idle": 74,
+      "full": 40
+    },
+    "xgboost": {
+      "reactive_insertion": 2182,
+      "queue_mle_reservation": 50,
+      "full_no_idle": 21,
+      "full_coordinated_idle": 76,
+      "full": 15,
+      "full_queue_aware": 26,
+      "paper_sa_adapted": 74,
+      "full_no_nn": 78,
+      "myopic_ab": 6
+    }
+  },
+  "replay_cities": [
+    "delft",
+    "haifa",
+    "leuven",
+    "manhattan",
+    "new_delhi",
+    "oxford",
+    "palo_alto",
+    "tel_aviv"
+  ],
+  "models": {
+    "xgboost": {
+      "learner_id": "01bcf05b7dd1acb56298a1f04e250319c8f0a66328e1e9cdd439ea264388cc5c",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_no_full_mle_v1_20261029/models/xgboost/59c0c0f5674e6ae1b6094cccfe778465adee42a97d57267b2b81f71dc08106f8.json",
+      "science_id": "8dc39c35474062b8e4a8d82e05a63fd5ad358648f56142d8f5e09f6985c3b4f7",
+      "sha256": "fedf21824792ca43da459f2c342b86904f0851fce00478fe33de21bc27864730",
+      "training_states": 2015,
+      "kind": "xgboost",
+      "output_heads": 9,
+      "policies": [
+        "myopic_ab",
+        "reactive_insertion",
+        "paper_sa_adapted",
+        "full_no_nn",
+        "full_no_idle",
+        "full",
+        "full_queue_aware",
+        "full_coordinated_idle",
+        "queue_mle_reservation"
+      ]
+    },
+    "nn": {
+      "learner_id": "2cd08c117ada6765882954b9d6341118c209a46e775cddb5761bc03382f144ed",
+      "path": "/data/workspace/robot_delivery/dynamic-delivery-robot-fleet/runs/icaps_small_city_switching_no_full_mle_v1_20261029/models/nn/baee2ce31828f0591968c7e559fbbdc078292511c9097ec10c0422554aad34a3.json",
+      "science_id": "8dc39c35474062b8e4a8d82e05a63fd5ad358648f56142d8f5e09f6985c3b4f7",
+      "sha256": "3633da1501763619f4a8b6c8f6f9b7c295d71739647f1e110428dc5654ff34a4",
+      "training_states": 2097,
+      "kind": "nn",
+      "output_heads": 9,
+      "policies": [
+        "myopic_ab",
+        "reactive_insertion",
+        "paper_sa_adapted",
+        "full_no_nn",
+        "full_no_idle",
+        "full",
+        "full_queue_aware",
+        "full_coordinated_idle",
+        "queue_mle_reservation"
+      ]
+    }
+  },
+  "original_model_sha256_unchanged": {
+    "xgboost": "e6b8598d308206554428603db7e84a30164f6a13989ff2b0dd79f299076e0cdf",
+    "nn": "b8751b3ba6f9299b679dae50633267d859349994890ba7ed4b5f618c303ce576"
+  },
+  "held_out_cities": [
+    "cambridge_uk",
+    "ghent",
+    "lucca",
+    "salamanca"
+  ],
+  "held_out_inputs": 0,
+  "test_opened": false,
+  "old_training_labels_reused": 0
+}
